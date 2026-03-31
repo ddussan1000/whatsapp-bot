@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/components/use-theme";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheckIcon,

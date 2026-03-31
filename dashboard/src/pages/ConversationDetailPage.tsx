@@ -52,14 +52,8 @@ export function ConversationDetailPage() {
     el.scrollTop = el.scrollHeight;
   }, [groupedMessages.length, messages.length]);
 
-  const ENFORCE_24H_WINDOW = false;
-  const startedAtMs = conversation?.started_at
-    ? new Date(conversation.started_at).getTime()
-    : null;
-  const within24h = startedAtMs
-    ? Date.now() - startedAtMs < 24 * 60 * 60 * 1000
-    : true;
-  const canSend = ENFORCE_24H_WINDOW ? within24h : true;
+  // Nota: la ventana de 24h está desactivada actualmente.
+  const canSend = true;
 
   const isSending = sendMutation.isPending || uploadMutation.isPending;
 
@@ -256,13 +250,7 @@ export function ConversationDetailPage() {
             </Button>
           </div>
           <p className="muted">
-            Ventana 24h preparada:{" "}
-            {ENFORCE_24H_WINDOW
-              ? within24h
-                ? "activa"
-                : "bloqueada"
-              : "desactivada (siempre activo)"}
-            .
+            Ventana 24h preparada: desactivada (siempre activo).
           </p>
         </div>
       </Card>

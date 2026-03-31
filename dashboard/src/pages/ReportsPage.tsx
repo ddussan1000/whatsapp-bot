@@ -90,7 +90,7 @@ export function ReportsPage() {
       page,
       pageSize,
     }),
-    [flowId, fromDate, granularity, instanceId, page]
+    [flowId, fromDate, granularity, instanceId, page, toDate]
   );
 
   const { data, isLoading, isFetching, isError, refetch } =

@@ -1,32 +1,35 @@
-import { useEffect, useState } from "react";
+import { useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useBotConfigQuery, useUpdateBotConfigMutation } from "../lib/hooks";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 
 export function ConfigPage() {
-  const [systemPrompt, setSystemPrompt] = useState("");
-  const [keywords, setKeywords] = useState("");
-  const [receiptPendingMessage, setReceiptPendingMessage] = useState("");
-  const [receiptRejectedMessage, setReceiptRejectedMessage] = useState("");
   const { data } = useBotConfigQuery();
   const saveMutation = useUpdateBotConfigMutation();
 
-  useEffect(() => {
-    if (!data) return;
-    setSystemPrompt(data.systemPrompt);
-    setKeywords(data.keywords);
-    setReceiptPendingMessage(data.receiptPendingMessage ?? "");
-    setReceiptRejectedMessage(data.receiptRejectedMessage ?? "");
-  }, [data]);
+  const defaults = useMemo(
+    () => ({
+      systemPrompt: data?.systemPrompt ?? "",
+      keywords: data?.keywords ?? "",
+      receiptPendingMessage: data?.receiptPendingMessage ?? "",
+      receiptRejectedMessage: data?.receiptRejectedMessage ?? "",
+    }),
+    [data],
+  );
+
+  const systemPromptRef = useRef<HTMLTextAreaElement | null>(null);
+  const keywordsRef = useRef<HTMLTextAreaElement | null>(null);
+  const pendingRef = useRef<HTMLTextAreaElement | null>(null);
+  const rejectedRef = useRef<HTMLTextAreaElement | null>(null);
 
   const onSave = async () => {
     try {
       await saveMutation.mutateAsync({
-        systemPrompt,
-        keywords,
-        receiptPendingMessage,
-        receiptRejectedMessage,
+        systemPrompt: systemPromptRef.current?.value ?? defaults.systemPrompt,
+        keywords: keywordsRef.current?.value ?? defaults.keywords,
+        receiptPendingMessage: pendingRef.current?.value ?? defaults.receiptPendingMessage,
+        receiptRejectedMessage: rejectedRef.current?.value ?? defaults.receiptRejectedMessage,
       });
       toast.success("Configuración guardada.");
     } catch {
@@ -43,8 +46,8 @@ export function ConfigPage() {
           <textarea
             rows={8}
             placeholder="Aqui podras gestionar el prompt central del asistente."
-            value={systemPrompt}
-            onChange={(e) => setSystemPrompt(e.target.value)}
+            ref={systemPromptRef}
+            defaultValue={defaults.systemPrompt}
           />
         </Card>
         <Card>
@@ -52,20 +55,20 @@ export function ConfigPage() {
           <textarea
             rows={4}
             placeholder="precio,pago,producto,ayuda..."
-            value={keywords}
-            onChange={(e) => setKeywords(e.target.value)}
+            ref={keywordsRef}
+            defaultValue={defaults.keywords}
           />
           <textarea
             rows={4}
             placeholder="Mensaje cuando hay monto, pero falta fecha (validación manual)."
-            value={receiptPendingMessage}
-            onChange={(e) => setReceiptPendingMessage(e.target.value)}
+            ref={pendingRef}
+            defaultValue={defaults.receiptPendingMessage}
           />
           <textarea
             rows={4}
             placeholder="Mensaje cuando no se puede validar comprobante (sin monto o fecha >24h)."
-            value={receiptRejectedMessage}
-            onChange={(e) => setReceiptRejectedMessage(e.target.value)}
+            ref={rejectedRef}
+            defaultValue={defaults.receiptRejectedMessage}
           />
           <Button className="save-btn" onClick={onSave} type="button">
             Guardar

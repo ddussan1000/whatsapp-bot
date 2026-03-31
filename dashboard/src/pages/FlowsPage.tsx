@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
@@ -106,7 +105,10 @@ function toDraft(flow?: FlowV2): DraftFlow {
 }
 
 function extractTriggerWord(phrase: string): string {
-  const normalized = phrase.toLowerCase().replace(/[.,!?¿¡;:'"()\-]/g, "").trim();
+  const normalized = phrase
+    .toLowerCase()
+    .replace(/[.,!?¿¡;:'"()-]/g, "")
+    .trim();
   return normalized.split(/\s+/)[0] ?? "";
 }
 
@@ -134,10 +136,20 @@ function delayLabel(seconds: number): string {
 
 // ── Message type config ───────────────────────────────────────────────────
 
-const MSG_TYPES: { type: FlowMessageTypeV2; label: string; icon: React.ElementType; color: string }[] = [
+const MSG_TYPES: {
+  type: FlowMessageTypeV2;
+  label: string;
+  icon: React.ElementType;
+  color: string;
+}[] = [
   { type: "text", label: "Texto", icon: MessageSquare, color: "text-blue-500" },
   { type: "image", label: "Imagen", icon: ImageIcon, color: "text-green-500" },
-  { type: "document", label: "Documento", icon: FileText, color: "text-orange-500" },
+  {
+    type: "document",
+    label: "Documento",
+    icon: FileText,
+    color: "text-orange-500",
+  },
   { type: "video", label: "Video", icon: Video, color: "text-purple-500" },
 ];
 
@@ -198,7 +210,6 @@ function MessageTypePopover({
 function MessageRow({
   msg,
   index,
-  stepIndex,
   uploadPending,
   onTypeChange,
   onTextChange,
@@ -208,7 +219,6 @@ function MessageRow({
 }: {
   msg: DraftMessage;
   index: number;
-  stepIndex: number;
   uploadPending: boolean;
   onTypeChange: (v: FlowMessageTypeV2) => void;
   onTextChange: (v: string) => void;
@@ -216,8 +226,6 @@ function MessageRow({
   onUploadClick: () => void;
   onDelete: () => void;
 }) {
-  const isMedia = msg.messageType !== "text";
-
   return (
     <div className="group relative flex gap-3 rounded-lg border bg-background p-3">
       {/* Order indicator */}
@@ -372,7 +380,6 @@ function StepConnector({
 function StepCard({
   step,
   stepIndex,
-  totalSteps,
   uploadTarget,
   uploadPending,
   onUpdate,
@@ -387,7 +394,6 @@ function StepCard({
 }: {
   step: DraftStep;
   stepIndex: number;
-  totalSteps: number;
   uploadTarget: { step: number; msg: number } | null;
   uploadPending: boolean;
   onUpdate: (step: DraftStep) => void;
@@ -418,9 +424,7 @@ function StepCard({
             placeholder={`Nombre del paso (opcional)`}
             value={step.label ?? ""}
             className="h-7 flex-1 border-0 bg-transparent px-1 text-sm font-medium shadow-none focus-visible:ring-0"
-            onChange={(e) =>
-              onUpdate({ ...step, label: e.target.value })
-            }
+            onChange={(e) => onUpdate({ ...step, label: e.target.value })}
           />
           <button
             type="button"
@@ -444,7 +448,6 @@ function StepCard({
                 key={`${msg.id ?? "new"}-${j}`}
                 msg={msg}
                 index={j}
-                stepIndex={stepIndex}
                 uploadPending={
                   uploadPending &&
                   uploadTarget?.step === stepIndex &&
@@ -490,7 +493,9 @@ export function FlowsPage() {
         localStorage.removeItem("flow_new_draft");
         return JSON.parse(raw) as DraftFlow;
       }
-    } catch {}
+    } catch {
+      // ignore invalid template payload
+    }
     return toDraft();
   });
   const [dirty, setDirty] = useState(false);
@@ -508,7 +513,9 @@ export function FlowsPage() {
           setDirty(true);
           setConfigOpen(true);
         }
-      } catch {}
+      } catch {
+        // ignore event parsing errors
+      }
     };
     window.addEventListener("flow_template_loaded", handler);
     return () => window.removeEventListener("flow_template_loaded", handler);
@@ -516,7 +523,10 @@ export function FlowsPage() {
   const [keywordInput, setKeywordInput] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [uploadTarget, setUploadTarget] = useState<{ step: number; msg: number } | null>(null);
+  const [uploadTarget, setUploadTarget] = useState<{
+    step: number;
+    msg: number;
+  } | null>(null);
 
   // ── Setters ──────────────────────────────────────────────────────────────
 
@@ -534,7 +544,11 @@ export function FlowsPage() {
     });
   };
 
-  const patchMessage = (i: number, j: number, partial: Partial<DraftMessage>) => {
+  const patchMessage = (
+    i: number,
+    j: number,
+    partial: Partial<DraftMessage>
+  ) => {
     setDirty(true);
     setDraft((d) => {
       const steps = [...d.steps];
@@ -569,7 +583,12 @@ export function FlowsPage() {
       ...d,
       steps: [
         ...d.steps,
-        { position: d.steps.length, delaySeconds: d.steps.length === 0 ? 0 : 300, label: "", messages: [] },
+        {
+          position: d.steps.length,
+          delaySeconds: d.steps.length === 0 ? 0 : 300,
+          label: "",
+          messages: [],
+        },
       ],
     }));
   };
@@ -598,7 +617,9 @@ export function FlowsPage() {
       const steps = [...d.steps];
       steps[stepIndex] = {
         ...steps[stepIndex],
-        messages: steps[stepIndex].messages.filter((_, idx) => idx !== msgIndex),
+        messages: steps[stepIndex].messages.filter(
+          (_, idx) => idx !== msgIndex
+        ),
       };
       return { ...d, steps };
     });
@@ -618,10 +639,17 @@ export function FlowsPage() {
     patch({ keywords: draft.keywords.filter((k) => k !== kw) });
   };
 
-  const uploadMessageMedia = async (stepIndex: number, msgIndex: number, file: File) => {
+  const uploadMessageMedia = async (
+    stepIndex: number,
+    msgIndex: number,
+    file: File
+  ) => {
     try {
       const uploaded = await uploadMedia.mutateAsync(file);
-      patchMessage(stepIndex, msgIndex, { mediaUrl: uploaded.url, filename: file.name });
+      patchMessage(stepIndex, msgIndex, {
+        mediaUrl: uploaded.url,
+        filename: file.name,
+      });
       toast.success("Archivo subido correctamente");
     } catch {
       toast.error("No se pudo subir el archivo");
@@ -629,8 +657,14 @@ export function FlowsPage() {
   };
 
   const save = () => {
-    if (!draft.name.trim()) { toast.error("El nombre del flow es requerido"); return; }
-    if (!draft.triggerPhrase.trim()) { toast.error("La frase de trigger es requerida"); return; }
+    if (!draft.name.trim()) {
+      toast.error("El nombre del flow es requerido");
+      return;
+    }
+    if (!draft.triggerPhrase.trim()) {
+      toast.error("La frase de trigger es requerida");
+      return;
+    }
 
     const payload: UpsertFlowBody = {
       id: draft.id,
@@ -690,11 +724,7 @@ export function FlowsPage() {
       <div className="grid flex-1 gap-5 overflow-hidden p-6 lg:grid-cols-[300px_1fr]">
         {/* ── Left: Flow list ── */}
         <div className="flex flex-col gap-3">
-          <Button
-            variant="outline"
-            className="w-full gap-2"
-            onClick={newFlow}
-          >
+          <Button variant="outline" className="w-full gap-2" onClick={newFlow}>
             <Plus size={15} />
             Nuevo flow
           </Button>
@@ -702,7 +732,10 @@ export function FlowsPage() {
           {flows.isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
+                <div
+                  key={i}
+                  className="h-16 animate-pulse rounded-lg bg-muted"
+                />
               ))}
             </div>
           ) : (flows.data ?? []).length === 0 ? (
@@ -736,9 +769,14 @@ export function FlowsPage() {
                   </div>
                   <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                     <Zap size={10} />
-                    <span className="font-mono">{f.trigger_first_word || "—"}</span>
+                    <span className="font-mono">
+                      {f.trigger_first_word || "—"}
+                    </span>
                     <span>·</span>
-                    <span>{(f.steps ?? []).length} paso{(f.steps ?? []).length !== 1 ? "s" : ""}</span>
+                    <span>
+                      {(f.steps ?? []).length} paso
+                      {(f.steps ?? []).length !== 1 ? "s" : ""}
+                    </span>
                   </div>
                 </button>
               ))}
@@ -757,10 +795,16 @@ export function FlowsPage() {
             >
               <span className="font-medium">Configuración del flow</span>
               {draft.name && (
-                <span className="text-sm text-muted-foreground">{draft.name}</span>
+                <span className="text-sm text-muted-foreground">
+                  {draft.name}
+                </span>
               )}
               <span className="ml-auto text-muted-foreground">
-                {configOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                {configOpen ? (
+                  <ChevronUp size={16} />
+                ) : (
+                  <ChevronDown size={16} />
+                )}
               </span>
             </button>
 
@@ -875,7 +919,9 @@ export function FlowsPage() {
                             : "border-border text-muted-foreground hover:bg-muted"
                         }`}
                       >
-                        {opt === "trigger" ? "Disparar el flow igual" : "No hacer nada"}
+                        {opt === "trigger"
+                          ? "Disparar el flow igual"
+                          : "No hacer nada"}
                       </button>
                     ))}
                   </div>
@@ -917,7 +963,8 @@ export function FlowsPage() {
                   Sin pasos configurados.
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Cada paso puede tener uno o más mensajes y un delay antes de enviarse.
+                  Cada paso puede tener uno o más mensajes y un delay antes de
+                  enviarse.
                 </p>
               </div>
             ) : (
@@ -927,21 +974,34 @@ export function FlowsPage() {
                     key={`${step.id ?? "new"}-${i}`}
                     step={step}
                     stepIndex={i}
-                    totalSteps={draft.steps.length}
                     uploadTarget={uploadTarget}
                     uploadPending={uploadMedia.isPending}
                     onUpdate={(s) => patchStep(i, s)}
                     onDelete={() => deleteStep(i)}
                     onAddMessage={() => addMessage(i)}
                     onDeleteMessage={(j) => deleteMessage(i, j)}
-                    onMessageTypeChange={(j, type) => patchMessage(i, j, { messageType: type, textContent: "", mediaUrl: "", filename: "", caption: "" })}
-                    onMessageTextChange={(j, text) => patchMessage(i, j, { textContent: text })}
-                    onMessageCaptionChange={(j, caption) => patchMessage(i, j, { caption })}
+                    onMessageTypeChange={(j, type) =>
+                      patchMessage(i, j, {
+                        messageType: type,
+                        textContent: "",
+                        mediaUrl: "",
+                        filename: "",
+                        caption: "",
+                      })
+                    }
+                    onMessageTextChange={(j, text) =>
+                      patchMessage(i, j, { textContent: text })
+                    }
+                    onMessageCaptionChange={(j, caption) =>
+                      patchMessage(i, j, { caption })
+                    }
                     onUploadClick={(j) => {
                       setUploadTarget({ step: i, msg: j });
                       fileInputRef.current?.click();
                     }}
-                    onDelayChange={(secs) => patchStep(i, { delaySeconds: secs })}
+                    onDelayChange={(secs) =>
+                      patchStep(i, { delaySeconds: secs })
+                    }
                   />
                 ))}
               </div>
