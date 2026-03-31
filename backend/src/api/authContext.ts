@@ -101,6 +101,29 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
     }
   }
 
+  if (!membership && emailNorm) {
+    const { data: invite } = await supabase
+      .from("organization_invites")
+      .select("id, organization_id, role")
+      .eq("email", emailNorm)
+      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (invite) {
+      const { error: insErr } = await supabase.from("organization_members").insert({
+        organization_id: invite.organization_id,
+        user_id: user.id,
+        role: invite.role,
+      });
+      if (!insErr) {
+        await supabase.from("organization_invites").update({ status: "accepted" }).eq("id", invite.id);
+        membership = { organization_id: invite.organization_id, role: invite.role };
+      }
+    }
+  }
+
   if (!membership) {
     if (isPlatformAdmin) {
       return {
