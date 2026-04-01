@@ -106,14 +106,16 @@ export async function handleWebhook(c: Context) {
 
     const lastUpdated = previous?.updated_at ? new Date(previous.updated_at).getTime() : 0;
     const sessionTimeoutHours = runtimeFlow.session_timeout_hours ?? 24;
-    // session_timeout_hours = 0 means "no session timeout" (never expires after starting)
-    const timeoutMs = sessionTimeoutHours > 0 ? sessionTimeoutHours * 60 * 60 * 1000 : Infinity;
-    const expired = lastUpdated > 0 ? Date.now() - lastUpdated > timeoutMs : true;
+    // session_timeout_hours = 0 means "no persistent session" — treat every message as a fresh start
+    const timeoutMs = sessionTimeoutHours * 60 * 60 * 1000;
+    const expired = sessionTimeoutHours === 0
+      ? true
+      : (lastUpdated > 0 ? Date.now() - lastUpdated > timeoutMs : true);
     const needsTrigger = !previous?.id || expired;
     const inboundText = msg.type === "text" ? msg.text?.body ?? "" : "";
     const triggerMatched = msg.type === "text" ? matchesFlowTrigger(inboundText, runtimeFlow) : true;
 
-    // Don't restart a flow that still has pending scheduled steps in progress
+    // Guard: don't restart a flow that still has pending scheduled steps being delivered
     const pendingResult = supabase
       ? await supabase
           .from("scheduled_flow_messages")
@@ -124,8 +126,13 @@ export async function handleWebhook(c: Context) {
       : null;
     const flowIsInProgress = (pendingResult?.count ?? 0) > 0;
 
-    const shouldStartFlow = !flowIsInProgress && needsTrigger && (triggerMatched || runtimeFlow.no_match_behavior === "trigger");
-    if (needsTrigger && !shouldStartFlow) {
+    // Starting a new session always requires an explicit trigger match.
+    // no_match_behavior="trigger" only applies within an active session (unmatched messages
+    // fall through to the AI handler below, but never auto-restart the flow from step 0).
+    const shouldStartFlow = !flowIsInProgress && needsTrigger && triggerMatched;
+
+    // If session needs a trigger, the phrase didn't match, and no_match_behavior = "ignore" → drop the message
+    if (!flowIsInProgress && needsTrigger && !triggerMatched && runtimeFlow.no_match_behavior !== "trigger") {
       return c.text("ok");
     }
 

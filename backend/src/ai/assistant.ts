@@ -48,6 +48,29 @@ async function askAnthropic(text: string, systemPrompt: string): Promise<Assista
   return extractJson(raw);
 }
 
+async function askGroq(text: string, systemPrompt: string): Promise<AssistantResult> {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: env.GROQ_MODEL,
+      max_tokens: 280,
+      temperature: 0.3,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: text },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`Groq API error ${res.status}`);
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const raw = data.choices?.[0]?.message?.content ?? '{"reply":"No pude responder","next_state":null,"send_catalog":false}';
+  return extractJson(raw);
+}
+
 async function askGemini(text: string, systemPrompt: string): Promise<AssistantResult> {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
@@ -70,18 +93,27 @@ export async function askAssistant(text: string, systemOverride?: string | null)
     env.AI_PROVIDER === "auto"
       ? env.GEMINI_API_KEY
         ? "gemini"
-        : env.ANTHROPIC_API_KEY
-          ? "anthropic"
-          : "none"
+        : env.GROQ_API_KEY
+          ? "groq"
+          : env.ANTHROPIC_API_KEY
+            ? "anthropic"
+            : "none"
       : env.AI_PROVIDER;
 
-  if (provider === "none" || (provider === "gemini" && !env.GEMINI_API_KEY) || (provider === "anthropic" && !env.ANTHROPIC_API_KEY)) {
+  const missingKey =
+    (provider === "gemini" && !env.GEMINI_API_KEY) ||
+    (provider === "groq" && !env.GROQ_API_KEY) ||
+    (provider === "anthropic" && !env.ANTHROPIC_API_KEY) ||
+    provider === "none";
+
+  if (missingKey) {
     log.warn({ provider }, "askAssistant: no hay API key configurada para el proveedor");
     return { reply: "Por ahora estoy en modo pruebas. Te ayudamos pronto.", next_state: "interesado", send_catalog: false };
   }
 
   try {
     if (provider === "gemini") return await askGemini(text, systemPrompt);
+    if (provider === "groq") return await askGroq(text, systemPrompt);
     if (provider === "anthropic") return await askAnthropic(text, systemPrompt);
   } catch (err) {
     log.error({ err, provider }, "askAssistant: fallo al llamar al proveedor de AI");
