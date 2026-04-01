@@ -195,35 +195,29 @@ export async function startAssignedFlow(
 
 /**
  * Called by the cron job every minute.
- * Fetches all pending scheduled messages due now and sends them.
+ * Atomically claims pending scheduled messages (FOR UPDATE SKIP LOCKED)
+ * to prevent duplicate sends when multiple server instances run concurrently.
  */
 export async function processScheduledMessages(): Promise<void> {
   if (!supabase) return;
 
-  const now = new Date().toISOString();
-
-  const { data: pending, error } = await supabase
-    .from("scheduled_flow_messages")
-    .select(
-      `id, organization_id, conversation_id, step_id, phone,
-       whatsapp_instance_id, meta_phone_number_id, flow_id`,
-    )
-    .eq("status", "pending")
-    .lte("scheduled_at", now)
-    .limit(50);
+  // Atomically claim due rows — concurrent instances will skip locked rows
+  const { data: claimed, error } = await supabase.rpc("claim_scheduled_messages", {
+    batch_limit: 50,
+  });
 
   if (error) {
-    log.error({ err: error }, "processScheduledMessages: fetch error");
+    log.error({ err: error }, "processScheduledMessages: claim error");
     return;
   }
 
-  if (!pending?.length) return;
+  if (!claimed?.length) return;
 
-  log.info({ count: pending.length }, "processScheduledMessages: processing batch");
+  log.info({ count: claimed.length }, "processScheduledMessages: processing batch");
 
-  for (const row of pending) {
+  for (const row of claimed) {
+    const sentAt = new Date().toISOString();
     try {
-      // Fetch the step with its messages
       const { data: step, error: stepErr } = await supabase
         .from("flow_steps")
         .select(
@@ -237,7 +231,7 @@ export async function processScheduledMessages(): Promise<void> {
         log.warn({ stepId: row.step_id }, "processScheduledMessages: step not found");
         await supabase
           .from("scheduled_flow_messages")
-          .update({ status: "failed", sent_at: now })
+          .update({ status: "failed", sent_at: sentAt })
           .eq("id", row.id);
         continue;
       }
@@ -255,15 +249,16 @@ export async function processScheduledMessages(): Promise<void> {
 
       await sendStepMessages(step as FlowStep, row.phone, fakeState);
 
+      // Row was already claimed as 'sent' by the RPC; just record the timestamp
       await supabase
         .from("scheduled_flow_messages")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .update({ sent_at: sentAt })
         .eq("id", row.id);
     } catch (err) {
       log.error({ err, rowId: row.id }, "processScheduledMessages: send error");
       await supabase
         .from("scheduled_flow_messages")
-        .update({ status: "failed" })
+        .update({ status: "failed", sent_at: sentAt })
         .eq("id", row.id);
     }
   }
