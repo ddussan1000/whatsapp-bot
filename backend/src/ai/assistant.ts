@@ -48,7 +48,7 @@ async function askAnthropic(text: string, systemPrompt: string): Promise<Assista
 }
 
 async function askGemini(text: string, systemPrompt: string): Promise<AssistantResult> {
-  const model = "gemini-1.5-flash";
+  const model = "gemini-2.0-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
   const res = await fetch(url, {
     method: "POST",
