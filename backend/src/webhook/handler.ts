@@ -105,12 +105,26 @@ export async function handleWebhook(c: Context) {
     }
 
     const lastUpdated = previous?.updated_at ? new Date(previous.updated_at).getTime() : 0;
-    const timeoutMs = (runtimeFlow.session_timeout_hours ?? 24) * 60 * 60 * 1000;
+    const sessionTimeoutHours = runtimeFlow.session_timeout_hours ?? 24;
+    // session_timeout_hours = 0 means "no session timeout" (never expires after starting)
+    const timeoutMs = sessionTimeoutHours > 0 ? sessionTimeoutHours * 60 * 60 * 1000 : Infinity;
     const expired = lastUpdated > 0 ? Date.now() - lastUpdated > timeoutMs : true;
     const needsTrigger = !previous?.id || expired;
     const inboundText = msg.type === "text" ? msg.text?.body ?? "" : "";
     const triggerMatched = msg.type === "text" ? matchesFlowTrigger(inboundText, runtimeFlow) : true;
-    const shouldStartFlow = needsTrigger && (triggerMatched || runtimeFlow.no_match_behavior === "trigger");
+
+    // Don't restart a flow that still has pending scheduled steps in progress
+    const pendingResult = supabase
+      ? await supabase
+          .from("scheduled_flow_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", organizationId)
+          .eq("phone", phone)
+          .eq("status", "pending")
+      : null;
+    const flowIsInProgress = (pendingResult?.count ?? 0) > 0;
+
+    const shouldStartFlow = !flowIsInProgress && needsTrigger && (triggerMatched || runtimeFlow.no_match_behavior === "trigger");
     if (needsTrigger && !shouldStartFlow) {
       return c.text("ok");
     }
