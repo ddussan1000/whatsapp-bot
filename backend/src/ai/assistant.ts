@@ -1,4 +1,5 @@
 import { env } from "../config/env";
+import { log } from "../logger";
 
 const DEFAULT_SYSTEM = `Eres un asistente de ventas por WhatsApp.
 Responde en espanol, maximo 3 oraciones y tono amigable.
@@ -15,7 +16,14 @@ function extractJson(text: string): AssistantResult {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   const raw = start >= 0 && end > start ? text.slice(start, end + 1) : text;
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // Gemini sometimes wraps JSON in markdown code blocks
+    const mdMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (mdMatch) return JSON.parse(mdMatch[1].trim());
+    throw new Error(`extractJson: no valid JSON found in: ${text.slice(0, 200)}`);
+  }
 }
 
 async function askAnthropic(text: string, systemPrompt: string): Promise<AssistantResult> {
@@ -76,11 +84,16 @@ export async function askAssistant(text: string, systemOverride?: string | null)
           : "none"
       : env.AI_PROVIDER;
 
+  if (provider === "none" || (provider === "gemini" && !env.GEMINI_API_KEY) || (provider === "anthropic" && !env.ANTHROPIC_API_KEY)) {
+    log.warn({ provider }, "askAssistant: no hay API key configurada para el proveedor");
+    return { reply: "Por ahora estoy en modo pruebas. Te ayudamos pronto.", next_state: "interesado", send_catalog: false };
+  }
+
   try {
-    if (provider === "gemini" && env.GEMINI_API_KEY) return await askGemini(text, systemPrompt);
-    if (provider === "anthropic" && env.ANTHROPIC_API_KEY) return await askAnthropic(text, systemPrompt);
-  } catch {
-    // fallback below
+    if (provider === "gemini") return await askGemini(text, systemPrompt);
+    if (provider === "anthropic") return await askAnthropic(text, systemPrompt);
+  } catch (err) {
+    log.error({ err, provider }, "askAssistant: fallo al llamar al proveedor de AI");
   }
   return {
     reply: "Por ahora estoy en modo pruebas. Te ayudamos pronto.",

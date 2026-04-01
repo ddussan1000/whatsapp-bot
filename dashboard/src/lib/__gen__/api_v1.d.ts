@@ -461,6 +461,8 @@ export interface paths {
                 [key: string]: unknown;
               } | null;
               is_active: boolean;
+              /** @default 24 */
+              session_timeout_hours: number;
               updated_at?: string | null;
               steps?: {
                 id: string;
@@ -548,6 +550,8 @@ export interface paths {
                 [key: string]: unknown;
               } | null;
               is_active: boolean;
+              /** @default 24 */
+              session_timeout_hours: number;
               updated_at?: string | null;
               steps?: {
                 id: string;
@@ -677,6 +681,8 @@ export interface paths {
             systemPrompt?: string | null;
             /** @default true */
             isActive?: boolean;
+            /** @default 24 */
+            sessionTimeoutHours?: number;
             messageOverrides?: {
               [key: string]: string;
             };
@@ -723,6 +729,8 @@ export interface paths {
                 [key: string]: unknown;
               } | null;
               is_active: boolean;
+              /** @default 24 */
+              session_timeout_hours: number;
               updated_at?: string | null;
               steps?: {
                 id: string;

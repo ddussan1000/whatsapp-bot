@@ -105,7 +105,8 @@ export async function handleWebhook(c: Context) {
     }
 
     const lastUpdated = previous?.updated_at ? new Date(previous.updated_at).getTime() : 0;
-    const expired = lastUpdated > 0 ? Date.now() - lastUpdated > 24 * 60 * 60 * 1000 : true;
+    const timeoutMs = (runtimeFlow.session_timeout_hours ?? 24) * 60 * 60 * 1000;
+    const expired = lastUpdated > 0 ? Date.now() - lastUpdated > timeoutMs : true;
     const needsTrigger = !previous?.id || expired;
     const inboundText = msg.type === "text" ? msg.text?.body ?? "" : "";
     const triggerMatched = msg.type === "text" ? matchesFlowTrigger(inboundText, runtimeFlow) : true;

@@ -61,6 +61,7 @@ type DraftFlow = {
   noMatchBehavior: "trigger" | "ignore";
   systemPrompt?: string | null;
   isActive: boolean;
+  sessionTimeoutHours: number;
   steps: DraftStep[];
 };
 
@@ -75,6 +76,7 @@ function toDraft(flow?: FlowV2): DraftFlow {
       noMatchBehavior: "trigger",
       systemPrompt: "",
       isActive: true,
+      sessionTimeoutHours: 24,
       steps: [],
     };
   }
@@ -86,6 +88,7 @@ function toDraft(flow?: FlowV2): DraftFlow {
     noMatchBehavior: flow.no_match_behavior,
     systemPrompt: flow.system_prompt ?? "",
     isActive: flow.is_active,
+    sessionTimeoutHours: flow.session_timeout_hours ?? 24,
     steps: (flow.steps ?? []).map((s) => ({
       id: s.id,
       position: s.position,
@@ -322,55 +325,67 @@ function StepConnector({
   if (stepIndex === 0) return null;
 
   return (
-    <div className="flex items-center gap-2 py-1 pl-6">
-      <div className="flex h-full w-px flex-1 flex-col items-center">
-        <div className="h-4 w-px bg-border" />
-      </div>
-      <div className="flex items-center gap-1.5">
-        <Clock size={12} className="text-muted-foreground" />
-        {editing ? (
-          <div className="flex items-center gap-1">
-            <Input
-              type="number"
-              min={0}
-              value={localVal}
-              onChange={(e) => setLocalVal(e.target.value)}
-              className="h-6 w-16 px-1.5 text-xs"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commit();
-                if (e.key === "Escape") setEditing(false);
-              }}
-            />
-            <select
-              value={localUnit}
-              onChange={(e) => setLocalUnit(e.target.value as DelayUnit)}
-              className="h-6 rounded border bg-background px-1 text-xs text-foreground"
-            >
-              <option value="seg">seg</option>
-              <option value="min">min</option>
-              <option value="hrs">hrs</option>
-            </select>
-            <Button size="sm" className="h-6 px-2 text-xs" onClick={commit}>
-              OK
-            </Button>
+    <div className="flex flex-col items-center py-1">
+      <div className="h-3 w-px bg-border" />
+      <div className="group w-full max-w-[220px] rounded-lg border bg-card shadow-sm transition-shadow hover:shadow-md">
+        <div className="flex items-center gap-2 px-3 py-2">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+            <Clock size={12} />
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              const { value, unit } = secondsToDisplay(delaySeconds);
-              setLocalVal(String(value));
-              setLocalUnit(unit);
-              setEditing(true);
-            }}
-            className="rounded px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            {delayLabel(delaySeconds)}
-          </button>
-        )}
+          <div className="flex flex-1 flex-col gap-0.5 min-w-0">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Esperar
+            </span>
+            {editing ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  min={0}
+                  value={localVal}
+                  onChange={(e) => setLocalVal(e.target.value)}
+                  className="h-6 w-14 px-1.5 text-xs"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commit();
+                    if (e.key === "Escape") setEditing(false);
+                  }}
+                />
+                <select
+                  value={localUnit}
+                  onChange={(e) => setLocalUnit(e.target.value as DelayUnit)}
+                  className="h-6 rounded border bg-background px-1 text-xs text-foreground"
+                >
+                  <option value="seg">seg</option>
+                  <option value="min">min</option>
+                  <option value="hrs">hrs</option>
+                </select>
+                <Button size="sm" className="h-6 px-2 text-xs" onClick={commit}>
+                  OK
+                </Button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const { value, unit } = secondsToDisplay(delaySeconds);
+                  setLocalVal(String(value));
+                  setLocalUnit(unit);
+                  setEditing(true);
+                }}
+                className="flex items-center gap-1 text-left"
+              >
+                <span className="text-sm font-semibold text-foreground">
+                  {delayLabel(delaySeconds)}
+                </span>
+                <span className="text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                  (editar)
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-      <div className="h-px flex-1 bg-border" />
+      <div className="h-3 w-px bg-border" />
     </div>
   );
 }
@@ -674,6 +689,7 @@ export function FlowsPage() {
       noMatchBehavior: draft.noMatchBehavior,
       systemPrompt: draft.systemPrompt || null,
       isActive: draft.isActive,
+      sessionTimeoutHours: draft.sessionTimeoutHours,
       steps: draft.steps.map((s, i) => ({
         id: s.id,
         position: i,
@@ -939,6 +955,43 @@ export function FlowsPage() {
                     className="resize-none"
                     onChange={(e) => patch({ systemPrompt: e.target.value })}
                   />
+                </div>
+
+                {/* Session timeout */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Ventana de sesión (horas)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={720}
+                      value={draft.sessionTimeoutHours}
+                      className="w-24"
+                      onChange={(e) =>
+                        patch({
+                          sessionTimeoutHours: Math.max(
+                            0,
+                            parseInt(e.target.value, 10) || 0
+                          ),
+                        })
+                      }
+                    />
+                    <span className="text-sm text-muted-foreground">horas</span>
+                    {draft.sessionTimeoutHours === 0 && (
+                      <span className="text-xs text-amber-600">
+                        Siempre re-inicia el flow
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Si el usuario escribe después de{" "}
+                    {draft.sessionTimeoutHours === 0
+                      ? "cualquier tiempo"
+                      : `${draft.sessionTimeoutHours}h`}
+                    , se inicia una nueva sesión del flow.
+                  </p>
                 </div>
               </div>
             )}

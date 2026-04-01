@@ -10,6 +10,7 @@ export type Flow = {
   no_match_behavior: "trigger" | "ignore";
   system_prompt: string | null;
   is_active: boolean;
+  session_timeout_hours: number;
 };
 
 function normalize(text: string) {
@@ -39,7 +40,7 @@ export async function getFlowById(flowId: string) {
   if (!supabase) return null;
   const { data } = await supabase
     .from("flows")
-    .select("id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, is_active")
+    .select("id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, is_active, session_timeout_hours")
     .eq("id", flowId)
     .maybeSingle<Flow>();
   return data ?? null;

@@ -208,6 +208,7 @@ export type FlowV2 = {
   system_prompt?: string | null;
   message_overrides?: Record<string, unknown> | null;
   is_active: boolean;
+  session_timeout_hours: number;
   updated_at?: string | null;
   steps?: FlowStepV2[];
 };
@@ -220,6 +221,7 @@ export type UpsertFlowBody = {
   systemPrompt?: string | null;
   messageOverrides?: Record<string, string>;
   isActive?: boolean;
+  sessionTimeoutHours?: number;
   steps: Array<{
     id?: string;
     position: number;
