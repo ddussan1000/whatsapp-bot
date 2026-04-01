@@ -566,9 +566,11 @@ export function ReportsPage() {
                           dataKey="clicks"
                           nameKey="name"
                           outerRadius={90}
-                          label={({ name, percent }) =>
-                            `${name.slice(0, 12)}${name.length > 12 ? "..." : ""} ${(percent * 100).toFixed(0)}%`
-                          }
+                          label={({ name, percent }: { name?: string; percent?: number }) => {
+                            const n = name ?? "";
+                            const p = percent ?? 0;
+                            return `${n.slice(0, 12)}${n.length > 12 ? "..." : ""} ${(p * 100).toFixed(0)}%`;
+                          }}
                           labelLine={false}
                         >
                           {adChartData.map((_, i) => (
@@ -579,8 +581,10 @@ export function ReportsPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(value: number) =>
-                            value.toLocaleString("es-CO")
+                          formatter={(value) =>
+                            typeof value === "number"
+                              ? value.toLocaleString("es-CO")
+                              : String(value)
                           }
                         />
                       </PieChart>
