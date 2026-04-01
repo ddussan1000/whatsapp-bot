@@ -15,6 +15,7 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
+    "@google/genai": "^1.48.0",
     "@hono/node-server": "^1.19.11",
     "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-openapi": "^1.2.4",

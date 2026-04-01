@@ -1,3 +1,4 @@
+import { GoogleGenAI } from "@google/genai";
 import { env } from "../config/env";
 import { log } from "../logger";
 
@@ -48,28 +49,18 @@ async function askAnthropic(text: string, systemPrompt: string): Promise<Assista
 }
 
 async function askGemini(text: string, systemPrompt: string): Promise<AssistantResult> {
-  const model = "gemini-2.0-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text }] }],
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 280,
-        responseMimeType: "application/json",
-      },
-    }),
+  const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+  const response = await ai.models.generateContent({
+    model: "gemini-2.0-flash-lite",
+    config: {
+      temperature: 0.3,
+      maxOutputTokens: 280,
+      responseMimeType: "application/json",
+      systemInstruction: systemPrompt,
+    },
+    contents: [{ role: "user", parts: [{ text }] }],
   });
-  if (!res.ok) throw new Error(`Gemini API error ${res.status}`);
-  const data = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  const raw =
-    data.candidates?.[0]?.content?.parts?.[0]?.text ??
-    "{\"reply\":\"No pude responder\",\"next_state\":null,\"send_catalog\":false}";
+  const raw = response.text ?? '{"reply":"No pude responder","next_state":null,"send_catalog":false}';
   return extractJson(raw);
 }
 
