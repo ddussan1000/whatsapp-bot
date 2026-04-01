@@ -179,7 +179,17 @@ dashboardApi.use("/*", async (c, next) => {
   if (path.startsWith("/admin")) return await next();
   const session = getSession(c);
   if (!session.organizationId) {
-    if (!session.isPlatformAdmin) return c.json({ error: "Forbidden" }, 403);
+    if (!Boolean(session.isPlatformAdmin)) {
+      return c.json(
+        {
+          error: "Forbidden",
+          reason: "missing_organization",
+          detail:
+            "La sesión no tiene organización. Si usas la anon key en el backend, configura SUPABASE_SERVICE_ROLE_KEY o asegúrate de que organization_members sea legible. Si eres admin de plataforma, envía el header X-Organization-Id.",
+        },
+        403,
+      );
+    }
     return c.json({ error: "Selecciona organización (header X-Organization-Id)" }, 400);
   }
   await next();

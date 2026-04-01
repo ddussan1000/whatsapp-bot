@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../db/supabase";
 import { env } from "../config/env";
 
@@ -20,8 +21,37 @@ function parseBearerToken(authHeader?: string) {
   return authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
 }
 
+/**
+ * Cliente con JWT del usuario en el header para que Postgres vea auth.uid() en RPC con security invoker
+ * (p. ej. is_org_member). El singleton en db/supabase.ts no envía el token; no usarlo en esas rutas.
+ */
+export function getSupabaseWithUserJwt(c: Context): SupabaseClient | null {
+  if (!env.SUPABASE_URL || !env.SUPABASE_KEY) return null;
+  const token = parseBearerToken(c.req.header("authorization"));
+  if (!token) return null;
+  return createClient(env.SUPABASE_URL, env.SUPABASE_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+}
+
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+/**
+ * Cliente para resolver sesión en el API:
+ * - Si existe SUPABASE_SERVICE_ROLE_KEY, usa service role (bypass RLS; adecuado para backend).
+ * - Si no, usa SUPABASE_KEY con Authorization: Bearer <jwt> para que RLS vea auth.uid() con la anon key.
+ */
+function getDbForSession(token: string): SupabaseClient | null {
+  if (!env.SUPABASE_URL) return null;
+  if (env.SUPABASE_SERVICE_ROLE_KEY) {
+    return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  }
+  if (!env.SUPABASE_KEY) return null;
+  return createClient(env.SUPABASE_URL, env.SUPABASE_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
 }
 
 export async function resolveSession(c: Context): Promise<RequestSession | null> {
@@ -47,21 +77,24 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
     };
   }
 
-  const { data: authData, error: authError } = await supabase.auth.getUser(token);
+  const db = getDbForSession(token);
+  if (!db) return null;
+
+  const { data: authData, error: authError } = await db.auth.getUser(token);
   if (authError || !authData.user) return null;
   const user = authData.user;
   const emailNorm = user.email ? normalizeEmail(user.email) : null;
 
   let isPlatformAdmin = false;
   if (emailNorm) {
-    const { data: pa } = await supabase.from("platform_admins").select("email").eq("email", emailNorm).maybeSingle();
+    const { data: pa } = await db.from("platform_admins").select("email").eq("email", emailNorm).maybeSingle();
     isPlatformAdmin = Boolean(pa);
   }
 
   const requestedOrg = c.req.header("x-organization-id")?.trim() || undefined;
 
   if (isPlatformAdmin && requestedOrg) {
-    const { data: org } = await supabase.from("organizations").select("id").eq("id", requestedOrg).maybeSingle();
+    const { data: org } = await db.from("organizations").select("id").eq("id", requestedOrg).maybeSingle();
     if (org) {
       return {
         userId: user.id,
@@ -73,7 +106,7 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
     }
   }
 
-  let membershipQuery = supabase
+  let membershipQuery = db
     .from("organization_members")
     .select("organization_id, role")
     .eq("user_id", user.id)
@@ -83,26 +116,26 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
   let { data: membership } = await membershipQuery.maybeSingle<Membership>();
 
   if (!membership && emailNorm) {
-    const { data: allow } = await supabase
+    const { data: allow } = await db
       .from("organization_signup_allowlist")
       .select("id, organization_id, role")
       .eq("email", emailNorm)
       .maybeSingle();
     if (allow) {
-      const { error: insErr } = await supabase.from("organization_members").insert({
+      const { error: insErr } = await db.from("organization_members").insert({
         organization_id: allow.organization_id,
         user_id: user.id,
         role: allow.role,
       });
       if (!insErr) {
-        await supabase.from("organization_signup_allowlist").delete().eq("id", allow.id);
+        await db.from("organization_signup_allowlist").delete().eq("id", allow.id);
         membership = { organization_id: allow.organization_id, role: allow.role };
       }
     }
   }
 
   if (!membership && emailNorm) {
-    const { data: invite } = await supabase
+    const { data: invite } = await db
       .from("organization_invites")
       .select("id, organization_id, role")
       .eq("email", emailNorm)
@@ -112,13 +145,13 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
       .limit(1)
       .maybeSingle();
     if (invite) {
-      const { error: insErr } = await supabase.from("organization_members").insert({
+      const { error: insErr } = await db.from("organization_members").insert({
         organization_id: invite.organization_id,
         user_id: user.id,
         role: invite.role,
       });
       if (!insErr) {
-        await supabase.from("organization_invites").update({ status: "accepted" }).eq("id", invite.id);
+        await db.from("organization_invites").update({ status: "accepted" }).eq("id", invite.id);
         membership = { organization_id: invite.organization_id, role: invite.role };
       }
     }

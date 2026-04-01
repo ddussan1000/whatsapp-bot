@@ -7,7 +7,9 @@ const envSchema = z.object({
   META_PHONE_ID: z.string().default(""),
   VERIFY_TOKEN: z.string().default(""),
   SUPABASE_URL: z.string().default(""),
+  /** Prefer service_role en el servidor API para leer membresías sin depender de RLS con anon. */
   SUPABASE_KEY: z.string().default(""),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().default(""),
   ANTHROPIC_API_KEY: z.string().default(""),
   GEMINI_API_KEY: z.string().default(""),
   AI_PROVIDER: z.enum(["anthropic", "gemini", "auto"]).default("auto"),

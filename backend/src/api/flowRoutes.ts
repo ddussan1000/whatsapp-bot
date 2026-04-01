@@ -1,6 +1,11 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { supabase } from "../db/supabase";
+import type { Context } from "hono";
+import { getSupabaseWithUserJwt } from "./authContext";
 import { extractFirstWord } from "../db/flows";
+
+function db(c: Context) {
+  return getSupabaseWithUserJwt(c);
+}
 
 const ErrorSchema = z.object({ error: z.string() });
 
@@ -101,6 +106,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       },
     }),
     async (c) => {
+      const supabase = db(c);
       if (!supabase) return c.json([], 200);
       const { data, error } = await supabase
         .from("flows")
@@ -128,6 +134,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       },
     }),
     async (c) => {
+      const supabase = db(c);
       if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
       const { id } = c.req.valid("param");
       const { data, error } = await supabase
@@ -160,6 +167,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       },
     }),
     async (c) => {
+      const supabase = db(c);
       if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
       const body = c.req.valid("json");
       const payload = {
@@ -195,6 +203,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       },
     }),
     async (c) => {
+      const supabase = db(c);
       if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
       const { id } = c.req.valid("param");
       const { error } = await supabase.from("flows").delete().eq("id", id).eq("organization_id", orgId(c));
@@ -221,6 +230,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       },
     }),
     async (c) => {
+      const supabase = db(c);
       if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
       const { id } = c.req.valid("param");
       const body = c.req.valid("json");
@@ -263,6 +273,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       },
     }),
     async (c) => {
+      const supabase = db(c);
       if (!supabase) return c.json([], 200);
       const { data, error } = await supabase
         .from("flow_referrals")
@@ -317,6 +328,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       },
     }),
     async (c) => {
+      const supabase = db(c);
       if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
       const body = c.req.valid("json");
       const { data, error } = await supabase
