@@ -58,13 +58,20 @@ const NO_FLOW_VALUE = "__none__";
 function getInstanceHealthMessage(res: InstanceHealth): string {
   if (res.detail && res.detail.trim().length > 0) return res.detail;
   switch (res.reason) {
-    case "token_expired": return "El token venció. Generá uno nuevo en Meta.";
-    case "token_invalid": return "Token inválido o revocado.";
-    case "insufficient_permissions": return "El token no tiene los permisos necesarios.";
-    case "phone_number_not_found": return "El ID del número no existe en Meta.";
-    case "app_not_subscribed": return "La app no está habilitada para usar WhatsApp.";
-    case "rate_limited": return "Meta está limitando las peticiones. Intentá más tarde.";
-    default: return "No se pudo verificar la conexión con Meta.";
+    case "token_expired":
+      return "El token venció. Generá uno nuevo en Meta.";
+    case "token_invalid":
+      return "Token inválido o revocado.";
+    case "insufficient_permissions":
+      return "El token no tiene los permisos necesarios.";
+    case "phone_number_not_found":
+      return "El ID del número no existe en Meta.";
+    case "app_not_subscribed":
+      return "La app no está habilitada para usar WhatsApp.";
+    case "rate_limited":
+      return "Meta está limitando las peticiones. Intentá más tarde.";
+    default:
+      return "No se pudo verificar la conexión con Meta.";
   }
 }
 
@@ -83,7 +90,11 @@ function CopyButton({ value, label }: { value: string; label?: string }) {
       onClick={copy}
       className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
-      {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+      {copied ? (
+        <Check size={13} className="text-emerald-500" />
+      ) : (
+        <Copy size={13} />
+      )}
       {label ?? (copied ? "Copiado" : "Copiar")}
     </button>
   );
@@ -100,7 +111,9 @@ function WebhookConfigCard() {
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} className="text-primary" />
-          <CardTitle className="text-base">Configuración del webhook para Meta</CardTitle>
+          <CardTitle className="text-base">
+            Configuración del webhook para Meta
+          </CardTitle>
         </div>
         <p className="text-sm text-muted-foreground">
           Copiá estos datos y pegálos en{" "}
@@ -127,7 +140,9 @@ function WebhookConfigCard() {
                 </span>
               </div>
               <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-                <code className="flex-1 text-sm break-all">{data?.webhookUrl ?? "—"}</code>
+                <code className="flex-1 text-sm break-all">
+                  {data?.webhookUrl ?? "—"}
+                </code>
                 <CopyButton value={data?.webhookUrl ?? ""} />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -222,8 +237,12 @@ function EditDialog({
   const [metaToken, setMetaToken] = useState(instance.meta_token ?? "");
   const [wabaId, setWabaId] = useState(instance.waba_id ?? "");
   const [metaAppId, setMetaAppId] = useState(instance.meta_app_id ?? "");
-  const [displayPhone, setDisplayPhone] = useState(instance.display_phone_number ?? "");
-  const [selectedFlow, setSelectedFlow] = useState(instance.flow_id ?? NO_FLOW_VALUE);
+  const [displayPhone, setDisplayPhone] = useState(
+    instance.display_phone_number ?? ""
+  );
+  const [selectedFlow, setSelectedFlow] = useState(
+    instance.flow_id ?? NO_FLOW_VALUE
+  );
   const [showToken, setShowToken] = useState(false);
 
   const activeFlows = flows.filter((f) => f.is_active);
@@ -243,10 +262,19 @@ function EditDialog({
       {
         onSuccess: () => {
           assignFlow.mutate(
-            { instanceId: instance.id, flowId: selectedFlow === NO_FLOW_VALUE ? null : selectedFlow },
             {
-              onSuccess: () => { toast.success("Configuración guardada."); onClose(); },
-              onError: () => toast.error("Se guardó el número, pero falló la asignación del flow."),
+              instanceId: instance.id,
+              flowId: selectedFlow === NO_FLOW_VALUE ? null : selectedFlow,
+            },
+            {
+              onSuccess: () => {
+                toast.success("Configuración guardada.");
+                onClose();
+              },
+              onError: () =>
+                toast.error(
+                  "Se guardó el número, pero falló la asignación del flow."
+                ),
             }
           );
         },
@@ -276,7 +304,10 @@ function EditDialog({
               Identificación
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Nombre del número" hint="Solo para reconocerlo en el panel, no lo ve el cliente.">
+              <Field
+                label="Nombre del número"
+                hint="Solo para reconocerlo en el panel, no lo ve el cliente."
+              >
                 <Input
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
@@ -308,7 +339,11 @@ function EditDialog({
               label="ID del número (Phone Number ID)"
               hint="Identificador único que Meta asignó a este número. No se puede cambiar."
             >
-              <Input value={instance.phone_number_id} readOnly className="bg-muted text-muted-foreground" />
+              <Input
+                value={instance.phone_number_id}
+                readOnly
+                className="bg-muted text-muted-foreground"
+              />
             </Field>
             <Field
               label="Token de acceso"
@@ -374,7 +409,9 @@ function EditDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_FLOW_VALUE}>
-                    <span className="text-muted-foreground">Sin flow — el bot no responde</span>
+                    <span className="text-muted-foreground">
+                      Sin flow — el bot no responde
+                    </span>
                   </SelectItem>
                   {activeFlows.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
@@ -399,7 +436,8 @@ function EditDialog({
               onClick={() =>
                 testHealth.mutate(instance.id, {
                   onSuccess: (res) => {
-                    if (res.status === "connected") toast.success("Token vigente — conexión OK.");
+                    if (res.status === "connected")
+                      toast.success("Token vigente — conexión OK.");
                     else toast.error(getInstanceHealthMessage(res));
                   },
                   onError: (e) => toast.error(`Error: ${(e as Error).message}`),
@@ -412,7 +450,11 @@ function EditDialog({
               <Button variant="outline" onClick={onClose} disabled={isSaving}>
                 Cancelar
               </Button>
-              <Button onClick={save} loading={isSaving} loadingText="Guardando…">
+              <Button
+                onClick={save}
+                loading={isSaving}
+                loadingText="Guardando…"
+              >
                 Guardar cambios
               </Button>
             </div>
@@ -486,7 +528,10 @@ export function InstancesPage() {
               ) : (instances.data ?? []).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="py-12 text-center">
-                    <Smartphone size={32} className="mx-auto mb-2 text-muted-foreground/40" />
+                    <Smartphone
+                      size={32}
+                      className="mx-auto mb-2 text-muted-foreground/40"
+                    />
                     <p className="text-sm text-muted-foreground">
                       Todavía no tenés números configurados.
                     </p>
@@ -502,10 +547,14 @@ export function InstancesPage() {
                 </TableRow>
               ) : (
                 (instances.data ?? []).map((instance) => {
-                  const flowName = instance.flow_id ? flowMap.get(instance.flow_id) : null;
+                  const flowName = instance.flow_id
+                    ? flowMap.get(instance.flow_id)
+                    : null;
                   return (
                     <TableRow key={instance.id}>
-                      <TableCell className="font-medium">{instance.label}</TableCell>
+                      <TableCell className="font-medium">
+                        {instance.label}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {instance.display_phone_number ?? "—"}
                       </TableCell>
@@ -523,7 +572,9 @@ export function InstancesPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={instance.is_active ? "default" : "outline"}>
+                        <Badge
+                          variant={instance.is_active ? "default" : "outline"}
+                        >
                           {instance.is_active ? "Activo" : "Inactivo"}
                         </Badge>
                       </TableCell>

@@ -363,6 +363,175 @@ dashboardApi.openapi(
   },
 );
 
+const AdReferralItemSchema = z.object({
+  sourceId: z.string().nullable(),
+  headline: z.string().nullable(),
+  clicks: z.number(),
+  uniqueLeads: z.number(),
+  conversions: z.number(),
+  revenue: z.number(),
+  conversionRate: z.number(),
+});
+
+const AdReferralStatsSchema = z.object({
+  items: z.array(AdReferralItemSchema),
+  totals: z.object({
+    clicks: z.number(),
+    uniqueLeads: z.number(),
+    conversions: z.number(),
+    revenue: z.number(),
+    conversionRate: z.number(),
+  }),
+});
+
+dashboardApi.openapi(
+  createRoute({
+    method: "get",
+    path: "/stats/ad-referrals",
+    request: {
+      headers: AuthHeaderSchema,
+      query: z.object({
+        from: z.string().optional(),
+        to: z.string().optional(),
+        flowId: z.string().optional().openapi({ description: "CSV of flow IDs" }),
+      }),
+    },
+    responses: {
+      200: { description: "Ad referral stats", content: { "application/json": { schema: AdReferralStatsSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) {
+      return c.json(
+        { items: [], totals: { clicks: 0, uniqueLeads: 0, conversions: 0, revenue: 0, conversionRate: 0 } },
+        200,
+      );
+    }
+
+    const { from, to, flowId } = c.req.valid("query");
+    const organizationId = orgId(c);
+    const fromDate = from ? new Date(from) : new Date(Date.now() - 30 * 24 * 3600 * 1000);
+    const toDate = to ? new Date(to) : new Date();
+
+    let clickQuery = supabase
+      .from("ad_click_logs")
+      .select("source_id, headline, phone, flow_id, created_at")
+      .eq("organization_id", organizationId)
+      .gte("created_at", fromDate.toISOString())
+      .lte("created_at", toDate.toISOString());
+
+    const flowIds = splitCsv(flowId);
+    if (flowIds.length > 0) {
+      clickQuery = clickQuery.in("flow_id", flowIds);
+    }
+
+    const { data: clicks, error: clickErr } = await clickQuery;
+    if (clickErr) return c.json({ error: clickErr.message }, 500);
+
+    let payQuery = supabase
+      .from("payments")
+      .select("phone, amount, flow_id, state")
+      .eq("organization_id", organizationId)
+      .gte("created_at", fromDate.toISOString())
+      .lte("created_at", toDate.toISOString())
+      .in("state", ["validated", "pending_manual_review"]);
+
+    if (flowIds.length > 0) {
+      payQuery = payQuery.in("flow_id", flowIds);
+    }
+
+    const { data: payments } = await payQuery;
+
+    const adPhones = new Set((clicks ?? []).map((c) => c.phone));
+    const adPayments = (payments ?? []).filter((p) => adPhones.has(p.phone));
+
+    type AdGroup = {
+      sourceId: string | null;
+      headline: string | null;
+      phones: Set<string>;
+      clicks: number;
+    };
+
+    const byAd = new Map<string, AdGroup>();
+    for (const click of clicks ?? []) {
+      const key = click.source_id ?? "__none__";
+      let group = byAd.get(key);
+      if (!group) {
+        group = { sourceId: click.source_id, headline: click.headline, phones: new Set(), clicks: 0 };
+        byAd.set(key, group);
+      }
+      group.clicks++;
+      group.phones.add(click.phone);
+    }
+
+    const payByPhone = new Map<string, { count: number; revenue: number }>();
+    for (const p of adPayments) {
+      const existing = payByPhone.get(p.phone) ?? { count: 0, revenue: 0 };
+      existing.count++;
+      existing.revenue += Number(p.amount ?? 0);
+      payByPhone.set(p.phone, existing);
+    }
+
+    const items: Array<{
+      sourceId: string | null;
+      headline: string | null;
+      clicks: number;
+      uniqueLeads: number;
+      conversions: number;
+      revenue: number;
+      conversionRate: number;
+    }> = [];
+
+    let totalClicks = 0;
+    let totalLeads = 0;
+    let totalConversions = 0;
+    let totalRevenue = 0;
+
+    for (const group of byAd.values()) {
+      let conversions = 0;
+      let revenue = 0;
+      for (const phone of group.phones) {
+        const pData = payByPhone.get(phone);
+        if (pData) {
+          conversions += pData.count;
+          revenue += pData.revenue;
+        }
+      }
+      const uniqueLeads = group.phones.size;
+      items.push({
+        sourceId: group.sourceId,
+        headline: group.headline,
+        clicks: group.clicks,
+        uniqueLeads,
+        conversions,
+        revenue,
+        conversionRate: uniqueLeads > 0 ? conversions / uniqueLeads : 0,
+      });
+      totalClicks += group.clicks;
+      totalLeads += uniqueLeads;
+      totalConversions += conversions;
+      totalRevenue += revenue;
+    }
+
+    items.sort((a, b) => b.clicks - a.clicks);
+
+    return c.json(
+      {
+        items,
+        totals: {
+          clicks: totalClicks,
+          uniqueLeads: totalLeads,
+          conversions: totalConversions,
+          revenue: totalRevenue,
+          conversionRate: totalLeads > 0 ? totalConversions / totalLeads : 0,
+        },
+      },
+      200,
+    );
+  },
+);
+
 const MembershipSchema = z.object({
   organization_id: z.string(),
   role: z.enum(["owner", "admin", "agent", "viewer"]),

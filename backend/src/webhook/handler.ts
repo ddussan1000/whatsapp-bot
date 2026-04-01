@@ -1,10 +1,10 @@
 import type { Context } from "hono";
 import { classify } from "../bot/classifier";
 import { handleFlow } from "../bot/flows";
-import { startAssignedFlow } from "../bot/flowEngine";
+import { startAssignedFlow, getFlowById as getFullFlow } from "../bot/flowEngine";
 import { getState, setState } from "../cache/redis";
-import type { ConversationState, WhatsAppMessage } from "../types";
-import { handleReceipt } from "../receipts/handler";
+import type { ConversationState, WhatsAppMessage, WhatsAppReferral } from "../types";
+import { classifyAndHandleImage } from "../receipts/handler";
 import { upsertConversation } from "../db/conversations";
 import { log } from "../logger";
 import { alertAdmin } from "../alerts/telegram";
@@ -12,6 +12,38 @@ import { insertMessageLog, updateMessageDeliveryStatus } from "../db/messages";
 import { findFlowByCtwaClid, getFlowById, matchesFlowTrigger } from "../db/flows";
 import { getActiveInstanceByPhoneNumberId } from "../db/instances";
 import { supabase } from "../db/supabase";
+
+function extractReferral(msg: WhatsAppMessage): WhatsAppReferral | null {
+  const ref = (msg as unknown as { referral?: WhatsAppReferral }).referral;
+  if (!ref || (!ref.ctwa_clid && !ref.source_id)) return null;
+  return ref;
+}
+
+async function logAdClick(
+  organizationId: string,
+  flowId: string | null,
+  phone: string,
+  referral: WhatsAppReferral,
+) {
+  if (!supabase) return;
+  try {
+    await supabase.from("ad_click_logs").insert({
+      organization_id: organizationId,
+      flow_id: flowId,
+      phone,
+      ctwa_clid: referral.ctwa_clid ?? null,
+      source_id: referral.source_id ?? null,
+      source_type: referral.source_type ?? null,
+      source_url: referral.source_url ?? null,
+      headline: referral.headline ?? null,
+      body: referral.body ?? null,
+      media_type: referral.image?.id ? "image" : referral.video?.id ? "video" : null,
+      media_id: referral.image?.id || referral.video?.id || null,
+    });
+  } catch (err) {
+    log.warn({ err }, "logAdClick: failed to insert ad_click_log");
+  }
+}
 
 export async function handleWebhook(c: Context) {
   try {
@@ -57,13 +89,19 @@ export async function handleWebhook(c: Context) {
     const previous = previousConversation?.data ?? null;
 
     const state = await getState(phone, metaPhoneNumberId || null);
-    const ctwaClid = (msg as unknown as { referral?: { ctwa_clid?: string } }).referral?.ctwa_clid ?? null;
+
+    const referral = extractReferral(msg);
+    const ctwaClid = referral?.ctwa_clid ?? null;
     const referredFlow = organizationId && ctwaClid ? await findFlowByCtwaClid(organizationId, ctwaClid) : null;
     const assignedFlow = instance?.flow_id ? await getFlowById(instance.flow_id) : null;
     const runtimeFlow = referredFlow ?? assignedFlow;
     if (!runtimeFlow) {
       log.warn({ phone, organizationId, instanceId: instance?.id }, "Webhook ignorado: instancia sin flow asignado");
       return c.text("ok");
+    }
+
+    if (referral) {
+      await logAdClick(organizationId, runtimeFlow.id, phone, referral);
     }
 
     const lastUpdated = previous?.updated_at ? new Date(previous.updated_at).getTime() : 0;
@@ -85,7 +123,7 @@ export async function handleWebhook(c: Context) {
       whatsappInstanceId: instance?.id ?? state.whatsappInstanceId ?? null,
     });
     const conversationId = conv?.id ?? state.id ?? null;
-    const nextBaseState = {
+    const nextBaseState: ConversationState = {
       ...state,
       ...(conversationId && conversationId.length > 0 ? { id: conversationId } : {}),
       organizationId,
@@ -95,7 +133,7 @@ export async function handleWebhook(c: Context) {
       metaPhoneNumberId: metaPhoneNumberId || state.metaPhoneNumberId || null,
     };
 
-    const type = classify(msg, { productKeywords: runtimeFlow.keywords ?? [] });
+    const type = classify(msg);
     const text = inboundText;
     await insertMessageLog({
       organizationId,
@@ -123,15 +161,28 @@ export async function handleWebhook(c: Context) {
       flowName: runtimeFlow.name,
       whatsappInstanceId: instance?.id ?? nextBaseState.whatsappInstanceId ?? null,
     };
-    if (type === "receipt") {
-      nextState = await handleReceipt(msg, phone, nextState);
+
+    if (type === "image") {
+      const imgResult = await classifyAndHandleImage(msg, phone, nextState);
+      if (imgResult.handled) {
+        nextState = imgResult.state;
+      }
+      // If not handled (not a receipt), do nothing -- image was not a receipt, flow continues silently
     } else if (shouldStartFlow) {
-      await startAssignedFlow(phone, nextState);
+      const fullFlow = await getFullFlow(runtimeFlow.id, organizationId);
+      const hasSteps = Boolean(fullFlow?.steps?.length);
+      if (hasSteps) {
+        await startAssignedFlow(phone, nextState);
+        nextState = { ...nextState, stage: "flow_started" };
+      } else {
+        if (msg.type === "text" && text) {
+          nextState = await handleFlow(type, phone, text, nextState);
+        }
+      }
+    } else {
       if (msg.type === "text" && text) {
         nextState = await handleFlow(type, phone, text, nextState);
       }
-    } else {
-      nextState = await handleFlow(type, phone, text, nextState);
     }
 
     await setState(phone, nextState, metaPhoneNumberId || null);

@@ -1,13 +1,10 @@
 import { askAssistant } from "../ai/assistant";
-import { textMessage, welcomeButtons } from "./messages";
+import { textMessage } from "./messages";
 import { sendMessage } from "./sender";
 import type { ConversationState } from "../types";
 import { getFlowById } from "../db/flows";
 import { log } from "../logger";
 
-/**
- * Resolve prompt from assigned flow with safe fallback.
- */
 async function resolvePrompt(flowId: string | null, fallbackName: string | null): Promise<string> {
   if (flowId) {
     const flow = await getFlowById(flowId);
@@ -24,9 +21,7 @@ async function resolvePrompt(flowId: string | null, fallbackName: string | null)
   return "Eres un asistente de ventas por WhatsApp. Responde en español, sé amigable y conciso.";
 }
 
-export async function handleFlow(type: string, phone: string, text: string, state: ConversationState) {
-  const flowName = state.flowName ?? "flujo principal";
-
+export async function handleFlow(_type: string, phone: string, text: string, state: ConversationState) {
   const ctx = {
     metaPhoneNumberId: state.metaPhoneNumberId,
     organizationId: state.organizationId,
@@ -35,43 +30,11 @@ export async function handleFlow(type: string, phone: string, text: string, stat
     flowId: state.flowId,
   };
 
-  if (type === "greeting") {
-    await sendMessage(phone, welcomeButtons(), ctx);
-    if (state.flowId) {
-      await sendMessage(
-        phone,
-        textMessage(`Te ayudo con ${flowName}. Si quieres precio, escribe "precio"; para pagar, escribe "pagar".`),
-        ctx,
-      );
-    }
-    return { ...state, stage: "saludo", flowName: state.flowName ?? null };
-  }
-
-  if (type === "products") {
-    await sendMessage(phone, textMessage(`Tenemos info activa de ${flowName}. Escribe 'pagar' para continuar.`), ctx);
-    return { ...state, stage: "catalogo", flowName: state.flowName ?? null };
-  }
-
-  if (type === "pay") {
-    await sendMessage(phone, textMessage("Perfecto. Envia tu comprobante en foto para validarlo."), ctx);
-    return { ...state, stage: "esperando_comprobante", flowName: state.flowName ?? null };
-  }
-
-  if (type === "price") {
-    await sendMessage(phone, textMessage(`Los precios de ${flowName} dependen del plan. Escribe 'pagar' para continuar.`), ctx);
-    return { ...state, stage: "precio", flowName: state.flowName ?? null };
-  }
-
-  if (type === "help") {
-    await sendMessage(phone, textMessage(`Estoy para ayudarte con ${flowName}, precios y pagos.`), ctx);
-    return { ...state, stage: "ayuda", flowName: state.flowName ?? null };
-  }
-
   const systemPrompt = await resolvePrompt(state.flowId ?? null, state.flowName ?? null);
   const ai = await askAssistant(text, systemPrompt);
 
   if (!ai.reply) {
-    log.warn({ phone, type, event: "bot.ai_empty_reply" }, "AI returned empty reply, using fallback");
+    log.warn({ phone, type: _type, event: "bot.ai_empty_reply" }, "AI returned empty reply, using fallback");
   }
 
   await sendMessage(phone, textMessage(ai.reply ?? "Te respondo en breve."), ctx);

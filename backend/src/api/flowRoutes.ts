@@ -46,6 +46,7 @@ const FlowSchema = z.object({
   keywords: z.array(z.string()),
   no_match_behavior: z.enum(["trigger", "ignore"]),
   system_prompt: z.string().nullable().optional(),
+  message_overrides: z.record(z.string(), z.unknown()).nullable().optional(),
   is_active: z.boolean(),
   updated_at: z.string().nullable().optional(),
   steps: z.array(FlowStepSchema).optional(),
@@ -69,6 +70,7 @@ const UpsertFlowBodySchema = z.object({
   noMatchBehavior: z.enum(["trigger", "ignore"]).default("trigger"),
   systemPrompt: z.string().nullable().optional(),
   isActive: z.boolean().default(true),
+  messageOverrides: z.record(z.string(), z.string()).optional(),
   steps: z
     .array(
       z.object({
@@ -111,7 +113,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       const { data, error } = await supabase
         .from("flows")
         .select(
-          `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, is_active, updated_at,
+          `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, message_overrides, is_active, updated_at,
            steps:flow_steps(id, flow_id, organization_id, position, delay_seconds, label, trigger_keywords,
              messages:flow_step_messages(id, step_id, organization_id, position, message_type, text_content, media_url, filename, caption))`,
         )
@@ -140,7 +142,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       const { data, error } = await supabase
         .from("flows")
         .select(
-          `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, is_active, updated_at,
+          `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, message_overrides, is_active, updated_at,
            steps:flow_steps(id, flow_id, organization_id, position, delay_seconds, label, trigger_keywords,
              messages:flow_step_messages(id, step_id, organization_id, position, message_type, text_content, media_url, filename, caption))`,
         )
@@ -180,7 +182,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       const { data, error } = await supabase
         .from("flows")
         .select(
-          `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, is_active, updated_at,
+          `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, message_overrides, is_active, updated_at,
            steps:flow_steps(id, flow_id, organization_id, position, delay_seconds, label, trigger_keywords,
              messages:flow_step_messages(id, step_id, organization_id, position, message_type, text_content, media_url, filename, caption))`,
         )

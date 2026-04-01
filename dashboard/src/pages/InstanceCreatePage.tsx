@@ -26,8 +26,12 @@ function Field({
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline gap-1.5">
         <Label className="text-xs font-semibold">{label}</Label>
-        {required && <span className="text-[10px] text-destructive">Requerido</span>}
-        {optional && <span className="text-[10px] text-muted-foreground">(opcional)</span>}
+        {required && (
+          <span className="text-[10px] text-destructive">Requerido</span>
+        )}
+        {optional && (
+          <span className="text-[10px] text-muted-foreground">(opcional)</span>
+        )}
       </div>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -48,7 +52,9 @@ export function InstanceCreatePage() {
 
   const submit = () => {
     if (!label.trim() || !phoneNumberId.trim() || !metaToken.trim()) {
-      toast.error("Nombre, Phone Number ID y Token de acceso son obligatorios.");
+      toast.error(
+        "Nombre, Phone Number ID y Token de acceso son obligatorios."
+      );
       return;
     }
     createInstance.mutate(
@@ -65,8 +71,7 @@ export function InstanceCreatePage() {
           toast.success("Número agregado correctamente.");
           navigate("/instances");
         },
-        onError: (e) =>
-          toast.error(`Error: ${(e as Error).message}`),
+        onError: (e) => toast.error(`Error: ${(e as Error).message}`),
       }
     );
   };
@@ -86,8 +91,11 @@ export function InstanceCreatePage() {
         <h2 className="text-2xl font-semibold">Agregar número de WhatsApp</h2>
         <p className="mt-1 max-w-xl text-sm text-muted-foreground">
           Completá los datos que encontrás en{" "}
-          <span className="font-medium text-foreground">Meta for Developers</span> dentro
-          de tu aplicación. Podés dejar los campos opcionales para después.
+          <span className="font-medium text-foreground">
+            Meta for Developers
+          </span>{" "}
+          dentro de tu aplicación. Podés dejar los campos opcionales para
+          después.
         </p>
       </div>
 
@@ -129,7 +137,8 @@ export function InstanceCreatePage() {
               Los encontrás en{" "}
               <span className="font-medium text-foreground">
                 Meta for Developers → tu app → WhatsApp → API Setup
-              </span>.
+              </span>
+              .
             </p>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">

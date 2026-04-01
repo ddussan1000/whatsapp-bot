@@ -6,9 +6,11 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   LabelList,
   Pie,
   PieChart,
+  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -44,6 +46,7 @@ import {
   TableRow,
 } from "../components/ui/table";
 import {
+  useAdReferralsQuery,
   useFlowsV2Query,
   useInstancesQuery,
   useReportsQuery,
@@ -65,6 +68,22 @@ function money(value: number) {
     maximumFractionDigits: 0,
   });
 }
+function pct(value: number) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+const AD_BAR_COLORS = [
+  "#8b5cf6",
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#06b6d4",
+  "#ec4899",
+  "#14b8a6",
+  "#f97316",
+  "#6366f1",
+];
 
 export function ReportsPage() {
   const now = new Date();
@@ -93,8 +112,19 @@ export function ReportsPage() {
     [flowId, fromDate, granularity, instanceId, page, toDate]
   );
 
+  const adQueryParams = useMemo(
+    () => ({
+      from: toIsoStart(fromDate),
+      to: toIsoEnd(toDate),
+      flowId: flowId === "all" ? undefined : [flowId],
+    }),
+    [flowId, fromDate, toDate]
+  );
+
   const { data, isLoading, isFetching, isError, refetch } =
     useReportsQuery(queryParams);
+  const { data: adData, isLoading: adLoading } =
+    useAdReferralsQuery(adQueryParams);
   const { data: instances = [] } = useInstancesQuery();
   const { data: flows = [] } = useFlowsV2Query();
 
@@ -144,20 +174,27 @@ export function ReportsPage() {
     toast.success("CSV exportado");
   };
 
+  const adItems = adData?.items ?? [];
+  const adTotals = adData?.totals;
+  const adChartData = adItems.slice(0, 10).map((item) => ({
+    name: item.headline || item.sourceId || "Sin ID",
+    clicks: item.clicks,
+    leads: item.uniqueLeads,
+    conversions: item.conversions,
+  }));
+
   return (
     <section className="space-y-4">
       <div className="page-header">
         <h2>Reportes</h2>
-        <p className="muted">
-          Ventas y conversiones por instancia, flow y fecha
-        </p>
+        <p className="muted">Ventas, conversiones y rendimiento de anuncios</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
           <CardDescription>
-            Refina el análisis por periodo, WhatsApp y flow
+            Refina el analisis por periodo, WhatsApp y flow
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-6">
@@ -284,8 +321,8 @@ export function ReportsPage() {
                 value: kpis.conversationsCount.toLocaleString("es-CO"),
               },
               {
-                label: "Conversión",
-                value: `${(kpis.conversionRate * 100).toFixed(1)}%`,
+                label: "Conversion",
+                value: pct(kpis.conversionRate),
               },
             ].map((kpi) => (
               <Card key={kpi.label}>
@@ -399,7 +436,7 @@ export function ReportsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Distribución por instancia</CardTitle>
+            <CardTitle>Distribucion por instancia</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -426,17 +463,205 @@ export function ReportsPage() {
         </Card>
       </div>
 
+      {/* ── Ad Performance Section ──────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Rendimiento de anuncios</CardTitle>
+          <CardDescription>
+            Metricas de anuncios Click-to-WhatsApp (CTWA) en el periodo
+            seleccionado
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {adLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : adTotals && adTotals.clicks > 0 ? (
+            <>
+              <div className="grid gap-3 md:grid-cols-5">
+                {[
+                  {
+                    label: "Clics totales",
+                    value: adTotals.clicks.toLocaleString("es-CO"),
+                  },
+                  {
+                    label: "Leads unicos",
+                    value: adTotals.uniqueLeads.toLocaleString("es-CO"),
+                  },
+                  {
+                    label: "Conversiones",
+                    value: adTotals.conversions.toLocaleString("es-CO"),
+                  },
+                  { label: "Ingresos ads", value: money(adTotals.revenue) },
+                  {
+                    label: "Tasa conversion",
+                    value: pct(adTotals.conversionRate),
+                  },
+                ].map((kpi) => (
+                  <div key={kpi.label} className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">{kpi.label}</p>
+                    <p className="text-lg font-semibold">{kpi.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-2">
+                <Card className="border-0 shadow-none">
+                  <CardHeader className="pb-2 px-0">
+                    <CardTitle className="text-base">
+                      Comparativa por anuncio
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-0">
+                    <ChartContainer
+                      config={{
+                        clicks: { label: "Clics", color: "#3b82f6" },
+                        leads: { label: "Leads", color: "#22c55e" },
+                        conversions: {
+                          label: "Conversiones",
+                          color: "#f59e0b",
+                        },
+                      }}
+                      className="h-64 w-full"
+                    >
+                      <BarChart data={adChartData}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="name" hide />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Bar
+                          dataKey="clicks"
+                          fill="var(--color-clicks)"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="leads"
+                          fill="var(--color-leads)"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="conversions"
+                          fill="var(--color-conversions)"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-none">
+                  <CardHeader className="pb-2 px-0">
+                    <CardTitle className="text-base">
+                      Distribucion de clics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-0">
+                    <ChartContainer
+                      config={{ clicks: { label: "Clics", color: "#8b5cf6" } }}
+                      className="h-64 w-full"
+                    >
+                      <PieChart>
+                        <Pie
+                          data={adChartData}
+                          dataKey="clicks"
+                          nameKey="name"
+                          outerRadius={90}
+                          label={({ name, percent }) =>
+                            `${name.slice(0, 12)}${name.length > 12 ? "..." : ""} ${(percent * 100).toFixed(0)}%`
+                          }
+                          labelLine={false}
+                        >
+                          {adChartData.map((_, i) => (
+                            <Cell
+                              key={i}
+                              fill={AD_BAR_COLORS[i % AD_BAR_COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) =>
+                            value.toLocaleString("es-CO")
+                          }
+                        />
+                      </PieChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Anuncio</TableHead>
+                    <TableHead>ID fuente</TableHead>
+                    <TableHead className="text-right">Clics</TableHead>
+                    <TableHead className="text-right">Leads</TableHead>
+                    <TableHead className="text-right">Conversiones</TableHead>
+                    <TableHead className="text-right">Ingresos</TableHead>
+                    <TableHead className="text-right">Conversion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {adItems.map((item, idx) => (
+                    <TableRow key={item.sourceId ?? idx}>
+                      <TableCell className="font-medium max-w-[200px] truncate">
+                        {item.headline || "-"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">
+                        {item.sourceId || "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.clicks.toLocaleString("es-CO")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.uniqueLeads.toLocaleString("es-CO")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.conversions.toLocaleString("es-CO")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {money(item.revenue)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {pct(item.conversionRate)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {adItems.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-center text-muted-foreground"
+                      >
+                        No hay datos de anuncios para este periodo.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No se han registrado clics de anuncios CTWA en este periodo.
+              Cuando los usuarios lleguen desde anuncios de Click-to-WhatsApp,
+              las metricas apareceran aqui.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Sales Detail Table ─────────────────────────────────────────── */}
       <Card>
         <CardHeader>
           <CardTitle>Detalle de ventas</CardTitle>
-          <CardDescription>Dataset filtrado con paginación</CardDescription>
+          <CardDescription>Dataset filtrado con paginacion</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Fecha</TableHead>
-                <TableHead>Teléfono</TableHead>
+                <TableHead>Telefono</TableHead>
                 <TableHead>Flow</TableHead>
                 <TableHead>Instancia</TableHead>
                 <TableHead>Estado</TableHead>

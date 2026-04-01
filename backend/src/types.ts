@@ -1,25 +1,26 @@
+export type WhatsAppReferral = {
+  ctwa_clid?: string;
+  source_id?: string;
+  source_type?: string;
+  source_url?: string;
+  headline?: string;
+  body?: string;
+  image?: { id?: string };
+  video?: { id?: string };
+};
+
 export type WhatsAppTextMessage = {
   from: string;
   type: "text";
   text?: { body?: string };
-  referral?: {
-    ctwa_clid?: string;
-    source_id?: string;
-    source_type?: string;
-    source_url?: string;
-  };
+  referral?: WhatsAppReferral;
 };
 
 export type WhatsAppImageMessage = {
   from: string;
   type: "image";
   image?: { id?: string; mime_type?: string };
-  referral?: {
-    ctwa_clid?: string;
-    source_id?: string;
-    source_type?: string;
-    source_url?: string;
-  };
+  referral?: WhatsAppReferral;
 };
 
 export type WhatsAppInteractiveMessage = {
@@ -30,12 +31,7 @@ export type WhatsAppInteractiveMessage = {
     button_reply?: { id?: string; title?: string };
     list_reply?: { id?: string; title?: string };
   };
-  referral?: {
-    ctwa_clid?: string;
-    source_id?: string;
-    source_type?: string;
-    source_url?: string;
-  };
+  referral?: WhatsAppReferral;
 };
 
 export type WhatsAppMessage =

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import type {
+  AdReferralQueryParams,
   CreateCampaignBody,
   CreateFlowBody,
   CreateFlowDefinitionBody,
@@ -39,6 +40,13 @@ export function useReportsQuery(params: ReportsQueryParams) {
   return useQuery({
     queryKey: ["stats", "reports", params],
     queryFn: () => api.getReports(params),
+  });
+}
+
+export function useAdReferralsQuery(params?: AdReferralQueryParams) {
+  return useQuery({
+    queryKey: ["stats", "ad-referrals", params],
+    queryFn: () => api.getAdReferrals(params),
   });
 }
 

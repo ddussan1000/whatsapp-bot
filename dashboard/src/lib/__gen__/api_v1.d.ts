@@ -457,6 +457,9 @@ export interface paths {
               /** @enum {string} */
               no_match_behavior: "trigger" | "ignore";
               system_prompt?: string | null;
+              message_overrides?: {
+                [key: string]: unknown;
+              } | null;
               is_active: boolean;
               updated_at?: string | null;
               steps?: {
@@ -541,6 +544,9 @@ export interface paths {
               /** @enum {string} */
               no_match_behavior: "trigger" | "ignore";
               system_prompt?: string | null;
+              message_overrides?: {
+                [key: string]: unknown;
+              } | null;
               is_active: boolean;
               updated_at?: string | null;
               steps?: {
@@ -671,6 +677,9 @@ export interface paths {
             systemPrompt?: string | null;
             /** @default true */
             isActive?: boolean;
+            messageOverrides?: {
+              [key: string]: string;
+            };
             /** @default [] */
             steps?: {
               id?: string;
@@ -710,6 +719,9 @@ export interface paths {
               /** @enum {string} */
               no_match_behavior: "trigger" | "ignore";
               system_prompt?: string | null;
+              message_overrides?: {
+                [key: string]: unknown;
+              } | null;
               is_active: boolean;
               updated_at?: string | null;
               steps?: {
@@ -1132,6 +1144,77 @@ export interface paths {
                 page: number;
                 pageSize: number;
                 total: number;
+              };
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stats/ad-referrals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          from?: string;
+          to?: string;
+          /** @description CSV of flow IDs */
+          flowId?: string;
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Ad referral stats */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              items: {
+                sourceId: string | null;
+                headline: string | null;
+                clicks: number;
+                uniqueLeads: number;
+                conversions: number;
+                revenue: number;
+                conversionRate: number;
+              }[];
+              totals: {
+                clicks: number;
+                uniqueLeads: number;
+                conversions: number;
+                revenue: number;
+                conversionRate: number;
               };
             };
           };

@@ -147,7 +147,16 @@ const TEMPLATES: FlowTemplate[] = [
     draft: {
       name: "Consulta de precios",
       triggerPhrase: "precio",
-      keywords: ["precio", "costo", "cuánto", "cuanto", "cotización", "cotizacion", "vale", "valor"],
+      keywords: [
+        "precio",
+        "costo",
+        "cuánto",
+        "cuanto",
+        "cotización",
+        "cotizacion",
+        "vale",
+        "valor",
+      ],
       noMatchBehavior: "trigger",
       systemPrompt:
         "Eres un asesor de ventas especializado en precios. Proporciona información clara sobre los precios disponibles y ofrece alternativas según el presupuesto del cliente.",
@@ -193,7 +202,15 @@ const TEMPLATES: FlowTemplate[] = [
     draft: {
       name: "Soporte técnico",
       triggerPhrase: "ayuda",
-      keywords: ["ayuda", "problema", "error", "falla", "no funciona", "soporte", "help"],
+      keywords: [
+        "ayuda",
+        "problema",
+        "error",
+        "falla",
+        "no funciona",
+        "soporte",
+        "help",
+      ],
       noMatchBehavior: "trigger",
       systemPrompt:
         "Eres un agente de soporte técnico. Escucha el problema del cliente, pide información específica si la necesitas (modelo, versión, síntomas) y proporciona pasos claros para resolver el inconveniente.",
@@ -239,7 +256,15 @@ const TEMPLATES: FlowTemplate[] = [
     draft: {
       name: "Seguimiento post-venta",
       triggerPhrase: "compré",
-      keywords: ["compré", "compre", "pagué", "pague", "pedido", "compra", "pago"],
+      keywords: [
+        "compré",
+        "compre",
+        "pagué",
+        "pague",
+        "pedido",
+        "compra",
+        "pago",
+      ],
       noMatchBehavior: "ignore",
       systemPrompt:
         "Eres un asistente post-venta. Tu objetivo es asegurar que el cliente tenga todo lo que necesita después de su compra y recoger su experiencia.",
@@ -344,7 +369,15 @@ const TEMPLATES: FlowTemplate[] = [
     draft: {
       name: "Agendamiento de cita",
       triggerPhrase: "cita",
-      keywords: ["cita", "reunión", "reunion", "agendar", "turno", "appointment", "reserva"],
+      keywords: [
+        "cita",
+        "reunión",
+        "reunion",
+        "agendar",
+        "turno",
+        "appointment",
+        "reserva",
+      ],
       noMatchBehavior: "trigger",
       systemPrompt:
         "Eres un asistente de agendamiento. Recoge el nombre del cliente, la fecha y hora preferida, y confirma la disponibilidad. Sé claro con las instrucciones.",
@@ -381,7 +414,10 @@ const TEMPLATES: FlowTemplate[] = [
   },
 ];
 
-const CATEGORIES = ["Todos", ...Array.from(new Set(TEMPLATES.map((t) => t.category)))];
+const CATEGORIES = [
+  "Todos",
+  ...Array.from(new Set(TEMPLATES.map((t) => t.category))),
+];
 
 // ── Step preview ──────────────────────────────────────────────────────────
 
@@ -408,7 +444,9 @@ function StepPreview({ steps }: { steps: TemplateStepDraft[] }) {
             <span className="text-muted-foreground">P{i + 1}</span>
             {step.messages.map((m, j) => {
               const Icon = MSG_ICONS[m.messageType];
-              return <Icon key={j} size={10} className="text-muted-foreground" />;
+              return (
+                <Icon key={j} size={10} className="text-muted-foreground" />
+              );
             })}
           </span>
         </div>
@@ -472,7 +510,9 @@ function TemplateCard({
           className="flex items-center gap-1 self-start text-xs text-muted-foreground hover:text-foreground"
         >
           {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          {expanded ? "Ocultar pasos" : `Ver ${template.draft.steps.length} pasos`}
+          {expanded
+            ? "Ocultar pasos"
+            : `Ver ${template.draft.steps.length} pasos`}
         </button>
 
         {expanded && (
@@ -497,7 +537,10 @@ function TemplateCard({
                       const MIcon = MSG_ICONS[m.messageType];
                       return (
                         <div key={j} className="flex items-start gap-1.5">
-                          <MIcon size={11} className="mt-0.5 shrink-0 text-muted-foreground" />
+                          <MIcon
+                            size={11}
+                            className="mt-0.5 shrink-0 text-muted-foreground"
+                          />
                           <p className="text-xs text-muted-foreground line-clamp-2">
                             {m.textContent || `[${m.messageType}]`}
                           </p>
@@ -557,11 +600,16 @@ export function TemplatesPage() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Plantillas</h2>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Elegí una plantilla y el editor se abre con todo listo. Solo
-            cambiás los textos por los tuyos y guardás.
+            Elegí una plantilla y el editor se abre con todo listo. Solo cambiás
+            los textos por los tuyos y guardás.
           </p>
         </div>
-        <Button variant="outline" size="sm" className="shrink-0 gap-2" onClick={startBlank}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 gap-2"
+          onClick={startBlank}
+        >
           <Plus size={14} />
           Flow en blanco
         </Button>
@@ -590,7 +638,11 @@ export function TemplatesPage() {
       {/* Templates grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((template) => (
-          <TemplateCard key={template.id} template={template} onUse={useTemplate} />
+          <TemplateCard
+            key={template.id}
+            template={template}
+            onUse={useTemplate}
+          />
         ))}
       </div>
     </div>

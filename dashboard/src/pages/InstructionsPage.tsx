@@ -89,7 +89,8 @@ const MODULES: Module[] = [
     name: "Resumen",
     nav: "Resumen",
     icon: LayoutDashboard,
-    description: "Lo primero que ves al entrar: cuántas conversaciones hubo hoy, mensajes recibidos y si el bot está funcionando.",
+    description:
+      "Lo primero que ves al entrar: cuántas conversaciones hubo hoy, mensajes recibidos y si el bot está funcionando.",
     details:
       "No requiere ninguna configuración. Solo entrás y revisás. Si el bot tuvo actividad, lo vas a ver acá.",
   },
@@ -97,7 +98,8 @@ const MODULES: Module[] = [
     name: "Conversaciones",
     nav: "Conversaciones",
     icon: MessagesSquare,
-    description: "Todos los chats que tuvieron tus clientes con el bot, en un solo lugar.",
+    description:
+      "Todos los chats que tuvieron tus clientes con el bot, en un solo lugar.",
     details:
       "Elegís una conversación de la lista y ves todo lo que se habló. Muy útil para revisar cómo está respondiendo el bot o para hacer un seguimiento puntual a mano.",
     tip: "Si no ves conversaciones, revisá que el número de WhatsApp tenga un flow activo asignado.",
@@ -106,7 +108,8 @@ const MODULES: Module[] = [
     name: "Pagos",
     nav: "Pagos",
     icon: Receipt,
-    description: "Los pagos que tus clientes enviaron como comprobante y el bot registró automáticamente.",
+    description:
+      "Los pagos que tus clientes enviaron como comprobante y el bot registró automáticamente.",
     details:
       "Podés ver el monto, la fecha y el detalle de cada pago. Sirve para llevar el control sin tener que revisar el celular.",
   },
@@ -114,7 +117,8 @@ const MODULES: Module[] = [
     name: "Reportes",
     nav: "Reportes",
     icon: BarChart3,
-    description: "Gráficos de lo que pasó en un período: conversaciones, mensajes y tendencias.",
+    description:
+      "Gráficos de lo que pasó en un período: conversaciones, mensajes y tendencias.",
     details:
       "Elegís las fechas que querés ver y el panel te muestra cómo evolucionó la actividad. Útil para reuniones de equipo o para entender qué semanas fueron más activas.",
   },
@@ -122,7 +126,8 @@ const MODULES: Module[] = [
     name: "Flows",
     nav: "Flows",
     icon: Workflow,
-    description: "Acá creás y editás los flows: el guion completo que sigue el bot en cada conversación.",
+    description:
+      "Acá creás y editás los flows: el guion completo que sigue el bot en cada conversación.",
     details:
       "Cada flow tiene una palabra de activación (lo que escribe el cliente para iniciar la conversación), una serie de mensajes en orden, y tiempos de espera entre ellos. Podés usar texto, imágenes, documentos o videos. Cuando el flow está listo, lo asignás a tu número de WhatsApp.",
     tip: "Guardá el flow completo cuando esté listo. El botón de guardar está abajo y envía todo junto.",
@@ -131,7 +136,8 @@ const MODULES: Module[] = [
     name: "Plantillas",
     nav: "Plantillas",
     icon: Library,
-    description: "Flows ya armados para los casos más comunes: bienvenida, precios, soporte, post-venta y más.",
+    description:
+      "Flows ya armados para los casos más comunes: bienvenida, precios, soporte, post-venta y más.",
     details:
       "Elegís una, le das un vistazo y hacés click en 'Usar plantilla'. Se abre el editor con todo pre-cargado. Solo cambiás los textos por los tuyos y guardás.",
     tip: "Las plantillas son un punto de partida, no un molde fijo. Podés agregar, quitar o cambiar cualquier cosa antes de guardar.",
@@ -149,7 +155,8 @@ const MODULES: Module[] = [
     name: "CTWA Ads",
     nav: "CTWA Ads",
     icon: Link2,
-    description: "Conectá tus anuncios de Instagram o Facebook con flows distintos según el anuncio.",
+    description:
+      "Conectá tus anuncios de Instagram o Facebook con flows distintos según el anuncio.",
     details:
       "Cuando alguien hace click en un anuncio que abre WhatsApp, podés hacer que el bot arranque con un flow específico para ese anuncio. Así cada campaña tiene su propia bienvenida.",
   },
@@ -157,7 +164,8 @@ const MODULES: Module[] = [
     name: "Equipo",
     nav: "Equipo",
     icon: Building2,
-    description: "El nombre de tu negocio en el sistema y las personas que tienen acceso.",
+    description:
+      "El nombre de tu negocio en el sistema y las personas que tienen acceso.",
     details:
       "Podés invitar a tu equipo por correo y elegir si van a poder hacer cambios o solo consultar. Cada persona entra con su propia cuenta.",
   },
@@ -211,14 +219,18 @@ function FAQItem({ item }: { item: FAQ }) {
       >
         <span className="text-sm font-medium">{item.q}</span>
         {open ? (
-          <ChevronUp size={15} className="mt-0.5 shrink-0 text-muted-foreground" />
+          <ChevronUp
+            size={15}
+            className="mt-0.5 shrink-0 text-muted-foreground"
+          />
         ) : (
-          <ChevronDown size={15} className="mt-0.5 shrink-0 text-muted-foreground" />
+          <ChevronDown
+            size={15}
+            className="mt-0.5 shrink-0 text-muted-foreground"
+          />
         )}
       </button>
-      {open && (
-        <p className="pb-4 text-sm text-muted-foreground">{item.a}</p>
-      )}
+      {open && <p className="pb-4 text-sm text-muted-foreground">{item.a}</p>}
     </div>
   );
 }
@@ -230,9 +242,12 @@ export function InstructionsPage() {
     <div className="flex flex-col gap-8 p-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Guía de inicio</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">
+          Guía de inicio
+        </h2>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Todo lo que necesitás para empezar a usar el bot y entender qué hace cada sección del panel.
+          Todo lo que necesitás para empezar a usar el bot y entender qué hace
+          cada sección del panel.
         </p>
       </div>
 
@@ -269,7 +284,9 @@ export function InstructionsPage() {
                       Menú: {s.nav}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{s.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {s.description}
+                  </p>
                   {s.tip && (
                     <p className="mt-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Tip: </span>
@@ -287,7 +304,9 @@ export function InstructionsPage() {
 
       {/* How a flow works */}
       <div>
-        <h3 className="mb-1 text-base font-semibold">¿Cómo funciona un flow?</h3>
+        <h3 className="mb-1 text-base font-semibold">
+          ¿Cómo funciona un flow?
+        </h3>
         <p className="mb-4 text-sm text-muted-foreground">
           Un flow es el guion que sigue el bot: qué dice, cuándo y en qué orden.
         </p>
@@ -314,7 +333,10 @@ export function InstructionsPage() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.title} className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+              <div
+                key={item.title}
+                className="flex flex-col gap-2 rounded-xl border bg-card p-4"
+              >
                 <Icon size={20} className={item.color} />
                 <p className="font-medium text-sm">{item.title}</p>
                 <p className="text-xs text-muted-foreground">{item.desc}</p>
@@ -328,7 +350,9 @@ export function InstructionsPage() {
 
       {/* Modules reference */}
       <div>
-        <h3 className="mb-4 text-base font-semibold">¿Para qué sirve cada sección?</h3>
+        <h3 className="mb-4 text-base font-semibold">
+          ¿Para qué sirve cada sección?
+        </h3>
         <div className="grid gap-4 md:grid-cols-2">
           {MODULES.map((mod) => {
             const Icon = mod.icon;
@@ -344,7 +368,9 @@ export function InstructionsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2 text-sm">
-                  <p className="font-medium text-foreground text-xs">{mod.description}</p>
+                  <p className="font-medium text-foreground text-xs">
+                    {mod.description}
+                  </p>
                   <p className="text-xs text-muted-foreground">{mod.details}</p>
                   {mod.tip && (
                     <p className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
@@ -378,7 +404,9 @@ export function InstructionsPage() {
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-emerald-500" />
-            <CardTitle className="text-sm">Resumen rápido: qué hacer primero</CardTitle>
+            <CardTitle className="text-sm">
+              Resumen rápido: qué hacer primero
+            </CardTitle>
           </div>
         </CardHeader>
         <CardContent>

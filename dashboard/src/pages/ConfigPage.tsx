@@ -15,7 +15,7 @@ export function ConfigPage() {
       receiptPendingMessage: data?.receiptPendingMessage ?? "",
       receiptRejectedMessage: data?.receiptRejectedMessage ?? "",
     }),
-    [data],
+    [data]
   );
 
   const systemPromptRef = useRef<HTMLTextAreaElement | null>(null);
@@ -28,8 +28,10 @@ export function ConfigPage() {
       await saveMutation.mutateAsync({
         systemPrompt: systemPromptRef.current?.value ?? defaults.systemPrompt,
         keywords: keywordsRef.current?.value ?? defaults.keywords,
-        receiptPendingMessage: pendingRef.current?.value ?? defaults.receiptPendingMessage,
-        receiptRejectedMessage: rejectedRef.current?.value ?? defaults.receiptRejectedMessage,
+        receiptPendingMessage:
+          pendingRef.current?.value ?? defaults.receiptPendingMessage,
+        receiptRejectedMessage:
+          rejectedRef.current?.value ?? defaults.receiptRejectedMessage,
       });
       toast.success("Configuración guardada.");
     } catch {

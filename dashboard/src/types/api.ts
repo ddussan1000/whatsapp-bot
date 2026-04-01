@@ -206,6 +206,7 @@ export type FlowV2 = {
   keywords: string[];
   no_match_behavior: "trigger" | "ignore";
   system_prompt?: string | null;
+  message_overrides?: Record<string, unknown> | null;
   is_active: boolean;
   updated_at?: string | null;
   steps?: FlowStepV2[];
@@ -217,6 +218,7 @@ export type UpsertFlowBody = {
   keywords?: string[];
   noMatchBehavior?: "trigger" | "ignore";
   systemPrompt?: string | null;
+  messageOverrides?: Record<string, string>;
   isActive?: boolean;
   steps: Array<{
     id?: string;
@@ -430,3 +432,32 @@ export type CreateFlowStepMessageBody = {
 export type UpdateFlowStepMessageBody = Partial<
   Omit<CreateFlowStepMessageBody, "stepId">
 >;
+
+// ── Ad Referral Stats ─────────────────────────────────────────────────────
+
+export type AdReferralItem = {
+  sourceId: string | null;
+  headline: string | null;
+  clicks: number;
+  uniqueLeads: number;
+  conversions: number;
+  revenue: number;
+  conversionRate: number;
+};
+
+export type AdReferralStats = {
+  items: AdReferralItem[];
+  totals: {
+    clicks: number;
+    uniqueLeads: number;
+    conversions: number;
+    revenue: number;
+    conversionRate: number;
+  };
+};
+
+export type AdReferralQueryParams = {
+  from?: string;
+  to?: string;
+  flowId?: string[];
+};

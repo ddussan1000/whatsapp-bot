@@ -1,31 +1,34 @@
 import sharp from "sharp";
 import Tesseract from "tesseract.js";
 
+const RECEIPT_KEYWORDS = [
+  "comprobante", "pago", "transaccion", "transferencia", "recibo",
+  "deposito", "consignacion", "nequi", "daviplata", "bancolombia",
+  "davivienda", "banco", "bbva", "scotiabank", "colpatria", "popular",
+  "exitoso", "exitosa", "aprobado", "aprobada", "confirmado", "confirmada",
+  "valor", "monto", "total", "referencia", "ref", "numero de operacion",
+  "clave", "cta", "cuenta", "debito", "credito", "ahorro", "corriente",
+  "pse", "efecty", "giro", "remesa", "corresponsal", "transf", "movimiento",
+  "compra", "abono", "retiro", "ingreso", "egreso", "saldo", "destinatario",
+  "beneficiario", "ordenante", "cus", "aprobacion", "voucher", "recaudo",
+  "billetera", "billetera digital", "codigo de barras", "codigo qr",
+  "autorizacion", "entidad", "sucursal", "cajero", "receipt", "payment",
+  "transaction", "transfer", "approved", "amount",
+];
+
 const monthMap: Record<string, number> = {
-  enero: 1,
-  ene: 1,
-  febrero: 2,
-  feb: 2,
-  marzo: 3,
-  mar: 3,
-  abril: 4,
-  abr: 4,
+  enero: 1, ene: 1,
+  febrero: 2, feb: 2,
+  marzo: 3, mar: 3,
+  abril: 4, abr: 4,
   mayo: 5,
-  junio: 6,
-  jun: 6,
-  julio: 7,
-  jul: 7,
-  agosto: 8,
-  ago: 8,
-  septiembre: 9,
-  setiembre: 9,
-  sep: 9,
-  octubre: 10,
-  oct: 10,
-  noviembre: 11,
-  nov: 11,
-  diciembre: 12,
-  dic: 12,
+  junio: 6, jun: 6,
+  julio: 7, jul: 7,
+  agosto: 8, ago: 8,
+  septiembre: 9, setiembre: 9, sep: 9,
+  octubre: 10, oct: 10,
+  noviembre: 11, nov: 11,
+  diciembre: 12, dic: 12,
 };
 
 function normalizeText(raw: string) {
@@ -56,7 +59,6 @@ function parseTime(timeRaw?: string, meridiemRaw?: string) {
 function parseReceiptDate(text: string): Date | null {
   const normalized = normalizeText(text);
 
-  // Caso 1: formato numerico, ej. 30/03/2026 o 30-03-26
   const numeric = normalized.match(
     /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})(?:\s*[-,]?\s*(\d{1,2}:\d{2})\s*(am|pm)?)?/,
   );
@@ -68,7 +70,6 @@ function parseReceiptDate(text: string): Date | null {
     return new Date(year, month - 1, day, hours, minutes, 0, 0);
   }
 
-  // Caso 1.1: formato ISO parcial, ej. 2026-03-30 10:32
   const isoLike = normalized.match(
     /(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})(?:\s*[-,]?\s*(\d{1,2}:\d{2})\s*(am|pm)?)?/,
   );
@@ -80,9 +81,6 @@ function parseReceiptDate(text: string): Date | null {
     return new Date(year, month - 1, day, hours, minutes, 0, 0);
   }
 
-  // Caso 2: formato texto, ej:
-  // "30 de marzo del 2026 - 11:05 am"
-  // "30 marzo 2026"
   const literalPatterns = [
     /(\d{1,2})\s+de\s+([a-z]+)\s+d(?:e|el)\s+(\d{4})(?:\s*[-,]?\s*(\d{1,2}:\d{2})\s*(am|pm)?)?/,
     /(\d{1,2})\s+([a-z]+)\s+(\d{4})(?:\s*[-,]?\s*(\d{1,2}:\d{2})\s*(am|pm)?)?/,
@@ -102,11 +100,25 @@ function parseReceiptDate(text: string): Date | null {
   return null;
 }
 
-export async function extractPaymentData(imgBuffer: Buffer) {
+export async function runOcr(imgBuffer: Buffer): Promise<string> {
   const processed = await sharp(imgBuffer).grayscale().normalize().sharpen().toBuffer();
   const { data } = await Tesseract.recognize(processed, "spa");
-  const text = data.text ?? "";
+  return data.text ?? "";
+}
 
+export function isLikelyReceipt(ocrText: string): boolean {
+  const normalized = normalizeText(ocrText);
+  let matches = 0;
+  for (const kw of RECEIPT_KEYWORDS) {
+    if (normalized.includes(kw)) {
+      matches++;
+      if (matches >= 2) return true;
+    }
+  }
+  return false;
+}
+
+export function extractPaymentFields(ocrText: string) {
   const amountPatterns = [
     /(?:valor|monto|total|por)[:\s]*\$?\s*([\d.,]+)/i,
     /\$\s*([\d]{1,3}(?:[.,]\d{3})+)/,
@@ -115,15 +127,21 @@ export async function extractPaymentData(imgBuffer: Buffer) {
 
   let amount: number | null = null;
   for (const p of amountPatterns) {
-    const match = text.match(p);
+    const match = ocrText.match(p);
     if (match?.[1]) {
       amount = Number.parseFloat(match[1].replace(/\./g, "").replace(",", "."));
       break;
     }
   }
 
-  const receiptDate = parseReceiptDate(text);
+  const receiptDate = parseReceiptDate(ocrText);
   const hoursDiff = receiptDate ? (Date.now() - receiptDate.getTime()) / 3600000 : null;
   const isWithin24Hours = receiptDate ? hoursDiff !== null && hoursDiff <= 24 && hoursDiff >= 0 : false;
-  return { text, amount, receiptDate, isWithin24Hours };
+  return { text: ocrText, amount, receiptDate, isWithin24Hours };
+}
+
+/** @deprecated Use runOcr + extractPaymentFields instead */
+export async function extractPaymentData(imgBuffer: Buffer) {
+  const text = await runOcr(imgBuffer);
+  return extractPaymentFields(text);
 }

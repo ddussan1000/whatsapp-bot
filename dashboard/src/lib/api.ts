@@ -1,4 +1,6 @@
 import type {
+  AdReferralQueryParams,
+  AdReferralStats,
   BotConfig,
   BotHealth,
   Campaign,
@@ -108,9 +110,7 @@ async function fetchSessionResolved(): Promise<SessionInfo> {
   if (info.isPlatformAdmin) {
     const orgs = await request<AdminOrganization[]>("/api/admin/organizations");
     const existing = getActiveOrgId();
-    const stillValid = Boolean(
-      existing && orgs.some((o) => o.id === existing)
-    );
+    const stillValid = Boolean(existing && orgs.some((o) => o.id === existing));
     if (!stillValid && orgs.length > 0) {
       setActiveOrgId(orgs[0].id);
     }
@@ -488,6 +488,15 @@ export const api = {
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
+
+  getAdReferrals: (params?: AdReferralQueryParams) => {
+    const q = new URLSearchParams();
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
+    if (params?.flowId && params.flowId.length > 0)
+      q.set("flowId", params.flowId.join(","));
+    return request<AdReferralStats>(`/api/stats/ad-referrals?${q.toString()}`);
+  },
 
   // ── Bot health ───────────────────────────────────────────────────────────
   getBotHealth: () => request<BotHealth>("/api/bot/health"),
