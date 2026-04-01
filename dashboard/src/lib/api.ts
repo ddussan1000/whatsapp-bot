@@ -55,14 +55,33 @@ import { supabase } from "./supabase";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const DASHBOARD_TOKEN = import.meta.env.VITE_DASHBOARD_TOKEN;
-const ACTIVE_ORG_KEY = "active_organization_id";
+
+/** Clave en localStorage para enviar X-Organization-Id (admins de plataforma y contexto multi-org). */
+export const ACTIVE_ORG_STORAGE_KEY = "active_organization_id";
+
+export function getActiveOrgId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_ORG_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setActiveOrgId(id: string | null): void {
+  try {
+    if (id) localStorage.setItem(ACTIVE_ORG_STORAGE_KEY, id);
+    else localStorage.removeItem(ACTIVE_ORG_STORAGE_KEY);
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
 
 async function buildHeaders(
   contentType = true
 ): Promise<Record<string, string>> {
   const session = await supabase?.auth.getSession();
   const accessToken = session?.data.session?.access_token;
-  const orgId = localStorage.getItem(ACTIVE_ORG_KEY);
+  const orgId = getActiveOrgId();
   return {
     Authorization: `Bearer ${accessToken ?? DASHBOARD_TOKEN}`,
     ...(contentType ? { "Content-Type": "application/json" } : {}),
@@ -77,6 +96,29 @@ async function request<T>(path: string): Promise<T> {
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   return (await res.json()) as T;
+}
+
+/** Carga sesión y asegura org activa en localStorage (necesario para admins de plataforma). */
+async function fetchSessionResolved(): Promise<SessionInfo> {
+  let info = await request<SessionInfo>("/api/auth/session");
+  if (info.organizationId) {
+    setActiveOrgId(info.organizationId);
+    return info;
+  }
+  if (info.isPlatformAdmin) {
+    const orgs = await request<AdminOrganization[]>("/api/admin/organizations");
+    const existing = getActiveOrgId();
+    const stillValid = Boolean(
+      existing && orgs.some((o) => o.id === existing)
+    );
+    if (!stillValid && orgs.length > 0) {
+      setActiveOrgId(orgs[0].id);
+    }
+    if (getActiveOrgId()) {
+      info = await request<SessionInfo>("/api/auth/session");
+    }
+  }
+  return info;
 }
 
 export const api = {
@@ -190,7 +232,7 @@ export const api = {
         return r.json() as Promise<UpdateBotConfigResponse>;
       })
     ),
-  getSession: () => request<SessionInfo>("/api/auth/session"),
+  getSession: () => fetchSessionResolved(),
   getCurrentOrganization: () => request<OrganizationInfo>("/api/org/current"),
   getInvites: () => request<OrganizationInvite[]>("/api/org/invites"),
   createInvite: (payload: CreateInviteBody) =>

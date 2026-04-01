@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
+import { setActiveOrgId } from "@/lib/api";
 import { useSessionQuery } from "@/lib/hooks";
 
 // ── Nav section ───────────────────────────────────────────────────────────
@@ -168,6 +169,7 @@ export function AppLayout() {
   const confirmSignOut = async () => {
     setSigningOut(true);
     try {
+      setActiveOrgId(null);
       await supabase?.auth.signOut();
       setLogoutOpen(false);
       setMobileOpen(false);

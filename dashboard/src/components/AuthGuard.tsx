@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { api } from "../lib/api";
+import { queryClient } from "../lib/query-client";
 
 export function AuthGuard({ children }: { children: ReactElement }) {
   const [loading, setLoading] = useState(true);
@@ -9,15 +11,37 @@ export function AuthGuard({ children }: { children: ReactElement }) {
 
   useEffect(() => {
     let mounted = true;
-    void supabase?.auth.getSession().then(({ data }) => {
+    void supabase?.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
-      setAuthenticated(Boolean(data.session));
+      const ok = Boolean(data.session);
+      setAuthenticated(ok);
+      if (ok) {
+        try {
+          await queryClient.prefetchQuery({
+            queryKey: ["auth", "session"],
+            queryFn: api.getSession,
+          });
+        } catch {
+          /* backend caído o token inválido */
+        }
+      }
+      if (!mounted) return;
       setLoading(false);
     });
     const { data: listener } =
-      supabase?.auth.onAuthStateChange((_event, session) =>
-        setAuthenticated(Boolean(session))
-      ) ?? {};
+      supabase?.auth.onAuthStateChange(async (_event, session) => {
+        setAuthenticated(Boolean(session));
+        if (session) {
+          try {
+            await queryClient.prefetchQuery({
+              queryKey: ["auth", "session"],
+              queryFn: api.getSession,
+            });
+          } catch {
+            /* ignore */
+          }
+        }
+      }) ?? {};
     return () => {
       mounted = false;
       listener?.subscription.unsubscribe();
