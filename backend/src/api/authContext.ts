@@ -38,6 +38,10 @@ export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function isUuidString(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.trim());
+}
+
 /**
  * Cliente para resolver sesión en el API:
  * - Si existe SUPABASE_SERVICE_ROLE_KEY, usa service role (bypass RLS; adecuado para backend).
@@ -100,6 +104,17 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
         userId: user.id,
         email: user.email ?? null,
         organizationId: requestedOrg,
+        role: "owner",
+        isPlatformAdmin: true,
+      };
+    }
+    // RLS en organizations solo permite ver filas donde el usuario es miembro; un platform admin
+    // puede no aparecer en organization_members y el SELECT devuelve vacío. Confiar en el UUID del header.
+    if (isUuidString(requestedOrg)) {
+      return {
+        userId: user.id,
+        email: user.email ?? null,
+        organizationId: requestedOrg.trim(),
         role: "owner",
         isPlatformAdmin: true,
       };

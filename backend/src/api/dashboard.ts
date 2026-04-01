@@ -175,8 +175,11 @@ dashboardApi.use("/admin/*", async (c, next) => {
 
 dashboardApi.use("/*", async (c, next) => {
   const path = c.req.path;
-  if (path === "/auth/session") return await next();
-  if (path.startsWith("/admin")) return await next();
+  // Con app.route("/api", dashboardApi), c.req.path incluye el prefijo /api (p. ej. /api/auth/session).
+  const isAuthSession = path === "/auth/session" || path.endsWith("/auth/session");
+  const isAdminRoute = path.startsWith("/admin") || path.startsWith("/api/admin");
+  if (isAuthSession) return await next();
+  if (isAdminRoute) return await next();
   const session = getSession(c);
   if (!session.organizationId) {
     if (!Boolean(session.isPlatformAdmin)) {

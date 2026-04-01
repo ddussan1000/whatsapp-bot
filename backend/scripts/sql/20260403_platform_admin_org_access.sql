@@ -1,0 +1,285 @@
+-- Acceso de platform_admins a tenants vía JWT (email), alineado con resolveSession en el API.
+-- Ejecutar en Supabase SQL editor o migración.
+
+begin;
+
+create or replace function public.is_platform_admin_user()
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.platform_admins pa
+    where lower(pa.email) = lower(coalesce((auth.jwt() ->> 'email')::text, ''))
+  );
+$$;
+
+create or replace function public.is_org_member_or_platform_admin(target_org uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select public.is_org_member(target_org) or public.is_platform_admin_user();
+$$;
+
+-- ---------------------------------------------------------------------------
+-- upsert_flow_tree: permitir admins de plataforma sin fila en organization_members
+-- ---------------------------------------------------------------------------
+create or replace function public.upsert_flow_tree(payload jsonb)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_now timestamptz := now();
+  v_flow_id uuid;
+  v_org_id uuid;
+  v_step jsonb;
+  v_msg jsonb;
+  v_step_id uuid;
+  v_message_id uuid;
+  keep_step_ids uuid[] := '{}';
+  keep_message_ids uuid[] := '{}';
+begin
+  if payload is null then
+    raise exception 'payload requerido';
+  end if;
+
+  v_flow_id := nullif(payload->>'id', '')::uuid;
+  v_org_id := nullif(payload->>'organizationId', '')::uuid;
+
+  if v_flow_id is null and v_org_id is null then
+    raise exception 'organizationId requerido para crear flow';
+  end if;
+
+  if v_flow_id is not null then
+    select organization_id into v_org_id from public.flows where id = v_flow_id;
+    if v_org_id is null then
+      raise exception 'flow no encontrado';
+    end if;
+  end if;
+
+  if not public.is_org_member_or_platform_admin(v_org_id) then
+    raise exception 'forbidden';
+  end if;
+
+  if v_flow_id is null then
+    insert into public.flows (
+      organization_id, name, trigger_phrase, trigger_first_word, keywords,
+      no_match_behavior, system_prompt, is_active, created_at, updated_at
+    )
+    values (
+      v_org_id,
+      coalesce(nullif(payload->>'name', ''), 'Flow'),
+      coalesce(nullif(payload->>'triggerPhrase', ''), 'hola'),
+      coalesce(
+        nullif(
+          split_part(
+            regexp_replace(
+              lower(coalesce(nullif(payload->>'triggerPhrase', ''), 'hola')),
+              '[^a-z0-9áéíóúüñ ]',
+              '',
+              'g'
+            ),
+            ' ',
+            1
+          ),
+          ''
+        ),
+        'hola'
+      ),
+      coalesce(
+        (
+          select coalesce(array_agg(lower(trim(x))), '{}'::text[])
+          from jsonb_array_elements_text(coalesce(payload->'keywords', '[]'::jsonb)) t(x)
+          where trim(x) <> ''
+        ),
+        '{}'::text[]
+      ),
+      coalesce(nullif(payload->>'noMatchBehavior', ''), 'trigger'),
+      nullif(payload->>'systemPrompt', ''),
+      coalesce((payload->>'isActive')::boolean, true),
+      v_now,
+      v_now
+    )
+    returning id into v_flow_id;
+  else
+    update public.flows
+    set
+      name = coalesce(nullif(payload->>'name', ''), name),
+      trigger_phrase = coalesce(nullif(payload->>'triggerPhrase', ''), trigger_phrase),
+      trigger_first_word = coalesce(
+        nullif(
+          split_part(
+            regexp_replace(
+              lower(coalesce(nullif(payload->>'triggerPhrase', ''), trigger_phrase)),
+              '[^a-z0-9áéíóúüñ ]',
+              '',
+              'g'
+            ),
+            ' ',
+            1
+          ),
+          ''
+        ),
+        trigger_first_word
+      ),
+      keywords = coalesce(
+        (
+          select coalesce(array_agg(lower(trim(x))), '{}'::text[])
+          from jsonb_array_elements_text(coalesce(payload->'keywords', '[]'::jsonb)) t(x)
+          where trim(x) <> ''
+        ),
+        keywords
+      ),
+      no_match_behavior = coalesce(nullif(payload->>'noMatchBehavior', ''), no_match_behavior),
+      system_prompt = case
+        when payload ? 'systemPrompt' then nullif(payload->>'systemPrompt', '')
+        else system_prompt
+      end,
+      is_active = coalesce((payload->>'isActive')::boolean, is_active),
+      updated_at = v_now
+    where id = v_flow_id
+      and organization_id = v_org_id;
+  end if;
+
+  for v_step in
+    select value from jsonb_array_elements(coalesce(payload->'steps', '[]'::jsonb))
+  loop
+    v_step_id := nullif(v_step->>'id', '')::uuid;
+
+    if v_step_id is null then
+      insert into public.flow_steps (
+        flow_id, organization_id, position, delay_seconds, trigger_keywords, label, created_at, updated_at
+      )
+      values (
+        v_flow_id,
+        v_org_id,
+        coalesce((v_step->>'position')::int, 0),
+        coalesce((v_step->>'delaySeconds')::int, 0),
+        '{}'::text[],
+        nullif(v_step->>'label', ''),
+        v_now,
+        v_now
+      )
+      returning id into v_step_id;
+    else
+      update public.flow_steps
+      set
+        position = coalesce((v_step->>'position')::int, position),
+        delay_seconds = coalesce((v_step->>'delaySeconds')::int, delay_seconds),
+        label = case when v_step ? 'label' then nullif(v_step->>'label', '') else label end,
+        updated_at = v_now
+      where id = v_step_id
+        and flow_id = v_flow_id
+        and organization_id = v_org_id;
+    end if;
+
+    keep_step_ids := array_append(keep_step_ids, v_step_id);
+    keep_message_ids := '{}';
+
+    for v_msg in
+      select value from jsonb_array_elements(coalesce(v_step->'messages', '[]'::jsonb))
+    loop
+      v_message_id := nullif(v_msg->>'id', '')::uuid;
+
+      if v_message_id is null then
+        insert into public.flow_step_messages (
+          step_id, organization_id, position, message_type,
+          text_content, media_url, filename, caption, created_at, updated_at
+        )
+        values (
+          v_step_id,
+          v_org_id,
+          coalesce((v_msg->>'position')::int, 0),
+          coalesce(nullif(v_msg->>'messageType', '')::public.flow_message_type, 'text'::public.flow_message_type),
+          nullif(v_msg->>'textContent', ''),
+          nullif(v_msg->>'mediaUrl', ''),
+          nullif(v_msg->>'filename', ''),
+          nullif(v_msg->>'caption', ''),
+          v_now,
+          v_now
+        )
+        returning id into v_message_id;
+      else
+        update public.flow_step_messages
+        set
+          position = coalesce((v_msg->>'position')::int, position),
+          message_type = coalesce(nullif(v_msg->>'messageType', '')::public.flow_message_type, message_type),
+          text_content = case when v_msg ? 'textContent' then nullif(v_msg->>'textContent', '') else text_content end,
+          media_url = case when v_msg ? 'mediaUrl' then nullif(v_msg->>'mediaUrl', '') else media_url end,
+          filename = case when v_msg ? 'filename' then nullif(v_msg->>'filename', '') else filename end,
+          caption = case when v_msg ? 'caption' then nullif(v_msg->>'caption', '') else caption end,
+          updated_at = v_now
+        where id = v_message_id
+          and step_id = v_step_id
+          and organization_id = v_org_id;
+      end if;
+
+      keep_message_ids := array_append(keep_message_ids, v_message_id);
+    end loop;
+
+    delete from public.flow_step_messages
+    where step_id = v_step_id
+      and organization_id = v_org_id
+      and (array_length(keep_message_ids, 1) is null or id <> all(keep_message_ids));
+  end loop;
+
+  delete from public.flow_steps
+  where flow_id = v_flow_id
+    and organization_id = v_org_id
+    and (array_length(keep_step_ids, 1) is null or id <> all(keep_step_ids));
+
+  update public.flows set updated_at = v_now where id = v_flow_id and organization_id = v_org_id;
+  return v_flow_id;
+end;
+$$;
+
+-- RLS: mismas políticas, expresión ampliada
+drop policy if exists flows_member_all on public.flows;
+create policy flows_member_all on public.flows
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+drop policy if exists flow_steps_member_all on public.flow_steps;
+create policy flow_steps_member_all on public.flow_steps
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+drop policy if exists flow_step_messages_member_all on public.flow_step_messages;
+create policy flow_step_messages_member_all on public.flow_step_messages
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+drop policy if exists flow_referrals_member_all on public.flow_referrals;
+create policy flow_referrals_member_all on public.flow_referrals
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+drop policy if exists wa_instances_member_all on public.whatsapp_instances;
+create policy wa_instances_member_all on public.whatsapp_instances
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+drop policy if exists templates_member_all on public.message_templates;
+create policy templates_member_all on public.message_templates
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+drop policy if exists conversations_member_all on public.conversations;
+create policy conversations_member_all on public.conversations
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+drop policy if exists messages_member_all on public.messages;
+create policy messages_member_all on public.messages
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+drop policy if exists payments_member_all on public.payments;
+create policy payments_member_all on public.payments
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+drop policy if exists scheduled_flow_messages_member_all on public.scheduled_flow_messages;
+create policy scheduled_flow_messages_member_all on public.scheduled_flow_messages
+for all using (public.is_org_member_or_platform_admin(organization_id));
+
+commit;
