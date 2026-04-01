@@ -3,13 +3,18 @@ import { log } from "../logger";
 import { processScheduledMessages } from "../bot/flowEngine";
 
 export function registerScheduledMessagesCron() {
-  // Run every minute to send pending scheduled flow messages
+  let running = false;
+
+  // Run every 10 seconds to respect sub-minute step delays
   const job = new CronJob(
-    "* * * * *",
-    () =>
-      void processScheduledMessages().catch((err) =>
-        log.error({ err }, "processScheduledMessages cron failed"),
-      ),
+    "*/10 * * * * *",
+    () => {
+      if (running) return; // skip if previous execution is still in progress
+      running = true;
+      processScheduledMessages()
+        .catch((err) => log.error({ err }, "processScheduledMessages cron failed"))
+        .finally(() => { running = false; });
+    },
     null,
     true,
     "America/Bogota",
