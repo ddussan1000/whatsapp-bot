@@ -17,6 +17,8 @@ const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().default(""),
   TELEGRAM_CHAT_ID: z.string().default(""),
   DASHBOARD_SECRET: z.string().default(""),
+  /** URL pública del backend (ej. https://xxx.up.railway.app). Opcional; si no se define se usa X-Forwarded-* */
+  PUBLIC_BASE_URL: z.string().default(""),
   STORAGE_MODE: z.enum(["local", "supabase"]).default("local"),
   SUPABASE_STORAGE_BUCKET_RECEIPTS: z.string().default("receipts"),
   SUPABASE_STORAGE_BUCKET_FLOW_MEDIA: z.string().default("flow-media"),

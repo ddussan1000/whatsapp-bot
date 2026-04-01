@@ -8,6 +8,7 @@ import { resolveSession } from "./authContext";
 import { registerAdminRoutes } from "./adminRoutes";
 import { registerFlowRoutes } from "./flowRoutes";
 import { env } from "../config/env";
+import { getPublicOrigin } from "../http/publicOrigin";
 import { uploadOrgFlowMedia } from "../storage/supabaseStorage";
 
 function todayStartIso() {
@@ -571,8 +572,8 @@ dashboardApi.openapi(
     },
   }),
   async (c) => {
-    const reqUrl = new URL(c.req.url);
     const org = orgId(c);
+    const origin = getPublicOrigin(c);
 
     let verifyToken = env.VERIFY_TOKEN || "";
 
@@ -588,7 +589,7 @@ dashboardApi.openapi(
 
     return c.json(
       {
-        webhookUrl: `${reqUrl.origin}/webhook`,
+        webhookUrl: `${origin}/webhook`,
         verifyToken,
       },
       200,
