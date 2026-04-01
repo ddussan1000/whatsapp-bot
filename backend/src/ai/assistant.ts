@@ -14,17 +14,30 @@ type AssistantResult = {
 };
 
 function extractJson(text: string): AssistantResult {
+  // Try markdown code block first (```json ... ```)
+  const mdMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (mdMatch) {
+    try {
+      return JSON.parse(mdMatch[1].trim());
+    } catch {}
+  }
+
+  // Try to extract a JSON object from anywhere in the text
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  const raw = start >= 0 && end > start ? text.slice(start, end + 1) : text;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    // Gemini sometimes wraps JSON in markdown code blocks
-    const mdMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (mdMatch) return JSON.parse(mdMatch[1].trim());
-    throw new Error(`extractJson: no valid JSON found in: ${text.slice(0, 200)}`);
+  if (start >= 0 && end > start) {
+    try {
+      return JSON.parse(text.slice(start, end + 1));
+    } catch {}
   }
+
+  // Model returned plain text — treat it as the reply directly
+  const plain = text.trim();
+  if (plain.length > 0) {
+    return { reply: plain, next_state: null, send_catalog: false };
+  }
+
+  throw new Error(`extractJson: no valid JSON found in: ${text.slice(0, 200)}`);
 }
 
 async function askAnthropic(text: string, systemPrompt: string): Promise<AssistantResult> {
