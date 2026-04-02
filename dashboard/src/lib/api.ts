@@ -163,9 +163,9 @@ export const api = {
   },
   getConversationById: (id: string) =>
     request<Conversation>(`/api/conversations/${id}`),
-  getConversationMessages: (id: string, page = 1, pageSize = 30) =>
+  getConversationMessages: (id: string, page = 1, pageSize = 30, sortDesc = false) =>
     request<Paginated<ChatMessage>>(
-      `/api/conversations/${id}/messages?page=${page}&pageSize=${pageSize}`
+      `/api/conversations/${id}/messages?page=${page}&pageSize=${pageSize}&sortDesc=${sortDesc}`
     ),
   sendConversationMessage: (id: string, payload: SendConversationMessageBody) =>
     buildHeaders(true).then((headers) =>

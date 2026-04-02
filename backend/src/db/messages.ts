@@ -57,6 +57,7 @@ export async function listMessagesByConversation(
   conversationId: string,
   page: number,
   pageSize: number,
+  sortDesc = false,
 ) {
   if (!supabase || !organizationId) return { items: [], total: 0 };
   const from = (page - 1) * pageSize;
@@ -69,7 +70,7 @@ export async function listMessagesByConversation(
     )
     .eq("organization_id", organizationId)
     .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: !sortDesc })
     .range(from, to);
   if (error) throw error;
   return { items: data ?? [], total: count ?? 0 };

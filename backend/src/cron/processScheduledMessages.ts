@@ -7,7 +7,7 @@ export function registerScheduledMessagesCron() {
 
   // Run every 10 seconds to respect sub-minute step delays
   const job = new CronJob(
-    "*/10 * * * * *",
+    "*/5 * * * * *",
     () => {
       if (running) return; // skip if previous execution is still in progress
       running = true;

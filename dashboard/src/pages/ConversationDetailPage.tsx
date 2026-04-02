@@ -1,15 +1,18 @@
 import { Paperclip, Send, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DragEventHandler } from "react";
 import { useParams } from "react-router-dom";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import {
-  useConversationMessagesQuery,
   useConversationQuery,
   useSendConversationMessageMutation,
   useUploadAndSendFileMutation,
 } from "../lib/hooks";
+import { api } from "../lib/api";
+import type { ChatMessage } from "../types/api";
+
+const PAGE_SIZE = 50;
 
 export function ConversationDetailPage() {
   const { id = "" } = useParams();
@@ -17,14 +20,81 @@ export function ConversationDetailPage() {
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatWindowRef = useRef<HTMLDivElement | null>(null);
-  const [page] = useState(1);
-  const [pageSize] = useState(100);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
 
   const { data: conversation } = useConversationQuery(id);
-  const { data, isLoading } = useConversationMessagesQuery(id, page, pageSize);
   const sendMutation = useSendConversationMessageMutation(id);
   const uploadMutation = useUploadAndSendFileMutation(id);
-  const messages = useMemo(() => data?.items ?? [], [data]);
+
+  // Initial load: fetch most recent PAGE_SIZE messages (desc → reverse for display)
+  useEffect(() => {
+    if (!id) return;
+    setInitialLoading(true);
+    setMessages([]);
+    setPage(1);
+    api
+      .getConversationMessages(id, 1, PAGE_SIZE, true)
+      .then((res) => {
+        setMessages([...res.items].reverse());
+        setTotal(res.total);
+      })
+      .finally(() => setInitialLoading(false));
+  }, [id]);
+
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    if (!initialLoading && messages.length > 0) {
+      const el = chatWindowRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+  }, [initialLoading]);
+
+  // Scroll to bottom when new outbound messages arrive (after send)
+  const prevLengthRef = useRef(0);
+  useEffect(() => {
+    if (messages.length > prevLengthRef.current) {
+      const el = chatWindowRef.current;
+      if (el) {
+        const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+        if (isNearBottom) el.scrollTop = el.scrollHeight;
+      }
+    }
+    prevLengthRef.current = messages.length;
+  }, [messages.length]);
+
+  const hasMore = messages.length < total;
+
+  const loadOlderMessages = useCallback(async () => {
+    if (loadingOlder || !hasMore || !id) return;
+    setLoadingOlder(true);
+    const nextPage = page + 1;
+    try {
+      const res = await api.getConversationMessages(id, nextPage, PAGE_SIZE, true);
+      const older = [...res.items].reverse();
+      const el = chatWindowRef.current;
+      const prevScrollHeight = el?.scrollHeight ?? 0;
+      setMessages((prev) => [...older, ...prev]);
+      setPage(nextPage);
+      // Restore scroll position so prepended messages don't jump the view
+      requestAnimationFrame(() => {
+        if (el) el.scrollTop = el.scrollHeight - prevScrollHeight;
+      });
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [id, page, loadingOlder, hasMore]);
+
+  const onScroll = useCallback(() => {
+    const el = chatWindowRef.current;
+    if (!el) return;
+    if (el.scrollTop < 80) void loadOlderMessages();
+  }, [loadOlderMessages]);
+
   const groupedMessages = useMemo(() => {
     const groups: Array<{ day: string; items: typeof messages }> = [];
     for (const msg of messages) {
@@ -46,15 +116,7 @@ export function ConversationDetailPage() {
     return groups;
   }, [messages]);
 
-  useEffect(() => {
-    const el = chatWindowRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [groupedMessages.length, messages.length]);
-
-  // Nota: la ventana de 24h está desactivada actualmente.
   const canSend = true;
-
   const isSending = sendMutation.isPending || uploadMutation.isPending;
 
   const onSend = async () => {
@@ -73,6 +135,14 @@ export function ConversationDetailPage() {
     if (!text.trim()) return;
     await sendMutation.mutateAsync({ type: "text", text });
     setText("");
+    // Refresh to show sent message
+    const res = await api.getConversationMessages(id, 1, PAGE_SIZE, true);
+    setMessages([...res.items].reverse());
+    setTotal(res.total);
+    requestAnimationFrame(() => {
+      const el = chatWindowRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
   };
 
   const onDropFile: DragEventHandler<HTMLDivElement> = (e) => {
@@ -152,10 +222,21 @@ export function ConversationDetailPage() {
         <div
           ref={chatWindowRef}
           className="chat-window"
+          onScroll={onScroll}
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDropFile}
         >
-          {isLoading ? <p className="muted">Cargando mensajes...</p> : null}
+          {loadingOlder && (
+            <p className="muted" style={{ textAlign: "center", padding: "8px 0" }}>
+              Cargando mensajes anteriores...
+            </p>
+          )}
+          {!loadingOlder && hasMore && (
+            <p className="muted" style={{ textAlign: "center", padding: "8px 0", fontSize: "0.75rem" }}>
+              Sube para cargar mensajes anteriores
+            </p>
+          )}
+          {initialLoading ? <p className="muted">Cargando mensajes...</p> : null}
           {groupedMessages.map((group) => (
             <div key={group.day} className="day-group">
               <div className="day-separator">{group.day}</div>

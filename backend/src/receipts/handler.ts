@@ -81,35 +81,50 @@ export async function classifyAndHandleImage(
   if (!state.organizationId) return { handled: false, state };
   if (msg.type !== "image" || !msg.image?.id) return { handled: false, state };
 
+  log.info({ phone, mediaId: msg.image.id }, "classifyAndHandleImage: image received, downloading");
+
   let buffer: Buffer;
   try {
     buffer = await downloadFromMeta(msg.image.id);
+    log.debug({ phone, mediaId: msg.image.id, bytes: buffer.length }, "classifyAndHandleImage: download ok");
   } catch (err) {
-    log.error({ err }, "classifyAndHandleImage: download failed");
+    log.error({ err, phone, mediaId: msg.image.id }, "classifyAndHandleImage: download failed");
     return { handled: false, state };
   }
 
   const ocrText = await runOcr(buffer);
+  log.debug({ phone, ocrChars: ocrText.length, ocrPreview: ocrText.slice(0, 120).replace(/\n/g, " ") }, "classifyAndHandleImage: OCR done");
+
   if (!isLikelyReceipt(ocrText)) {
-    log.info({ phone, event: "image.not_receipt" }, "Image classified as non-receipt, skipping");
+    log.info({ phone, event: "image.not_receipt", ocrPreview: ocrText.slice(0, 80).replace(/\n/g, " ") }, "classifyAndHandleImage: NOT a receipt, skipping");
     return { handled: false, state };
   }
 
+  log.info({ phone, event: "image.is_receipt" }, "classifyAndHandleImage: classified as RECEIPT, extracting fields");
+
   const { amount, receiptDate, isWithin24Hours } = extractPaymentFields(ocrText);
+  log.info(
+    { phone, amount, receiptDate: receiptDate?.toISOString() ?? null, isWithin24Hours },
+    "classifyAndHandleImage: fields extracted",
+  );
+
   const receiptUrl = await saveReceipt(buffer, phone, state.organizationId);
   const { pendingMessage, rejectedMessage, retryMessage } = await getReceiptMessages(state.organizationId, state.flowId);
 
   if (!amount) {
+    log.warn({ phone, event: "receipt.illegible" }, "classifyAndHandleImage: amount not detected → comprobante_ilegible");
     await sendMessage(phone, textMessage(retryMessage), msgCtx(state));
     return { handled: true, state: { ...state, stage: "comprobante_ilegible" } };
   }
 
   if (receiptDate && !isWithin24Hours) {
+    log.warn({ phone, event: "receipt.rejected", receiptDate: receiptDate.toISOString() }, "classifyAndHandleImage: receipt older than 24h → comprobante_rechazado");
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
     return { handled: true, state: { ...state, stage: "comprobante_rechazado" } };
   }
 
   if (!receiptDate && amount) {
+    log.info({ phone, event: "receipt.pending_review", amount }, "classifyAndHandleImage: no date detected → pending_manual_review");
     await insertPayment({
       organizationId: state.organizationId,
       phone,
@@ -126,6 +141,7 @@ export async function classifyAndHandleImage(
     return { handled: true, state: { ...state, stage: "confirmar_comprobante" } };
   }
 
+  log.info({ phone, event: "receipt.validated", amount, receiptDate: receiptDate?.toISOString() }, "classifyAndHandleImage: payment validated ✓");
   await insertPayment({
     organizationId: state.organizationId,
     phone,

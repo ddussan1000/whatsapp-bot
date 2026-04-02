@@ -1827,7 +1827,7 @@ dashboardApi.openapi(
     request: {
       headers: AuthHeaderSchema,
       params: z.object({ id: z.string() }),
-      query: z.object({ page: z.coerce.number().default(1), pageSize: z.coerce.number().default(30) }),
+      query: z.object({ page: z.coerce.number().default(1), pageSize: z.coerce.number().default(30), sortDesc: z.coerce.boolean().default(false) }),
     },
     responses: {
       200: { description: "Paginated messages", content: { "application/json": { schema: paginatedSchema(ChatMessageSchema) } } },
@@ -1836,10 +1836,10 @@ dashboardApi.openapi(
   }),
   async (c) => {
     const { id } = c.req.valid("param");
-    const { page, pageSize } = c.req.valid("query");
+    const { page, pageSize, sortDesc } = c.req.valid("query");
     const session = getSession(c);
     try {
-      const { items, total } = await listMessagesByConversation(orgId(c), id, page, pageSize);
+      const { items, total } = await listMessagesByConversation(orgId(c), id, page, pageSize, sortDesc);
       return c.json({ items, page, pageSize, total }, 200);
     } catch (error) {
       return c.json({ error: (error as Error).message }, 500);
