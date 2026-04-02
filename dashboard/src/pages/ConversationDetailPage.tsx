@@ -60,7 +60,8 @@ export function ConversationDetailPage() {
     if (messages.length > prevLengthRef.current) {
       const el = chatWindowRef.current;
       if (el) {
-        const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+        const isNearBottom =
+          el.scrollHeight - el.scrollTop - el.clientHeight < 200;
         if (isNearBottom) el.scrollTop = el.scrollHeight;
       }
     }
@@ -74,7 +75,12 @@ export function ConversationDetailPage() {
     setLoadingOlder(true);
     const nextPage = page + 1;
     try {
-      const res = await api.getConversationMessages(id, nextPage, PAGE_SIZE, true);
+      const res = await api.getConversationMessages(
+        id,
+        nextPage,
+        PAGE_SIZE,
+        true
+      );
       const older = [...res.items].reverse();
       const el = chatWindowRef.current;
       const prevScrollHeight = el?.scrollHeight ?? 0;
@@ -227,16 +233,28 @@ export function ConversationDetailPage() {
           onDrop={onDropFile}
         >
           {loadingOlder && (
-            <p className="muted" style={{ textAlign: "center", padding: "8px 0" }}>
+            <p
+              className="muted"
+              style={{ textAlign: "center", padding: "8px 0" }}
+            >
               Cargando mensajes anteriores...
             </p>
           )}
           {!loadingOlder && hasMore && (
-            <p className="muted" style={{ textAlign: "center", padding: "8px 0", fontSize: "0.75rem" }}>
+            <p
+              className="muted"
+              style={{
+                textAlign: "center",
+                padding: "8px 0",
+                fontSize: "0.75rem",
+              }}
+            >
               Sube para cargar mensajes anteriores
             </p>
           )}
-          {initialLoading ? <p className="muted">Cargando mensajes...</p> : null}
+          {initialLoading ? (
+            <p className="muted">Cargando mensajes...</p>
+          ) : null}
           {groupedMessages.map((group) => (
             <div key={group.day} className="day-group">
               <div className="day-separator">{group.day}</div>

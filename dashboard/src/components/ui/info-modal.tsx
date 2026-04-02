@@ -15,7 +15,12 @@ interface InfoModalProps {
   iconOnly?: boolean;
 }
 
-export function InfoModal({ title, children, triggerLabel, iconOnly = false }: InfoModalProps) {
+export function InfoModal({
+  title,
+  children,
+  triggerLabel,
+  iconOnly = false,
+}: InfoModalProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -47,7 +52,13 @@ export function InfoModal({ title, children, triggerLabel, iconOnly = false }: I
   );
 }
 
-export function InfoSection({ title, children }: { title?: string; children: React.ReactNode }) {
+export function InfoSection({
+  title,
+  children,
+}: {
+  title?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-1.5">
       {title && <p className="font-semibold text-foreground">{title}</p>}
@@ -56,7 +67,13 @@ export function InfoSection({ title, children }: { title?: string; children: Rea
   );
 }
 
-export function InfoStep({ n, children }: { n: number; children: React.ReactNode }) {
+export function InfoStep({
+  n,
+  children,
+}: {
+  n: number;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex gap-3">
       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground mt-0.5">

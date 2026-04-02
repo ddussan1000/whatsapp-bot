@@ -5,7 +5,6 @@ import {
   MessagesSquare,
   BarChart3,
   Receipt,
-  Link2,
   Building2,
   Library,
   LayoutDashboard,
@@ -115,21 +114,25 @@ const PERMISSIONS = [
     level: "Requerido",
     levelColor: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     what: "Enviar mensajes, recibir webhooks de mensajes entrantes y descargar media (imágenes, documentos) enviados por usuarios.",
-    without: "Sin este permiso el bot no puede enviar mensajes ni analizar comprobantes de pago. Causa el error «META_TOKEN no configurado» al intentar descargar imágenes.",
+    without:
+      "Sin este permiso el bot no puede enviar mensajes ni analizar comprobantes de pago. Causa el error «META_TOKEN no configurado» al intentar descargar imágenes.",
   },
   {
     permission: "whatsapp_business_management",
     level: "Requerido",
     levelColor: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     what: "Gestionar números de teléfono, configurar webhooks y acceder a metadata de la cuenta WABA.",
-    without: "El health check del número fallará y algunas operaciones de gestión de cuenta no funcionarán.",
+    without:
+      "El health check del número fallará y algunas operaciones de gestión de cuenta no funcionarán.",
   },
   {
     permission: "ads_read",
     level: "Recomendado",
-    levelColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    levelColor:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     what: "Leer datos de campañas y anuncios de la cuenta publicitaria. La plataforma lo usa para enriquecer ad_click_logs con nombre de anuncio, campaña y adset vía Graph API.",
-    without: "Los registros de anuncios solo tendrán el headline que llega en el referral del webhook. No se consultará la Graph API para datos adicionales.",
+    without:
+      "Los registros de anuncios solo tendrán el headline que llega en el referral del webhook. No se consultará la Graph API para datos adicionales.",
   },
 ];
 
@@ -140,14 +143,16 @@ const MODULES = [
     name: "Resumen",
     nav: "Resumen",
     icon: LayoutDashboard,
-    description: "Overview del día: conversaciones activas, mensajes procesados y estado del bot.",
+    description:
+      "Overview del día: conversaciones activas, mensajes procesados y estado del bot.",
     details: "No requiere configuración. Refleja la actividad en tiempo real.",
   },
   {
     name: "Conversaciones",
     nav: "Conversaciones",
     icon: MessagesSquare,
-    description: "Lista completa de conversaciones con historial de mensajes y composer para responder manualmente.",
+    description:
+      "Lista completa de conversaciones con historial de mensajes y composer para responder manualmente.",
     details:
       "El chat carga los últimos 50 mensajes al abrir. Al hacer scroll hacia arriba se cargan los anteriores en bloques de 50. Podés enviar texto, imágenes y documentos directamente.",
     tip: "El stage de la conversación refleja el estado del flow: flow_started, flow, pago_confirmado, etc.",
@@ -156,7 +161,8 @@ const MODULES = [
     name: "Pagos",
     nav: "Pagos",
     icon: Receipt,
-    description: "Comprobantes de pago procesados por OCR con monto, fecha y estado.",
+    description:
+      "Comprobantes de pago procesados por OCR con monto, fecha y estado.",
     details:
       "El pipeline: descarga la imagen con el META_TOKEN → OCR con Tesseract en español → extrae monto y fecha → valida que sea de las últimas 24h → inserta en payments con estado validated, pending_manual_review o rechazado.",
     tip: "Si los comprobantes quedan en pending_manual_review, generalmente es porque el OCR no pudo extraer la fecha. El monto sí se registra.",
@@ -165,7 +171,8 @@ const MODULES = [
     name: "Reportes",
     nav: "Reportes",
     icon: BarChart3,
-    description: "Analytics de conversaciones, ventas y performance de anuncios CTWA con filtros por fecha y flow.",
+    description:
+      "Analytics de conversaciones, ventas y performance de anuncios CTWA con filtros por fecha y flow.",
     details:
       "La sección Anuncios muestra métricas agrupadas por source_id: clicks, unique leads (teléfonos únicos), conversiones (pagos) y revenue. Si el token tiene ads_read, también muestra el nombre del anuncio y la campaña.",
   },
@@ -173,7 +180,8 @@ const MODULES = [
     name: "Flows",
     nav: "Flows",
     icon: Workflow,
-    description: "Editor de flows: steps con delay_seconds, mensajes (texto/imagen/documento/video) y configuración de trigger.",
+    description:
+      "Editor de flows: steps con delay_seconds, mensajes (texto/imagen/documento/video) y configuración de trigger.",
     details:
       "Cada flow tiene: trigger_phrase, trigger_first_word, keywords[], no_match_behavior (trigger|ignore), session_timeout_hours (0 = sin sesión persistente) y system_prompt para el proveedor de IA.",
     tip: "session_timeout_hours=0 significa que cada mensaje del usuario es tratado como una sesión nueva, pero siempre requiere trigger explícito para iniciar el flow.",
@@ -182,14 +190,17 @@ const MODULES = [
     name: "Plantillas",
     nav: "Plantillas",
     icon: Library,
-    description: "Flows pre-configurados para casos comunes: bienvenida, catálogo, soporte, post-venta.",
-    details: "Al usar una plantilla se carga en el editor con todos los pasos. Podés modificar cualquier campo antes de guardar.",
+    description:
+      "Flows pre-configurados para casos comunes: bienvenida, catálogo, soporte, post-venta.",
+    details:
+      "Al usar una plantilla se carga en el editor con todos los pasos. Podés modificar cualquier campo antes de guardar.",
   },
   {
     name: "Números de WhatsApp",
     nav: "WhatsApp",
     icon: Smartphone,
-    description: "Gestión de instancias: credenciales Meta, webhook config y asignación de flow.",
+    description:
+      "Gestión de instancias: credenciales Meta, webhook config y asignación de flow.",
     details:
       "Cada instancia almacena: phone_number_id, meta_token (cifrado), waba_id, meta_app_id y el flow_id asignado. El health check llama a la Graph API para verificar token y permisos en tiempo real.",
     tip: "Si el health check retorna insufficient_permissions, el token existe pero le faltan permisos. Regenerálo con los permisos correctos.",
@@ -198,9 +209,10 @@ const MODULES = [
     name: "CTWA Ads",
     nav: "CTWA Ads",
     icon: Megaphone,
-    description: "Mapeo de ctwa_clid → flow para personalizar la experiencia según el anuncio de origen.",
+    description:
+      "Mapeo de ctwa_clid → flow para personalizar la experiencia según el anuncio de origen.",
     details:
-      "Cuando llega un mensaje con referral.source_type==\"ad\", la plataforma busca en flow_referrals si hay un flow mapeado para ese ctwa_clid. Si existe, usa ese flow en vez del asignado a la instancia.",
+      'Cuando llega un mensaje con referral.source_type=="ad", la plataforma busca en flow_referrals si hay un flow mapeado para ese ctwa_clid. Si existe, usa ese flow en vez del asignado a la instancia.',
   },
   {
     name: "Equipo",
@@ -229,7 +241,7 @@ const FAQS = [
   },
   {
     q: "¿Cómo funciona no_match_behavior?",
-    a: "\"trigger\" hace que cualquier mensaje (aunque no coincida con el trigger_phrase) pase al handler de IA si hay sesión activa. \"ignore\" hace que mensajes sin match sean ignorados cuando la sesión necesita trigger.",
+    a: '"trigger" hace que cualquier mensaje (aunque no coincida con el trigger_phrase) pase al handler de IA si hay sesión activa. "ignore" hace que mensajes sin match sean ignorados cuando la sesión necesita trigger.',
   },
   {
     q: "¿Por qué se envían dos pasos del flow al mismo tiempo?",
@@ -270,9 +282,15 @@ function FAQItem({ item }: { item: (typeof FAQS)[0] }) {
       >
         <span className="text-sm font-medium">{item.q}</span>
         {open ? (
-          <ChevronUp size={15} className="mt-0.5 shrink-0 text-muted-foreground" />
+          <ChevronUp
+            size={15}
+            className="mt-0.5 shrink-0 text-muted-foreground"
+          />
         ) : (
-          <ChevronDown size={15} className="mt-0.5 shrink-0 text-muted-foreground" />
+          <ChevronDown
+            size={15}
+            className="mt-0.5 shrink-0 text-muted-foreground"
+          />
         )}
       </button>
       {open && <p className="pb-4 text-sm text-muted-foreground">{item.a}</p>}
@@ -295,7 +313,10 @@ function SubSteps({ steps }: { steps: string[] }) {
       {open && (
         <ol className="mt-2 flex flex-col gap-1.5 pl-1">
           {steps.map((s, i) => (
-            <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+            <li
+              key={i}
+              className="flex items-start gap-2 text-xs text-muted-foreground"
+            >
               <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold">
                 {i + 1}
               </span>
@@ -313,11 +334,13 @@ function SubSteps({ steps }: { steps: string[] }) {
 export function InstructionsPage() {
   return (
     <div className="flex flex-col gap-8 p-6 max-w-4xl">
-
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Guía de configuración</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">
+          Guía de configuración
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Todo lo que necesitás para conectar la plataforma con Meta y sacarle el máximo provecho.
+          Todo lo que necesitás para conectar la plataforma con Meta y sacarle
+          el máximo provecho.
         </p>
       </div>
 
@@ -328,26 +351,39 @@ export function InstructionsPage() {
           {SETUP_STEPS.map((s) => {
             const Icon = s.icon;
             return (
-              <div key={s.step} className="flex gap-4 rounded-xl border bg-card p-4">
+              <div
+                key={s.step}
+                className="flex gap-4 rounded-xl border bg-card p-4"
+              >
                 <div className="flex flex-col items-center gap-1 pt-0.5">
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shrink-0">
                     {s.step}
                   </div>
-                  {s.step < SETUP_STEPS.length && <div className="mt-1 h-full w-px bg-border" />}
+                  {s.step < SETUP_STEPS.length && (
+                    <div className="mt-1 h-full w-px bg-border" />
+                  )}
                 </div>
                 <div className="flex flex-1 flex-col gap-1 pb-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Icon size={14} className="text-muted-foreground" />
                     <span className="font-medium text-sm">{s.title}</span>
-                    <Badge variant={s.required ? "default" : "outline"} className="text-[10px]">
+                    <Badge
+                      variant={s.required ? "default" : "outline"}
+                      className="text-[10px]"
+                    >
                       {s.required ? "Requerido" : "Opcional"}
                     </Badge>
-                    <span className="ml-auto text-xs text-muted-foreground">{s.nav}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {s.nav}
+                    </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{s.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {s.description}
+                  </p>
                   {s.tip && (
                     <p className="mt-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">Tip: </span>{s.tip}
+                      <span className="font-medium text-foreground">Tip: </span>
+                      {s.tip}
                     </p>
                   )}
                   {s.substeps && <SubSteps steps={s.substeps} />}
@@ -364,11 +400,13 @@ export function InstructionsPage() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck size={16} className="text-blue-500" />
-          <h3 className="text-base font-semibold">Permisos necesarios en el token de Meta</h3>
+          <h3 className="text-base font-semibold">
+            Permisos necesarios en el token de Meta
+          </h3>
         </div>
         <p className="mb-4 text-sm text-muted-foreground">
-          El token que configurás en cada número debe tener estos permisos activos.
-          Podés verificarlos con el{" "}
+          El token que configurás en cada número debe tener estos permisos
+          activos. Podés verificarlos con el{" "}
           <a
             href="https://developers.facebook.com/tools/debug/accesstoken"
             target="_blank"
@@ -382,15 +420,23 @@ export function InstructionsPage() {
 
         <div className="flex flex-col gap-3 mb-5">
           {PERMISSIONS.map((p) => (
-            <div key={p.permission} className="rounded-xl border bg-card p-4 flex flex-col gap-2">
+            <div
+              key={p.permission}
+              className="rounded-xl border bg-card p-4 flex flex-col gap-2"
+            >
               <div className="flex flex-wrap items-center gap-2">
-                <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{p.permission}</code>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${p.levelColor}`}>
+                <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">
+                  {p.permission}
+                </code>
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${p.levelColor}`}
+                >
                   {p.level}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Permite: </span>{p.what}
+                <span className="font-medium text-foreground">Permite: </span>
+                {p.what}
               </p>
               <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
                 <AlertTriangle size={12} className="shrink-0 mt-0.5" />
@@ -408,11 +454,29 @@ export function InstructionsPage() {
           </div>
           <div className="grid gap-2 sm:grid-cols-3 text-xs">
             {[
-              { type: "Token de usuario", dur: "1–2 horas", use: "Solo para pruebas en el Playground de Meta. No usar en producción.", warn: true },
-              { type: "Token de larga duración", dur: "60 días", use: "Para desarrollo. Requiere renovación manual o automatizada antes del vencimiento.", warn: true },
-              { type: "System User Token", dur: "No vence ✓", use: "Generado desde Business Manager → Usuarios del sistema. Recomendado para producción.", warn: false },
+              {
+                type: "Token de usuario",
+                dur: "1–2 horas",
+                use: "Solo para pruebas en el Playground de Meta. No usar en producción.",
+                warn: true,
+              },
+              {
+                type: "Token de larga duración",
+                dur: "60 días",
+                use: "Para desarrollo. Requiere renovación manual o automatizada antes del vencimiento.",
+                warn: true,
+              },
+              {
+                type: "System User Token",
+                dur: "No vence ✓",
+                use: "Generado desde Business Manager → Usuarios del sistema. Recomendado para producción.",
+                warn: false,
+              },
             ].map((t) => (
-              <div key={t.type} className={`rounded-lg p-3 flex flex-col gap-1 border ${t.warn ? "border-amber-200 bg-amber-50 dark:bg-amber-900/10" : "border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10"}`}>
+              <div
+                key={t.type}
+                className={`rounded-lg p-3 flex flex-col gap-1 border ${t.warn ? "border-amber-200 bg-amber-50 dark:bg-amber-900/10" : "border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10"}`}
+              >
                 <span className="font-semibold">{t.type}</span>
                 <span className="text-muted-foreground">Duración: {t.dur}</span>
                 <span className="text-muted-foreground">{t.use}</span>
@@ -426,9 +490,12 @@ export function InstructionsPage() {
 
       {/* How flows work */}
       <div>
-        <h3 className="mb-1 text-base font-semibold">Cómo funciona el motor de flows</h3>
+        <h3 className="mb-1 text-base font-semibold">
+          Cómo funciona el motor de flows
+        </h3>
         <p className="mb-4 text-sm text-muted-foreground">
-          Cada mensaje entrante pasa por este pipeline antes de llegar al cliente.
+          Cada mensaje entrante pasa por este pipeline antes de llegar al
+          cliente.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
@@ -453,7 +520,10 @@ export function InstructionsPage() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.title} className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+              <div
+                key={item.title}
+                className="flex flex-col gap-2 rounded-xl border bg-card p-4"
+              >
                 <Icon size={20} className={item.color} />
                 <p className="font-medium text-sm">{item.title}</p>
                 <p className="text-xs text-muted-foreground">{item.desc}</p>
@@ -469,19 +539,36 @@ export function InstructionsPage() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <ImageIcon size={16} className="text-violet-500" />
-          <h3 className="text-base font-semibold">Pipeline de comprobantes de pago</h3>
+          <h3 className="text-base font-semibold">
+            Pipeline de comprobantes de pago
+          </h3>
         </div>
         <p className="mb-3 text-sm text-muted-foreground">
           Cuando llega una imagen se ejecuta este pipeline automáticamente.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {[
-            { title: "1. Descarga con META_TOKEN", desc: "Usa el token de la instancia para llamar a graph.facebook.com/v19.0/{mediaId} y descargar la imagen. Requiere whatsapp_business_messaging." },
-            { title: "2. Pre-procesamiento + OCR", desc: "Convierte la imagen a escala de grises, normaliza y aplica Tesseract OCR en español para extraer el texto." },
-            { title: "3. Clasificación", desc: "Busca al menos 2 keywords de una lista de 40+ términos (nequi, daviplata, comprobante, pago, etc.). Si no se detectan, la imagen no es un comprobante." },
-            { title: "4. Extracción de campos", desc: "Extrae monto (regex de formatos $1.200, $1,200.00, etc.) y fecha (formatos numéricos y literales en español). Valida que sea de las últimas 24h." },
+            {
+              title: "1. Descarga con META_TOKEN",
+              desc: "Usa el token de la instancia para llamar a graph.facebook.com/v19.0/{mediaId} y descargar la imagen. Requiere whatsapp_business_messaging.",
+            },
+            {
+              title: "2. Pre-procesamiento + OCR",
+              desc: "Convierte la imagen a escala de grises, normaliza y aplica Tesseract OCR en español para extraer el texto.",
+            },
+            {
+              title: "3. Clasificación",
+              desc: "Busca al menos 2 keywords de una lista de 40+ términos (nequi, daviplata, comprobante, pago, etc.). Si no se detectan, la imagen no es un comprobante.",
+            },
+            {
+              title: "4. Extracción de campos",
+              desc: "Extrae monto (regex de formatos $1.200, $1,200.00, etc.) y fecha (formatos numéricos y literales en español). Valida que sea de las últimas 24h.",
+            },
           ].map((item) => (
-            <div key={item.title} className="rounded-xl border bg-card p-3 flex flex-col gap-1">
+            <div
+              key={item.title}
+              className="rounded-xl border bg-card p-3 flex flex-col gap-1"
+            >
               <p className="text-xs font-semibold">{item.title}</p>
               <p className="text-xs text-muted-foreground">{item.desc}</p>
             </div>
@@ -493,7 +580,9 @@ export function InstructionsPage() {
 
       {/* Modules */}
       <div>
-        <h3 className="mb-4 text-base font-semibold">Referencia de secciones</h3>
+        <h3 className="mb-4 text-base font-semibold">
+          Referencia de secciones
+        </h3>
         <div className="grid gap-4 md:grid-cols-2">
           {MODULES.map((mod) => {
             const Icon = mod.icon;
@@ -503,15 +592,20 @@ export function InstructionsPage() {
                   <div className="flex items-center gap-2">
                     <Icon size={16} className="text-muted-foreground" />
                     <CardTitle className="text-sm">{mod.name}</CardTitle>
-                    <span className="ml-auto text-xs text-muted-foreground">{mod.nav}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {mod.nav}
+                    </span>
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2">
-                  <p className="text-xs font-medium text-foreground">{mod.description}</p>
+                  <p className="text-xs font-medium text-foreground">
+                    {mod.description}
+                  </p>
                   <p className="text-xs text-muted-foreground">{mod.details}</p>
                   {mod.tip && (
                     <p className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">Tip: </span>{mod.tip}
+                      <span className="font-medium text-foreground">Tip: </span>
+                      {mod.tip}
                     </p>
                   )}
                 </CardContent>
@@ -540,7 +634,9 @@ export function InstructionsPage() {
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-emerald-500" />
-            <CardTitle className="text-sm">Checklist de configuración completa</CardTitle>
+            <CardTitle className="text-sm">
+              Checklist de configuración completa
+            </CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -568,11 +664,23 @@ export function InstructionsPage() {
       {/* External links */}
       <div className="flex flex-wrap gap-2">
         {[
-          { label: "Token Debugger", href: "https://developers.facebook.com/tools/debug/accesstoken" },
-          { label: "WhatsApp Cloud API docs", href: "https://developers.facebook.com/docs/whatsapp/cloud-api" },
+          {
+            label: "Token Debugger",
+            href: "https://developers.facebook.com/tools/debug/accesstoken",
+          },
+          {
+            label: "WhatsApp Cloud API docs",
+            href: "https://developers.facebook.com/docs/whatsapp/cloud-api",
+          },
           { label: "Business Manager", href: "https://business.facebook.com" },
-          { label: "Graph API Explorer", href: "https://developers.facebook.com/tools/explorer" },
-          { label: "Permissions reference", href: "https://developers.facebook.com/docs/permissions" },
+          {
+            label: "Graph API Explorer",
+            href: "https://developers.facebook.com/tools/explorer",
+          },
+          {
+            label: "Permissions reference",
+            href: "https://developers.facebook.com/docs/permissions",
+          },
         ].map((link) => (
           <a
             key={link.href}
@@ -586,7 +694,6 @@ export function InstructionsPage() {
           </a>
         ))}
       </div>
-
     </div>
   );
 }

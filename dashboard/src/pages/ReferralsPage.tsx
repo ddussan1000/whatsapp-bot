@@ -36,27 +36,31 @@ import {
 
 function HowItWorksModal() {
   return (
-    <InfoModal title="¿Cómo funcionan los anuncios CTWA?" triggerLabel="¿Cómo funciona?">
+    <InfoModal
+      title="¿Cómo funcionan los anuncios CTWA?"
+      triggerLabel="¿Cómo funciona?"
+    >
       <InfoSection title="¿Qué es un anuncio CTWA?">
         <p>
-          CTWA significa <strong>Click-to-WhatsApp</strong>. Son anuncios de Instagram o
-          Facebook que, al hacer click, abren directamente un chat de WhatsApp con tu número.
+          CTWA significa <strong>Click-to-WhatsApp</strong>. Son anuncios de
+          Instagram o Facebook que, al hacer click, abren directamente un chat
+          de WhatsApp con tu número.
         </p>
       </InfoSection>
 
       <InfoSection title="¿Por qué conectarlos con flows?">
         <p>
-          Cada anuncio puede llevar a un flow diferente. Si tenés un anuncio para un producto A
-          y otro para el producto B, podés hacer que el bot salude de forma distinta según de
-          cuál anuncio viene el cliente.
+          Cada anuncio puede llevar a un flow diferente. Si tenés un anuncio
+          para un producto A y otro para el producto B, podés hacer que el bot
+          salude de forma distinta según de cuál anuncio viene el cliente.
         </p>
       </InfoSection>
 
       <InfoSection title="¿Qué es el ctwa_clid?">
         <p>
-          Es un identificador único que Meta genera cuando alguien hace click en tu anuncio.
-          Llega en el primer mensaje del cliente junto con otros datos del anuncio (titular,
-          texto, etc.).
+          Es un identificador único que Meta genera cuando alguien hace click en
+          tu anuncio. Llega en el primer mensaje del cliente junto con otros
+          datos del anuncio (titular, texto, etc.).
         </p>
         <p className="mt-1">
           La plataforma lo registra automáticamente en la tabla de{" "}
@@ -67,26 +71,28 @@ function HowItWorksModal() {
       <InfoSection title="Cómo conectar un anuncio con un flow">
         <div className="flex flex-col gap-2 mt-1">
           <InfoStep n={1}>
-            Lanzá tu anuncio CTWA en Meta Ads Manager apuntando a tu número de WhatsApp.
+            Lanzá tu anuncio CTWA en Meta Ads Manager apuntando a tu número de
+            WhatsApp.
           </InfoStep>
           <InfoStep n={2}>
-            Enviá un mensaje desde el anuncio (hacé click en él desde tu celular o pedile a
-            alguien que lo haga).
+            Enviá un mensaje desde el anuncio (hacé click en él desde tu celular
+            o pedile a alguien que lo haga).
           </InfoStep>
           <InfoStep n={3}>
             En <strong>Reportes → Anuncios</strong> vas a ver el registro con el{" "}
-            <InfoCode>source_id</InfoCode> y el <InfoCode>ctwa_clid</InfoCode> del anuncio.
+            <InfoCode>source_id</InfoCode> y el <InfoCode>ctwa_clid</InfoCode>{" "}
+            del anuncio.
           </InfoStep>
           <InfoStep n={4}>
-            Copiá el <InfoCode>ctwa_clid</InfoCode>, pegálo en el formulario de abajo y
-            seleccioná el flow que querés que use ese anuncio.
+            Copiá el <InfoCode>ctwa_clid</InfoCode>, pegálo en el formulario de
+            abajo y seleccioná el flow que querés que use ese anuncio.
           </InfoStep>
         </div>
       </InfoSection>
 
       <InfoAlert>
-        Si no conectás un anuncio con ningún flow, el bot va a usar el flow por defecto
-        asignado al número de WhatsApp.
+        Si no conectás un anuncio con ningún flow, el bot va a usar el flow por
+        defecto asignado al número de WhatsApp.
       </InfoAlert>
     </InfoModal>
   );
@@ -116,7 +122,7 @@ export function ReferralsPage() {
           setFlowId("");
         },
         onError: (e) => toast.error(`Error: ${(e as Error).message}`),
-      },
+      }
     );
   };
 
@@ -160,7 +166,10 @@ export function ReferralsPage() {
         ].map((item) => {
           const Icon = item.icon;
           return (
-            <div key={item.title} className="flex gap-3 rounded-xl border bg-card p-4">
+            <div
+              key={item.title}
+              className="flex gap-3 rounded-xl border bg-card p-4"
+            >
               <Icon size={18} className={`${item.color} shrink-0 mt-0.5`} />
               <div className="flex flex-col gap-0.5">
                 <p className="text-xs font-semibold">{item.title}</p>
@@ -179,14 +188,17 @@ export function ReferralsPage() {
             Conectar anuncio con flow
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Encontrás el <code className="text-xs bg-muted px-1 rounded">ctwa_clid</code> en{" "}
-            <strong>Reportes → sección Anuncios</strong> después de que alguien haga click en tu
-            anuncio.
+            Encontrás el{" "}
+            <code className="text-xs bg-muted px-1 rounded">ctwa_clid</code> en{" "}
+            <strong>Reportes → sección Anuncios</strong> después de que alguien
+            haga click en tu anuncio.
           </p>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex flex-col gap-1.5 flex-1">
-            <label className="text-xs font-semibold">ctwa_clid del anuncio</label>
+            <label className="text-xs font-semibold">
+              ctwa_clid del anuncio
+            </label>
             <Input
               placeholder="ARAkLkA8rmlH8W3y…"
               value={ctwaClid}
@@ -205,9 +217,19 @@ export function ReferralsPage() {
                   <SelectItem key={f.id} value={f.id}>
                     <span className="flex items-center gap-2">
                       {f.is_active ? (
-                        <Badge variant="default" className="text-[9px] px-1 py-0">Activo</Badge>
+                        <Badge
+                          variant="default"
+                          className="text-[9px] px-1 py-0"
+                        >
+                          Activo
+                        </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[9px] px-1 py-0">Inactivo</Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1 py-0"
+                        >
+                          Inactivo
+                        </Badge>
                       )}
                       {f.name}
                     </span>
@@ -246,19 +268,25 @@ export function ReferralsPage() {
                 Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
                     {Array.from({ length: 3 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                      <TableCell key={j}>
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (referrals.data ?? []).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={3} className="py-10 text-center">
-                    <Megaphone size={28} className="mx-auto mb-2 text-muted-foreground/30" />
+                    <Megaphone
+                      size={28}
+                      className="mx-auto mb-2 text-muted-foreground/30"
+                    />
                     <p className="text-sm text-muted-foreground">
                       Todavía no hay conexiones configuradas.
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Lanzá un anuncio CTWA y conectálo con un flow usando el formulario de arriba.
+                      Lanzá un anuncio CTWA y conectálo con un flow usando el
+                      formulario de arriba.
                     </p>
                   </TableCell>
                 </TableRow>
@@ -271,11 +299,16 @@ export function ReferralsPage() {
                     <TableCell>
                       {r.flow_id ? (
                         <span className="flex items-center gap-1.5 text-sm">
-                          <Workflow size={13} className="text-emerald-500 shrink-0" />
+                          <Workflow
+                            size={13}
+                            className="text-emerald-500 shrink-0"
+                          />
                           {flowMap.get(r.flow_id) ?? r.flow_id}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground text-sm">Sin flow</span>
+                        <span className="text-muted-foreground text-sm">
+                          Sin flow
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">

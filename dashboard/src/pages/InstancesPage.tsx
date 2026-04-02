@@ -357,15 +357,36 @@ function EditDialog({
                 <span className="text-xs font-semibold">Token de acceso</span>
                 <InfoModal title="¿Dónde obtengo el token?" iconOnly>
                   <InfoSection title="Tipos de token">
-                    <p>Hay 3 tipos. Para producción usá siempre el <strong>System User Token</strong>:</p>
+                    <p>
+                      Hay 3 tipos. Para producción usá siempre el{" "}
+                      <strong>System User Token</strong>:
+                    </p>
                   </InfoSection>
                   <div className="flex flex-col gap-2 text-xs">
                     {[
-                      { type: "Token temporal", dur: "1–2 horas", ok: false, desc: "Solo para pruebas rápidas en el panel de Meta." },
-                      { type: "Token de larga duración", dur: "60 días", ok: false, desc: "Hay que renovarlo manualmente cada 2 meses." },
-                      { type: "System User Token", dur: "No vence", ok: true, desc: "Recomendado para producción." },
+                      {
+                        type: "Token temporal",
+                        dur: "1–2 horas",
+                        ok: false,
+                        desc: "Solo para pruebas rápidas en el panel de Meta.",
+                      },
+                      {
+                        type: "Token de larga duración",
+                        dur: "60 días",
+                        ok: false,
+                        desc: "Hay que renovarlo manualmente cada 2 meses.",
+                      },
+                      {
+                        type: "System User Token",
+                        dur: "No vence",
+                        ok: true,
+                        desc: "Recomendado para producción.",
+                      },
                     ].map((t) => (
-                      <div key={t.type} className={`rounded-lg border p-2.5 ${t.ok ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10" : "border-muted bg-muted/30"}`}>
+                      <div
+                        key={t.type}
+                        className={`rounded-lg border p-2.5 ${t.ok ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10" : "border-muted bg-muted/30"}`}
+                      >
                         <div className="flex items-center justify-between">
                           <span className="font-semibold">{t.type}</span>
                           <span className="text-muted-foreground">{t.dur}</span>
@@ -377,29 +398,36 @@ function EditDialog({
                   <InfoSection title="Cómo obtener el System User Token">
                     <div className="flex flex-col gap-2 mt-1">
                       <InfoStep n={1}>
-                        Entrá a <strong>business.facebook.com</strong> → Configuración del negocio.
+                        Entrá a <strong>business.facebook.com</strong> →
+                        Configuración del negocio.
                       </InfoStep>
                       <InfoStep n={2}>
-                        En el menú izquierdo: <strong>Usuarios → Usuarios del sistema</strong>.
-                        Creá un usuario del sistema con rol <InfoCode>Admin</InfoCode>.
+                        En el menú izquierdo:{" "}
+                        <strong>Usuarios → Usuarios del sistema</strong>. Creá
+                        un usuario del sistema con rol{" "}
+                        <InfoCode>Admin</InfoCode>.
                       </InfoStep>
                       <InfoStep n={3}>
-                        Hacé click en <strong>Generar token</strong>, seleccioná tu app y activá los
-                        permisos: <InfoCode>whatsapp_business_messaging</InfoCode> y{" "}
+                        Hacé click en <strong>Generar token</strong>, seleccioná
+                        tu app y activá los permisos:{" "}
+                        <InfoCode>whatsapp_business_messaging</InfoCode> y{" "}
                         <InfoCode>whatsapp_business_management</InfoCode>.
                       </InfoStep>
                       <InfoStep n={4}>
-                        Si querés que el sistema enriquezca datos de anuncios automáticamente,
-                        también activá <InfoCode>ads_read</InfoCode>.
+                        Si querés que el sistema enriquezca datos de anuncios
+                        automáticamente, también activá{" "}
+                        <InfoCode>ads_read</InfoCode>.
                       </InfoStep>
                       <InfoStep n={5}>
-                        Copiá el token generado y pegálo acá. <strong>No vence.</strong>
+                        Copiá el token generado y pegálo acá.{" "}
+                        <strong>No vence.</strong>
                       </InfoStep>
                     </div>
                   </InfoSection>
                   <InfoAlert>
-                    Sin <InfoCode>whatsapp_business_messaging</InfoCode> el bot no puede enviar
-                    mensajes ni descargar imágenes de comprobantes.
+                    Sin <InfoCode>whatsapp_business_messaging</InfoCode> el bot
+                    no puede enviar mensajes ni descargar imágenes de
+                    comprobantes.
                   </InfoAlert>
                 </InfoModal>
               </div>
@@ -420,7 +448,8 @@ function EditDialog({
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Token permanente de Meta. Lo encontrás en Meta for Developers → tu app → WhatsApp → API Setup.
+                Token permanente de Meta. Lo encontrás en Meta for Developers →
+                tu app → WhatsApp → API Setup.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
