@@ -79,10 +79,7 @@ export type ChatMessage = ArrayElement<PaginatedChatMessage["items"]>;
 export type PaginatedPayment = Json200<"/api/payments", "get">;
 export type Payment = ArrayElement<PaginatedPayment["items"]>;
 
-export type BotConfig = Json200<"/api/config/bot", "get"> & {
-  receiptPendingMessage?: string;
-  receiptRejectedMessage?: string;
-};
+export type BotConfig = Json200<"/api/config/bot", "get">;
 
 export type SessionInfo = Json200<"/api/auth/session", "get"> & {
   isPlatformAdmin?: boolean;
@@ -327,10 +324,7 @@ export type SendConversationMessageBody = JsonRequest<
   "/api/conversations/{id}/messages",
   "post"
 >;
-export type UpdateBotConfigBody = JsonRequest<"/api/config/bot", "put"> & {
-  receiptPendingMessage?: string;
-  receiptRejectedMessage?: string;
-};
+export type UpdateBotConfigBody = JsonRequest<"/api/config/bot", "put">;
 export type CreateProductBody = {
   name: string;
   slug: string;

@@ -14,6 +14,7 @@ export function ConfigPage() {
       keywords: data?.keywords ?? "",
       receiptPendingMessage: data?.receiptPendingMessage ?? "",
       receiptRejectedMessage: data?.receiptRejectedMessage ?? "",
+      receiptConfirmedMessage: data?.receiptConfirmedMessage ?? "",
     }),
     [data]
   );
@@ -22,6 +23,7 @@ export function ConfigPage() {
   const keywordsRef = useRef<HTMLTextAreaElement | null>(null);
   const pendingRef = useRef<HTMLTextAreaElement | null>(null);
   const rejectedRef = useRef<HTMLTextAreaElement | null>(null);
+  const confirmedRef = useRef<HTMLTextAreaElement | null>(null);
 
   const onSave = async () => {
     try {
@@ -32,6 +34,8 @@ export function ConfigPage() {
           pendingRef.current?.value ?? defaults.receiptPendingMessage,
         receiptRejectedMessage:
           rejectedRef.current?.value ?? defaults.receiptRejectedMessage,
+        receiptConfirmedMessage:
+          confirmedRef.current?.value ?? defaults.receiptConfirmedMessage,
       });
       toast.success("Configuración guardada.");
     } catch {
@@ -71,6 +75,12 @@ export function ConfigPage() {
             placeholder="Mensaje cuando no se puede validar comprobante (sin monto o fecha >24h)."
             ref={rejectedRef}
             defaultValue={defaults.receiptRejectedMessage}
+          />
+          <textarea
+            rows={4}
+            placeholder="Mensaje cuando el pago se confirma exitosamente."
+            ref={confirmedRef}
+            defaultValue={defaults.receiptConfirmedMessage}
           />
           <Button className="save-btn" onClick={onSave} type="button">
             Guardar

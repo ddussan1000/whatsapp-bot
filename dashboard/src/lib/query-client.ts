@@ -7,6 +7,11 @@ export const queryClient = new QueryClient({
       gcTime: 1000 * 60 * 5,
       refetchOnWindowFocus: true,
       retry: 1,
+      // Don't retry on AbortError (timeout) — surface the error immediately
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000),
+    },
+    mutations: {
+      retry: 0,
     },
   },
 });

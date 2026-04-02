@@ -14,6 +14,7 @@ import {
   LogOut,
   Shield,
   Images,
+  Settings2,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ModeToggle } from "../components/mode-toggle";
@@ -78,6 +79,7 @@ const productLinks: NavItem[] = [
 const systemLinks: NavItem[] = [
   { to: "/instances", label: "WhatsApp", icon: Smartphone },
   { to: "/organization", label: "Equipo", icon: Building2 },
+  { to: "/config", label: "Configuración", icon: Settings2 },
   { to: "/instructions", label: "Guía de inicio", icon: BookOpenText },
 ];
 

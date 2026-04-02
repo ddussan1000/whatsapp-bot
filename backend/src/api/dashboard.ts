@@ -2044,8 +2044,8 @@ const DEFAULT_BOT_CONFIG = {
   systemPrompt: "Eres un asistente de ventas por WhatsApp.",
   keywords: "precio,pago,producto,ayuda",
   receiptPendingMessage: "Gracias por tu comprobante. Lo estamos validando manualmente y te confirmaremos pronto.",
-  receiptRejectedMessage:
-    "No pudimos validar tu comprobante. Por favor verifica que la imagen sea legible y que la fecha sea de las ultimas 24 horas.",
+  receiptRejectedMessage: "No pudimos validar tu comprobante. Por favor verifica que la imagen sea legible y que la fecha sea de las ultimas 24 horas.",
+  receiptConfirmedMessage: "¡Gracias! Recibimos tu pago correctamente. En breve nos ponemos en contacto contigo.",
 };
 
 dashboardApi.openapi(
@@ -2063,6 +2063,7 @@ dashboardApi.openapi(
               keywords: z.string(),
               receiptPendingMessage: z.string(),
               receiptRejectedMessage: z.string(),
+              receiptConfirmedMessage: z.string(),
             }),
           },
         },
@@ -2082,6 +2083,7 @@ dashboardApi.openapi(
       keywords: cfg.keywords ?? DEFAULT_BOT_CONFIG.keywords,
       receiptPendingMessage: cfg.receiptPendingMessage ?? DEFAULT_BOT_CONFIG.receiptPendingMessage,
       receiptRejectedMessage: cfg.receiptRejectedMessage ?? DEFAULT_BOT_CONFIG.receiptRejectedMessage,
+      receiptConfirmedMessage: cfg.receiptConfirmedMessage ?? DEFAULT_BOT_CONFIG.receiptConfirmedMessage,
     }, 200);
   },
 );
@@ -2101,6 +2103,7 @@ dashboardApi.openapi(
               keywords: z.string().optional(),
               receiptPendingMessage: z.string().optional(),
               receiptRejectedMessage: z.string().optional(),
+              receiptConfirmedMessage: z.string().optional(),
             }),
           },
         },
@@ -2118,6 +2121,7 @@ dashboardApi.openapi(
                 keywords: z.string(),
                 receiptPendingMessage: z.string(),
                 receiptRejectedMessage: z.string(),
+                receiptConfirmedMessage: z.string(),
               }),
             }),
           },
@@ -2141,6 +2145,7 @@ dashboardApi.openapi(
       ...(body.keywords !== undefined ? { keywords: body.keywords } : {}),
       ...(body.receiptPendingMessage !== undefined ? { receiptPendingMessage: body.receiptPendingMessage } : {}),
       ...(body.receiptRejectedMessage !== undefined ? { receiptRejectedMessage: body.receiptRejectedMessage } : {}),
+      ...(body.receiptConfirmedMessage !== undefined ? { receiptConfirmedMessage: body.receiptConfirmedMessage } : {}),
     };
     await supabase
       .from("organizations")
@@ -2153,6 +2158,7 @@ dashboardApi.openapi(
         keywords: updated.keywords ?? DEFAULT_BOT_CONFIG.keywords,
         receiptPendingMessage: updated.receiptPendingMessage ?? DEFAULT_BOT_CONFIG.receiptPendingMessage,
         receiptRejectedMessage: updated.receiptRejectedMessage ?? DEFAULT_BOT_CONFIG.receiptRejectedMessage,
+        receiptConfirmedMessage: updated.receiptConfirmedMessage ?? DEFAULT_BOT_CONFIG.receiptConfirmedMessage,
       },
     }, 200);
   },

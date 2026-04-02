@@ -708,7 +708,9 @@ export function FlowsPage() {
       ? draft.steps[uploadTarget.step]?.messages[uploadTarget.msg]?.messageType
       : undefined;
   const currentTargetType: "image" | "video" | "document" | undefined =
-    _rawTargetType === "image" || _rawTargetType === "video" || _rawTargetType === "document"
+    _rawTargetType === "image" ||
+    _rawTargetType === "video" ||
+    _rawTargetType === "document"
       ? _rawTargetType
       : undefined;
 

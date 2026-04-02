@@ -14,6 +14,7 @@ import { InstancesPage } from "./pages/InstancesPage";
 import { InstanceCreatePage } from "./pages/InstanceCreatePage";
 import { ReferralsPage } from "./pages/ReferralsPage";
 import { MediaPage } from "./pages/MediaPage";
+import { ConfigPage } from "./pages/ConfigPage";
 import { InstructionsPage } from "./pages/InstructionsPage";
 import { AdminGuard } from "./components/AdminGuard";
 import { AdminLayout } from "./layout/AdminLayout";
@@ -54,6 +55,7 @@ function App() {
         <Route path="/instances/create" element={<InstanceCreatePage />} />
         <Route path="/referrals" element={<ReferralsPage />} />
         <Route path="/media" element={<MediaPage />} />
+        <Route path="/config" element={<ConfigPage />} />
         <Route path="/instructions" element={<InstructionsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -80,11 +80,34 @@ export function setActiveOrgId(id: string | null): void {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 20_000;
+
+/** Supabase getSession with a hard timeout to avoid hanging all requests. */
+async function getSessionWithTimeout() {
+  if (!supabase) return null;
+  return Promise.race([
+    supabase.auth.getSession(),
+    new Promise<null>((_, reject) =>
+      setTimeout(() => reject(new Error("getSession timeout")), 5_000)
+    ),
+  ]);
+}
+
 async function buildHeaders(
   contentType = true
 ): Promise<Record<string, string>> {
-  const session = await supabase?.auth.getSession();
-  const accessToken = session?.data.session?.access_token;
+  let accessToken: string | undefined;
+  try {
+    const result = await getSessionWithTimeout();
+    accessToken =
+      (
+        result as {
+          data?: { session?: { access_token?: string } | null };
+        } | null
+      )?.data?.session?.access_token ?? undefined;
+  } catch {
+    // session timed out or errored — fall back to dashboard token
+  }
   const orgId = getActiveOrgId();
   return {
     Authorization: `Bearer ${accessToken ?? DASHBOARD_TOKEN}`,
@@ -97,6 +120,7 @@ async function request<T>(path: string): Promise<T> {
   const headers = await buildHeaders(true);
   const res = await fetch(`${API_URL}${path}`, {
     headers,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   return (await res.json()) as T;

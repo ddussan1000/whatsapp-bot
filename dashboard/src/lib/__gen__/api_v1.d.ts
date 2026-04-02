@@ -2946,6 +2946,7 @@ export interface paths {
         query?: {
           page?: number | null;
           pageSize?: number | null;
+          sortDesc?: boolean | null;
         };
         header: {
           authorization: string;
@@ -3256,6 +3257,7 @@ export interface paths {
               keywords: string;
               receiptPendingMessage: string;
               receiptRejectedMessage: string;
+              receiptConfirmedMessage: string;
             };
           };
         };
@@ -3278,6 +3280,7 @@ export interface paths {
             keywords?: string;
             receiptPendingMessage?: string;
             receiptRejectedMessage?: string;
+            receiptConfirmedMessage?: string;
           };
         };
       };
@@ -3295,6 +3298,7 @@ export interface paths {
                 keywords: string;
                 receiptPendingMessage: string;
                 receiptRejectedMessage: string;
+                receiptConfirmedMessage: string;
               };
             };
           };
@@ -3953,6 +3957,222 @@ export interface paths {
           content: {
             "application/json": {
               ok: boolean;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/media": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          mediaType?: "image" | "video" | "document";
+          page?: number | null;
+          pageSize?: number | null;
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Org media list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              items: {
+                id: string;
+                organization_id: string;
+                filename: string;
+                original_name: string;
+                /** @enum {string} */
+                media_type: "image" | "video" | "document";
+                mime_type: string;
+                size_bytes?: number | null;
+                storage_path: string;
+                public_url: string;
+                created_at?: string | null;
+              }[];
+              page: number;
+              pageSize: number;
+              total: number;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/media/upload": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Media uploaded */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              media: {
+                id: string;
+                organization_id: string;
+                filename: string;
+                original_name: string;
+                /** @enum {string} */
+                media_type: "image" | "video" | "document";
+                mime_type: string;
+                size_bytes?: number | null;
+                storage_path: string;
+                public_url: string;
+                created_at?: string | null;
+              };
+            };
+          };
+        };
+        /** @description Bad request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/media/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
             };
           };
         };
