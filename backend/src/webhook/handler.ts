@@ -12,6 +12,7 @@ import { insertMessageLog, updateMessageDeliveryStatus } from "../db/messages";
 import { findFlowByCtwaClid, getFlowById, matchesFlowTrigger } from "../db/flows";
 import { getActiveInstanceByPhoneNumberId } from "../db/instances";
 import { supabase } from "../db/supabase";
+import { fetchAdDetails } from "../meta/adDetails";
 
 function extractReferral(msg: WhatsAppMessage): WhatsAppReferral | null {
   const ref = (msg as unknown as { referral?: WhatsAppReferral }).referral;
@@ -24,22 +25,46 @@ async function logAdClick(
   flowId: string | null,
   phone: string,
   referral: WhatsAppReferral,
+  metaToken: string | null,
 ) {
   if (!supabase) return;
   try {
-    await supabase.from("ad_click_logs").insert({
-      organization_id: organizationId,
-      flow_id: flowId,
-      phone,
-      ctwa_clid: referral.ctwa_clid ?? null,
-      source_id: referral.source_id ?? null,
-      source_type: referral.source_type ?? null,
-      source_url: referral.source_url ?? null,
-      headline: referral.headline ?? null,
-      body: referral.body ?? null,
-      media_type: referral.image?.id ? "image" : referral.video?.id ? "video" : null,
-      media_id: referral.image?.id || referral.video?.id || null,
-    });
+    const { data: row } = await supabase
+      .from("ad_click_logs")
+      .insert({
+        organization_id: organizationId,
+        flow_id: flowId,
+        phone,
+        ctwa_clid: referral.ctwa_clid ?? null,
+        source_id: referral.source_id ?? null,
+        source_type: referral.source_type ?? null,
+        source_url: referral.source_url ?? null,
+        headline: referral.headline ?? null,
+        body: referral.body ?? null,
+        media_type: referral.image?.id ? "image" : referral.video?.id ? "video" : null,
+        media_id: referral.image?.id || referral.video?.id || null,
+      })
+      .select("id")
+      .single();
+
+    // Enrich with ad/campaign/adset names from Meta Ads API (fire-and-forget)
+    if (row?.id && referral.source_id && referral.source_type === "ad" && metaToken) {
+      fetchAdDetails(referral.source_id, metaToken)
+        .then((details) => {
+          if (!details.adName && !details.campaignName) return; // nothing enriched
+          return supabase
+            ?.from("ad_click_logs")
+            .update({
+              ad_name: details.adName,
+              campaign_id: details.campaignId,
+              campaign_name: details.campaignName,
+              adset_id: details.adsetId,
+              adset_name: details.adsetName,
+            })
+            .eq("id", row.id);
+        })
+        .catch((err) => log.warn({ err }, "logAdClick: ad enrichment failed"));
+    }
   } catch (err) {
     log.warn({ err }, "logAdClick: failed to insert ad_click_log");
   }
@@ -101,7 +126,7 @@ export async function handleWebhook(c: Context) {
     }
 
     if (referral) {
-      await logAdClick(organizationId, runtimeFlow.id, phone, referral);
+      await logAdClick(organizationId, runtimeFlow.id, phone, referral, instance?.meta_token ?? null);
     }
 
     const lastUpdated = previous?.updated_at ? new Date(previous.updated_at).getTime() : 0;
@@ -185,7 +210,7 @@ export async function handleWebhook(c: Context) {
     };
 
     if (type === "image") {
-      const imgResult = await classifyAndHandleImage(msg, phone, nextState);
+      const imgResult = await classifyAndHandleImage(msg, phone, nextState, instance?.meta_token ?? null);
       if (imgResult.handled) {
         nextState = imgResult.state;
       }

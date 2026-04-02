@@ -77,6 +77,7 @@ export async function classifyAndHandleImage(
   msg: WhatsAppMessage,
   phone: string,
   state: ConversationState,
+  metaToken?: string | null,
 ): Promise<{ handled: boolean; state: ConversationState }> {
   if (!state.organizationId) return { handled: false, state };
   if (msg.type !== "image" || !msg.image?.id) return { handled: false, state };
@@ -85,7 +86,7 @@ export async function classifyAndHandleImage(
 
   let buffer: Buffer;
   try {
-    buffer = await downloadFromMeta(msg.image.id);
+    buffer = await downloadFromMeta(msg.image.id, metaToken ?? undefined);
     log.debug({ phone, mediaId: msg.image.id, bytes: buffer.length }, "classifyAndHandleImage: download ok");
   } catch (err) {
     log.error({ err, phone, mediaId: msg.image.id }, "classifyAndHandleImage: download failed");
