@@ -52,6 +52,71 @@ import {
   useReportsQuery,
 } from "../lib/hooks";
 
+// ── Stage label normalization ─────────────────────────────────────────────
+
+const STAGE_LABELS: Record<string, string> = {
+  saludo: "Saludo",
+  catalogo: "Catálogo",
+  esperando_comprobante: "Esperando comprobante",
+  confirmar_comprobante: "Confirmar comprobante",
+  pago_confirmado: "Pago confirmado",
+  comprobante_vencido: "Comprobante vencido",
+  comprobante_rechazado: "Comprobante rechazado",
+  comprobante_ilegible: "Comprobante ilegible",
+  ayuda: "Ayuda",
+  interesado: "Interesado",
+  flow_started: "En flujo",
+};
+
+function stageLabel(stage: string): string {
+  return (
+    STAGE_LABELS[stage] ??
+    stage.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
+// Custom YAxis tick that wraps long text into two lines via SVG tspan
+function FunnelYAxisTick({
+  x,
+  y,
+  payload,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value: string };
+}) {
+  const label = stageLabel(payload?.value ?? "");
+  const words = label.split(" ");
+  // Split into at most 2 lines at the midpoint
+  const mid = Math.ceil(words.length / 2);
+  const line1 = words.slice(0, mid).join(" ");
+  const line2 = words.length > 1 ? words.slice(mid).join(" ") : "";
+  const lineHeight = 13;
+  const offsetY = line2 ? -lineHeight / 2 : 0;
+
+  return (
+    <g transform={`translate(${x ?? 0},${y ?? 0})`}>
+      <text
+        x={-6}
+        y={0}
+        textAnchor="end"
+        fill="currentColor"
+        fontSize={11}
+        dominantBaseline="middle"
+      >
+        <tspan x={-6} dy={offsetY}>
+          {line1}
+        </tspan>
+        {line2 && (
+          <tspan x={-6} dy={lineHeight}>
+            {line2}
+          </tspan>
+        )}
+      </text>
+    </g>
+  );
+}
+
 function toIsoStart(date: string) {
   return new Date(`${date}T00:00:00.000Z`).toISOString();
 }
@@ -184,32 +249,44 @@ export function ReportsPage() {
   }));
 
   return (
-    <section className="space-y-4">
-      <div className="page-header">
-        <h2>Reportes</h2>
-        <p className="muted">Ventas, conversiones y rendimiento de anuncios</p>
+    <section className="flex flex-col gap-4 p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">Reportes</h2>
+          <p className="text-sm text-muted-foreground">
+            Ventas, conversiones y rendimiento de anuncios
+          </p>
+        </div>
+        <Button onClick={exportCsv} size="sm">
+          Exportar CSV
+        </Button>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Filtros</CardTitle>
           <CardDescription>
-            Refina el analisis por periodo, WhatsApp y flow
+            Refina el análisis por periodo, WhatsApp y flujo
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-6">
-          <input
-            type="date"
-            className="h-9 rounded-md border bg-background px-3"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-          />
-          <input
-            type="date"
-            className="h-9 rounded-md border bg-background px-3"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-          />
+        <CardContent className="flex flex-wrap gap-3">
+          {/* Date range */}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              className="h-9 rounded-md border bg-background px-3 text-sm"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
+            <span className="text-muted-foreground text-xs">—</span>
+            <input
+              type="date"
+              className="h-9 rounded-md border bg-background px-3 text-sm"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+            />
+          </div>
+
           <Select
             value={instanceId}
             onValueChange={(v) => {
@@ -217,7 +294,7 @@ export function ReportsPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="h-9 w-44 text-sm">
               <SelectValue placeholder="Instancia" />
             </SelectTrigger>
             <SelectContent>
@@ -229,6 +306,7 @@ export function ReportsPage() {
               ))}
             </SelectContent>
           </Select>
+
           <Select
             value={flowId}
             onValueChange={(v) => {
@@ -236,11 +314,11 @@ export function ReportsPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Flow" />
+            <SelectTrigger className="h-9 w-44 text-sm">
+              <SelectValue placeholder="Flujo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los flows</SelectItem>
+              <SelectItem value="all">Todos los flujos</SelectItem>
               {flows.map((f) => (
                 <SelectItem key={f.id} value={f.id}>
                   {f.name}
@@ -248,11 +326,12 @@ export function ReportsPage() {
               ))}
             </SelectContent>
           </Select>
+
           <Select
             value={granularity}
             onValueChange={(v: "day" | "week" | "month") => setGranularity(v)}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="h-9 w-36 text-sm">
               <SelectValue placeholder="Granularidad" />
             </SelectTrigger>
             <SelectContent>
@@ -261,9 +340,13 @@ export function ReportsPage() {
               <SelectItem value="month">Mensual</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex gap-2">
+
+          {/* Quick date presets */}
+          <div className="flex gap-1.5">
             <Button
               variant="outline"
+              size="sm"
+              className="h-9 text-xs"
               onClick={() => {
                 setFromDate(dateInputValue(new Date()));
                 setToDate(dateInputValue(new Date()));
@@ -273,6 +356,21 @@ export function ReportsPage() {
             </Button>
             <Button
               variant="outline"
+              size="sm"
+              className="h-9 text-xs"
+              onClick={() => {
+                setFromDate(
+                  dateInputValue(new Date(Date.now() - 7 * 86400000))
+                );
+                setToDate(dateInputValue(new Date()));
+              }}
+            >
+              7d
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs"
               onClick={() => {
                 setFromDate(
                   dateInputValue(new Date(Date.now() - 30 * 86400000))
@@ -282,7 +380,6 @@ export function ReportsPage() {
             >
               30d
             </Button>
-            <Button onClick={exportCsv}>Exportar CSV</Button>
           </div>
         </CardContent>
       </Card>
@@ -391,13 +488,32 @@ export function ReportsPage() {
                 }}
                 className="h-72 w-full"
               >
-                <BarChart data={data?.funnel ?? []} layout="vertical">
+                <BarChart
+                  data={data?.funnel ?? []}
+                  layout="vertical"
+                  margin={{ right: 30 }}
+                >
                   <CartesianGrid horizontal={false} />
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="stage" width={120} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <XAxis type="number" allowDecimals={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="stage"
+                    width={155}
+                    tick={<FunnelYAxisTick />}
+                  />
+                  <ChartTooltip
+                    content={<ChartTooltipContent />}
+                    formatter={(value, _name, props) => [
+                      value,
+                      stageLabel(props.payload?.stage ?? ""),
+                    ]}
+                  />
                   <Bar dataKey="count" fill="var(--color-count)" radius={6}>
-                    <LabelList dataKey="count" position="right" />
+                    <LabelList
+                      dataKey="count"
+                      position="right"
+                      style={{ fontSize: 11 }}
+                    />
                   </Bar>
                 </BarChart>
               </ChartContainer>
@@ -409,26 +525,54 @@ export function ReportsPage() {
       <div className="grid gap-3 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Ventas por flow</CardTitle>
+            <CardTitle>Ingresos por flujo</CardTitle>
+            <CardDescription>
+              Cuánto genera cada flujo de ventas
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <Skeleton className="h-72 w-full" />
+            ) : (data?.byFlow ?? []).length === 0 ? (
+              <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
+                Sin datos para el periodo seleccionado
+              </div>
             ) : (
               <ChartContainer
-                config={{ revenue: { label: "Ingresos", color: "#8b5cf6" } }}
+                config={{
+                  revenue: { label: "Ingresos", color: "#8b5cf6" },
+                  sales: { label: "Ventas", color: "#e9d5ff" },
+                }}
                 className="h-72 w-full"
               >
-                <BarChart data={data?.byFlow ?? []}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis dataKey="label" hide />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar
-                    dataKey="revenue"
-                    fill="var(--color-revenue)"
-                    radius={6}
+                <BarChart
+                  data={data?.byFlow ?? []}
+                  layout="vertical"
+                  margin={{ right: 60 }}
+                >
+                  <CartesianGrid horizontal={false} />
+                  <XAxis
+                    type="number"
+                    tickFormatter={(v: number) => money(v)}
+                    hide
                   />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={110}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="revenue" fill="var(--color-revenue)" radius={4}>
+                    <LabelList
+                      dataKey="revenue"
+                      position="right"
+                      style={{ fontSize: 11 }}
+                      formatter={(v) =>
+                        typeof v === "number" ? money(v) : String(v ?? "")
+                      }
+                    />
+                  </Bar>
                 </BarChart>
               </ChartContainer>
             )}
@@ -436,11 +580,18 @@ export function ReportsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Distribucion por instancia</CardTitle>
+            <CardTitle>Distribución por instancia</CardTitle>
+            <CardDescription>
+              Ingresos generados por cada número de WhatsApp
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <Skeleton className="h-72 w-full" />
+            ) : (data?.byInstance ?? []).length === 0 ? (
+              <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
+                Sin datos para el periodo seleccionado
+              </div>
             ) : (
               <ChartContainer
                 config={{ revenue: { label: "Ingresos", color: "#06b6d4" } }}
@@ -451,11 +602,24 @@ export function ReportsPage() {
                     data={data?.byInstance ?? []}
                     dataKey="revenue"
                     nameKey="label"
-                    outerRadius={100}
+                    outerRadius={95}
+                    innerRadius={40}
+                    paddingAngle={3}
                   >
-                    <LabelList dataKey="label" position="outside" />
+                    {(data?.byInstance ?? []).map((_, i) => (
+                      <Cell
+                        key={i}
+                        fill={AD_BAR_COLORS[i % AD_BAR_COLORS.length]}
+                      />
+                    ))}
                   </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Tooltip
+                    formatter={(value, name) => [
+                      typeof value === "number" ? money(value) : String(value),
+                      name,
+                    ]}
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
                 </PieChart>
               </ChartContainer>
             )}

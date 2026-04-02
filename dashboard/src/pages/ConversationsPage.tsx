@@ -9,7 +9,10 @@ import {
   ChevronRight,
   Workflow,
 } from "lucide-react";
-import { useConversationFiltersQuery, useConversationsQuery } from "../lib/hooks";
+import {
+  useConversationFiltersQuery,
+  useConversationsQuery,
+} from "../lib/hooks";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,7 +44,10 @@ function timeAgo(iso?: string | null) {
   if (hrs < 24) return `hace ${hrs} h`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `hace ${days} d`;
-  return new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
+  return new Date(iso).toLocaleDateString("es-CO", {
+    day: "2-digit",
+    month: "short",
+  });
 }
 
 const STAGE_OPTIONS = [
@@ -56,7 +62,13 @@ const STAGE_OPTIONS = [
 
 // ── ConversationRow ───────────────────────────────────────────────────────
 
-function ConversationRow({ conv, onClick }: { conv: Conversation; onClick: () => void }) {
+function ConversationRow({
+  conv,
+  onClick,
+}: {
+  conv: Conversation;
+  onClick: () => void;
+}) {
   const hasAd = Boolean(conv.ad_source);
 
   return (
@@ -92,7 +104,9 @@ function ConversationRow({ conv, onClick }: { conv: Conversation; onClick: () =>
       </div>
 
       <div className="shrink-0 text-right">
-        <span className="text-xs text-muted-foreground">{timeAgo(conv.updated_at)}</span>
+        <span className="text-xs text-muted-foreground">
+          {timeAgo(conv.updated_at)}
+        </span>
       </div>
     </button>
   );
@@ -136,7 +150,11 @@ export function ConversationsPage() {
     setPage(1);
   };
 
-  const hasFilters = search || stateFilter !== "all" || flowFilter !== "all" || adFilter !== "all";
+  const hasFilters =
+    search ||
+    stateFilter !== "all" ||
+    flowFilter !== "all" ||
+    adFilter !== "all";
 
   const hasFlowOptions = (filters?.flows?.length ?? 0) > 0;
   const hasAdOptions = (filters?.ads?.length ?? 0) > 0;
@@ -148,7 +166,9 @@ export function ConversationsPage() {
         <div>
           <h2 className="text-xl font-semibold">Conversaciones</h2>
           <p className="text-sm text-muted-foreground">
-            {total > 0 ? `${total.toLocaleString("es-CO")} conversaciones` : "Historial de chats con clientes"}
+            {total > 0
+              ? `${total.toLocaleString("es-CO")} conversaciones`
+              : "Historial de chats con clientes"}
           </p>
         </div>
         <Select
@@ -173,17 +193,26 @@ export function ConversationsPage() {
       <div className="flex flex-wrap items-center gap-2">
         {/* Search */}
         <div className="relative min-w-[180px] flex-1 max-w-xs">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
           <Input
             placeholder="Buscar por teléfono…"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="pl-8 h-9 text-sm"
           />
           {search && (
             <button
               type="button"
-              onClick={() => { setSearch(""); setPage(1); }}
+              onClick={() => {
+                setSearch("");
+                setPage(1);
+              }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X size={13} />
@@ -192,28 +221,44 @@ export function ConversationsPage() {
         </div>
 
         {/* Stage filter */}
-        <Select value={stateFilter} onValueChange={(v) => { setStateFilter(v); setPage(1); }}>
+        <Select
+          value={stateFilter}
+          onValueChange={(v) => {
+            setStateFilter(v);
+            setPage(1);
+          }}
+        >
           <SelectTrigger className="w-44 h-9 text-sm">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los estados</SelectItem>
             {STAGE_OPTIONS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         {/* Flow filter */}
         {hasFlowOptions && (
-          <Select value={flowFilter} onValueChange={(v) => { setFlowFilter(v); setPage(1); }}>
+          <Select
+            value={flowFilter}
+            onValueChange={(v) => {
+              setFlowFilter(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-44 h-9 text-sm">
               <SelectValue placeholder="Flujo" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los flujos</SelectItem>
               {filters!.flows.map((f) => (
-                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                <SelectItem key={f.id} value={f.id}>
+                  {f.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -221,7 +266,13 @@ export function ConversationsPage() {
 
         {/* Ad filter */}
         {hasAdOptions && (
-          <Select value={adFilter} onValueChange={(v) => { setAdFilter(v); setPage(1); }}>
+          <Select
+            value={adFilter}
+            onValueChange={(v) => {
+              setAdFilter(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-48 h-9 text-sm">
               <SelectValue placeholder="Anuncio" />
             </SelectTrigger>
@@ -260,8 +311,16 @@ export function ConversationsPage() {
           {flowFilter !== "all" && (
             <span className="flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium">
               <Workflow size={11} />
-              {filters?.flows.find((f) => f.id === flowFilter)?.name ?? flowFilter}
-              <button type="button" onClick={() => { setFlowFilter("all"); setPage(1); }} className="ml-0.5 text-muted-foreground hover:text-foreground">
+              {filters?.flows.find((f) => f.id === flowFilter)?.name ??
+                flowFilter}
+              <button
+                type="button"
+                onClick={() => {
+                  setFlowFilter("all");
+                  setPage(1);
+                }}
+                className="ml-0.5 text-muted-foreground hover:text-foreground"
+              >
                 <X size={11} />
               </button>
             </span>
@@ -271,8 +330,16 @@ export function ConversationsPage() {
               <Megaphone size={11} />
               {adFilter === "any"
                 ? "Cualquier anuncio"
-                : (filters?.ads.find((a) => a.source_id === adFilter)?.ad_name ?? adFilter)}
-              <button type="button" onClick={() => { setAdFilter("all"); setPage(1); }} className="ml-0.5 hover:text-violet-800">
+                : (filters?.ads.find((a) => a.source_id === adFilter)
+                    ?.ad_name ?? adFilter)}
+              <button
+                type="button"
+                onClick={() => {
+                  setAdFilter("all");
+                  setPage(1);
+                }}
+                className="ml-0.5 hover:text-violet-800"
+              >
                 <X size={11} />
               </button>
             </span>
@@ -284,7 +351,10 @@ export function ConversationsPage() {
       {isLoading ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 rounded-xl border px-4 py-3.5">
+            <div
+              key={i}
+              className="flex items-center gap-4 rounded-xl border px-4 py-3.5"
+            >
               <Skeleton className="h-10 w-10 rounded-full" />
               <div className="flex flex-1 flex-col gap-1.5">
                 <Skeleton className="h-3.5 w-32" />
@@ -299,10 +369,16 @@ export function ConversationsPage() {
           <MessagesSquare size={36} className="text-muted-foreground/30" />
           <div>
             <p className="font-medium text-muted-foreground">
-              {hasFilters ? "No hay conversaciones con esos filtros" : "No hay conversaciones todavía"}
+              {hasFilters
+                ? "No hay conversaciones con esos filtros"
+                : "No hay conversaciones todavía"}
             </p>
             {hasFilters && (
-              <button type="button" onClick={clearFilters} className="mt-1 text-sm text-primary underline underline-offset-2">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-1 text-sm text-primary underline underline-offset-2"
+              >
                 Limpiar filtros
               </button>
             )}
@@ -324,14 +400,27 @@ export function ConversationsPage() {
       {pageCount > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Página {page} de {pageCount} · {total.toLocaleString("es-CO")} resultados
+            Página {page} de {pageCount} · {total.toLocaleString("es-CO")}{" "}
+            resultados
           </p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1 || isLoading} onClick={() => setPage((p) => p - 1)} className="gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || isLoading}
+              onClick={() => setPage((p) => p - 1)}
+              className="gap-1"
+            >
               <ChevronLeft size={14} />
               Anterior
             </Button>
-            <Button variant="outline" size="sm" disabled={page >= pageCount || isLoading} onClick={() => setPage((p) => p + 1)} className="gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= pageCount || isLoading}
+              onClick={() => setPage((p) => p + 1)}
+              className="gap-1"
+            >
               Siguiente
               <ChevronRight size={14} />
             </Button>

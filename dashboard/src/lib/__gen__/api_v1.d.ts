@@ -4,4266 +4,4287 @@
  */
 
 export interface paths {
-    "/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service info */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                            service: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Service info */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              service: string;
             };
-            requestBody?: never;
-            responses: {
-                /** @description Health check */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            status: string;
-                        };
-                    };
-                };
-            };
+          };
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
     };
-    "/api/admin/organizations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description List */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            slug: string;
-                            name: string;
-                            created_at?: string | null;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        name: string;
-                        slug: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            slug: string;
-                            name: string;
-                            created_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/admin/organizations/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Health check */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              status: string;
+            };
+          };
         };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        slug?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            slug: string;
-                            name: string;
-                            created_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        trace?: never;
+      };
     };
-    "/api/admin/organizations/{orgId}/allowlist": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                };
-                path: {
-                    orgId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description List */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            email: string;
-                            /** @enum {string} */
-                            role: "owner" | "admin" | "agent" | "viewer";
-                            created_at?: string | null;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                };
-                path: {
-                    orgId: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: email */
-                        email: string;
-                        /**
-                         * @default owner
-                         * @enum {string}
-                         */
-                        role?: "owner" | "admin" | "agent" | "viewer";
-                    };
-                };
-            };
-            responses: {
-                /** @description Created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            email: string;
-                            /** @enum {string} */
-                            role: "owner" | "admin" | "agent" | "viewer";
-                            created_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/organizations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/admin/allowlist/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
         };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description List */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              slug: string;
+              name: string;
+              created_at?: string | null;
+            }[];
+          };
         };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/flows": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Flows */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            name: string;
-                            trigger_phrase: string;
-                            trigger_first_word: string;
-                            keywords: string[];
-                            /** @enum {string} */
-                            no_match_behavior: "trigger" | "ignore";
-                            system_prompt?: string | null;
-                            message_overrides?: {
-                                [key: string]: unknown;
-                            } | null;
-                            is_active: boolean;
-                            /** @default 24 */
-                            session_timeout_hours: number;
-                            updated_at?: string | null;
-                            steps?: {
-                                id: string;
-                                flow_id: string;
-                                organization_id: string;
-                                position: number;
-                                delay_seconds: number;
-                                label?: string | null;
-                                trigger_keywords?: string[];
-                                messages?: {
-                                    id: string;
-                                    step_id: string;
-                                    organization_id: string;
-                                    position: number;
-                                    /** @enum {string} */
-                                    message_type: "text" | "image" | "document" | "video";
-                                    text_content?: string | null;
-                                    media_url?: string | null;
-                                    filename?: string | null;
-                                    caption?: string | null;
-                                }[];
-                            }[];
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            name: string;
+            slug: string;
+          };
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
+      responses: {
+        /** @description Created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              slug: string;
+              name: string;
+              created_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/flows/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Flow */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            name: string;
-                            trigger_phrase: string;
-                            trigger_first_word: string;
-                            keywords: string[];
-                            /** @enum {string} */
-                            no_match_behavior: "trigger" | "ignore";
-                            system_prompt?: string | null;
-                            message_overrides?: {
-                                [key: string]: unknown;
-                            } | null;
-                            is_active: boolean;
-                            /** @default 24 */
-                            session_timeout_hours: number;
-                            updated_at?: string | null;
-                            steps?: {
-                                id: string;
-                                flow_id: string;
-                                organization_id: string;
-                                position: number;
-                                delay_seconds: number;
-                                label?: string | null;
-                                trigger_keywords?: string[];
-                                messages?: {
-                                    id: string;
-                                    step_id: string;
-                                    organization_id: string;
-                                    position: number;
-                                    /** @enum {string} */
-                                    message_type: "text" | "image" | "document" | "video";
-                                    text_content?: string | null;
-                                    media_url?: string | null;
-                                    filename?: string | null;
-                                    caption?: string | null;
-                                }[];
-                            }[];
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/organizations/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/flows/upsert": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
         };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        id?: string;
-                        name: string;
-                        triggerPhrase: string;
-                        /** @default [] */
-                        keywords?: string[];
-                        /**
-                         * @default trigger
-                         * @enum {string}
-                         */
-                        noMatchBehavior?: "trigger" | "ignore";
-                        systemPrompt?: string | null;
-                        /** @default true */
-                        isActive?: boolean;
-                        /** @default 24 */
-                        sessionTimeoutHours?: number;
-                        messageOverrides?: {
-                            [key: string]: string;
-                        };
-                        /** @default [] */
-                        steps?: {
-                            id?: string;
-                            position: number;
-                            /** @default 0 */
-                            delaySeconds?: number;
-                            label?: string;
-                            /** @default [] */
-                            messages?: {
-                                id?: string;
-                                position: number;
-                                /** @enum {string} */
-                                messageType: "text" | "image" | "document" | "video";
-                                textContent?: string | null;
-                                mediaUrl?: string | null;
-                                filename?: string | null;
-                                caption?: string | null;
-                            }[];
-                        }[];
-                    };
-                };
-            };
-            responses: {
-                /** @description Flow */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            name: string;
-                            trigger_phrase: string;
-                            trigger_first_word: string;
-                            keywords: string[];
-                            /** @enum {string} */
-                            no_match_behavior: "trigger" | "ignore";
-                            system_prompt?: string | null;
-                            message_overrides?: {
-                                [key: string]: unknown;
-                            } | null;
-                            is_active: boolean;
-                            /** @default 24 */
-                            session_timeout_hours: number;
-                            updated_at?: string | null;
-                            steps?: {
-                                id: string;
-                                flow_id: string;
-                                organization_id: string;
-                                position: number;
-                                delay_seconds: number;
-                                label?: string | null;
-                                trigger_keywords?: string[];
-                                messages?: {
-                                    id: string;
-                                    step_id: string;
-                                    organization_id: string;
-                                    position: number;
-                                    /** @enum {string} */
-                                    message_type: "text" | "image" | "document" | "video";
-                                    text_content?: string | null;
-                                    media_url?: string | null;
-                                    filename?: string | null;
-                                    caption?: string | null;
-                                }[];
-                            }[];
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path: {
+          id: string;
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": {
+            name?: string;
+            slug?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              slug: string;
+              name: string;
+              created_at?: string | null;
+            };
+          };
+        };
+        /** @description Bad request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/instances/{id}/flow": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        flowId: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    trace?: never;
+  };
+  "/api/admin/organizations/{orgId}/allowlist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/flow-referrals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Flow referrals */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            flow_id: string;
-                            ctwa_clid: string;
-                            source_id?: string | null;
-                            source_type?: string | null;
-                            source_url?: string | null;
-                            created_at?: string | null;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path: {
+          orgId: string;
         };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        flowId: string;
-                        ctwaClid: string;
-                        sourceId?: string;
-                        sourceType?: string;
-                        sourceUrl?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            flow_id: string;
-                            ctwa_clid: string;
-                            source_id?: string | null;
-                            source_type?: string | null;
-                            source_url?: string | null;
-                            created_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description List */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              email: string;
+              /** @enum {string} */
+              role: "owner" | "admin" | "agent" | "viewer";
+              created_at?: string | null;
+            }[];
+          };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/files/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
         };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "multipart/form-data": {
-                        /** Format: binary */
-                        file?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Flow media uploaded */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                            url: string;
-                            path: string;
-                            bucket: string;
-                            filename: string;
-                            mimeType: string;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path: {
+          orgId: string;
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: email */
+            email: string;
+            /**
+             * @default owner
+             * @enum {string}
+             */
+            role?: "owner" | "admin" | "agent" | "viewer";
+          };
+        };
+      };
+      responses: {
+        /** @description Created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              email: string;
+              /** @enum {string} */
+              role: "owner" | "admin" | "agent" | "viewer";
+              created_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/stats/today": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Today stats */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            total: number;
-                            count: number;
-                            average: number;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/allowlist/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/stats/reports": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
         };
-        get: {
-            parameters: {
-                query?: {
-                    from?: string;
-                    to?: string;
-                    /** @description CSV of instance IDs */
-                    instanceId?: string;
-                    /** @description CSV of flow IDs */
-                    flowId?: string;
-                    granularity?: "day" | "week" | "month";
-                    page?: number | null;
-                    pageSize?: number | null;
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Reports analytics */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            kpis: {
-                                revenueTotal: number;
-                                salesCount: number;
-                                avgTicket: number;
-                                conversationsCount: number;
-                                conversionRate: number;
-                            };
-                            timeseries: {
-                                bucket: string;
-                                revenue: number;
-                                sales: number;
-                                conversations: number;
-                            }[];
-                            byFlow: {
-                                id: string;
-                                label: string;
-                                revenue: number;
-                                sales: number;
-                            }[];
-                            byInstance: {
-                                id: string;
-                                label: string;
-                                revenue: number;
-                                sales: number;
-                            }[];
-                            funnel: {
-                                stage: string;
-                                count: number;
-                            }[];
-                            table: {
-                                items: {
-                                    paymentId: string;
-                                    validatedAt?: string | null;
-                                    amount: number;
-                                    currency?: string | null;
-                                    phone: string;
-                                    flowId?: string | null;
-                                    flowName?: string | null;
-                                    instanceId?: string | null;
-                                    instanceLabel?: string | null;
-                                    state?: string | null;
-                                }[];
-                                page: number;
-                                pageSize: number;
-                                total: number;
-                            };
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path: {
+          id: string;
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/stats/ad-referrals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    from?: string;
-                    to?: string;
-                    /** @description CSV of flow IDs */
-                    flowId?: string;
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Ad referral stats */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: {
-                                sourceId: string | null;
-                                headline: string | null;
-                                clicks: number;
-                                uniqueLeads: number;
-                                conversions: number;
-                                revenue: number;
-                                conversionRate: number;
-                            }[];
-                            totals: {
-                                clicks: number;
-                                uniqueLeads: number;
-                                conversions: number;
-                                revenue: number;
-                                conversionRate: number;
-                            };
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flows": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/auth/session": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Current session */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            userId: string;
-                            email: string | null;
-                            organizationId: string | null;
-                            /** @enum {string} */
-                            role: "owner" | "admin" | "agent" | "viewer";
-                            isPlatformAdmin: boolean;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Flows */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              trigger_phrase: string;
+              trigger_first_word: string;
+              keywords: string[];
+              /** @enum {string} */
+              no_match_behavior: "trigger" | "ignore";
+              system_prompt?: string | null;
+              message_overrides?: {
+                [key: string]: unknown;
+              } | null;
+              is_active: boolean;
+              /** @default 24 */
+              session_timeout_hours: number;
+              updated_at?: string | null;
+              steps?: {
+                id: string;
+                flow_id: string;
+                organization_id: string;
+                position: number;
+                delay_seconds: number;
+                label?: string | null;
+                trigger_keywords?: string[];
+                messages?: {
+                  id: string;
+                  step_id: string;
+                  organization_id: string;
+                  position: number;
+                  /** @enum {string} */
+                  message_type: "text" | "image" | "document" | "video";
+                  text_content?: string | null;
+                  media_url?: string | null;
+                  filename?: string | null;
+                  caption?: string | null;
+                }[];
+              }[];
+            }[];
+          };
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/org/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Current organization */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            organization: {
-                                id: string;
-                                slug: string;
-                                name: string;
-                            };
-                            membership: {
-                                organization_id: string;
-                                /** @enum {string} */
-                                role: "owner" | "admin" | "agent" | "viewer";
-                            };
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flows/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/instances/webhook-config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Webhook config */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            webhookUrl: string;
-                            verifyToken: string;
-                        };
-                    };
-                };
-            };
+        path: {
+          id: string;
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Flow */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              trigger_phrase: string;
+              trigger_first_word: string;
+              keywords: string[];
+              /** @enum {string} */
+              no_match_behavior: "trigger" | "ignore";
+              system_prompt?: string | null;
+              message_overrides?: {
+                [key: string]: unknown;
+              } | null;
+              is_active: boolean;
+              /** @default 24 */
+              session_timeout_hours: number;
+              updated_at?: string | null;
+              steps?: {
+                id: string;
+                flow_id: string;
+                organization_id: string;
+                position: number;
+                delay_seconds: number;
+                label?: string | null;
+                trigger_keywords?: string[];
+                messages?: {
+                  id: string;
+                  step_id: string;
+                  organization_id: string;
+                  position: number;
+                  /** @enum {string} */
+                  message_type: "text" | "image" | "document" | "video";
+                  text_content?: string | null;
+                  media_url?: string | null;
+                  filename?: string | null;
+                  caption?: string | null;
+                }[];
+              }[];
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/instances/{id}/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    put?: never;
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Instance health */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                            /** @enum {string} */
-                            status: "connected" | "invalid_token" | "error";
-                            /** @enum {string} */
-                            reason?: "ok" | "token_expired" | "token_invalid" | "insufficient_permissions" | "phone_number_not_found" | "app_not_subscribed" | "rate_limited" | "unknown";
-                            errorCode?: number;
-                            errorSubcode?: number;
-                            detail?: string | null;
-                            meta?: {
-                                phone_number_id?: string;
-                                display_phone_number?: string | null;
-                                verified_name?: string | null;
-                            } | null;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path: {
+          id: string;
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/instances": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description WhatsApp instances */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            /** @enum {string} */
-                            provider: "meta";
-                            label: string;
-                            waba_id?: string | null;
-                            meta_app_id?: string | null;
-                            phone_number_id: string;
-                            display_phone_number?: string | null;
-                            meta_token?: string | null;
-                            flow_id?: string | null;
-                            is_active: boolean;
-                            updated_at?: string | null;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        label: string;
-                        phoneNumberId: string;
-                        metaToken?: string;
-                        wabaId?: string;
-                        metaAppId?: string;
-                        displayPhoneNumber?: string;
-                        /** @default true */
-                        isActive?: boolean;
-                    };
-                };
-            };
-            responses: {
-                /** @description Instance created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            /** @enum {string} */
-                            provider: "meta";
-                            label: string;
-                            waba_id?: string | null;
-                            meta_app_id?: string | null;
-                            phone_number_id: string;
-                            display_phone_number?: string | null;
-                            meta_token?: string | null;
-                            flow_id?: string | null;
-                            is_active: boolean;
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flows/upsert": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/instances/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            id?: string;
+            name: string;
+            triggerPhrase: string;
+            /** @default [] */
+            keywords?: string[];
+            /**
+             * @default trigger
+             * @enum {string}
+             */
+            noMatchBehavior?: "trigger" | "ignore";
+            systemPrompt?: string | null;
+            /** @default true */
+            isActive?: boolean;
+            /** @default 24 */
+            sessionTimeoutHours?: number;
+            messageOverrides?: {
+              [key: string]: string;
             };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        label?: string;
-                        metaToken?: string | null;
-                        wabaId?: string | null;
-                        metaAppId?: string | null;
-                        displayPhoneNumber?: string | null;
-                        isActive?: boolean;
-                    };
-                };
-            };
-            responses: {
-                /** @description Instance updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            /** @enum {string} */
-                            provider: "meta";
-                            label: string;
-                            waba_id?: string | null;
-                            meta_app_id?: string | null;
-                            phone_number_id: string;
-                            display_phone_number?: string | null;
-                            meta_token?: string | null;
-                            flow_id?: string | null;
-                            is_active: boolean;
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+            /** @default [] */
+            steps?: {
+              id?: string;
+              position: number;
+              /** @default 0 */
+              delaySeconds?: number;
+              label?: string;
+              /** @default [] */
+              messages?: {
+                id?: string;
+                position: number;
+                /** @enum {string} */
+                messageType: "text" | "image" | "document" | "video";
+                textContent?: string | null;
+                mediaUrl?: string | null;
+                filename?: string | null;
+                caption?: string | null;
+              }[];
+            }[];
+          };
         };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
+      responses: {
+        /** @description Flow */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              trigger_phrase: string;
+              trigger_first_word: string;
+              keywords: string[];
+              /** @enum {string} */
+              no_match_behavior: "trigger" | "ignore";
+              system_prompt?: string | null;
+              message_overrides?: {
+                [key: string]: unknown;
+              } | null;
+              is_active: boolean;
+              /** @default 24 */
+              session_timeout_hours: number;
+              updated_at?: string | null;
+              steps?: {
+                id: string;
+                flow_id: string;
+                organization_id: string;
+                position: number;
+                delay_seconds: number;
+                label?: string | null;
+                trigger_keywords?: string[];
+                messages?: {
+                  id: string;
+                  step_id: string;
+                  organization_id: string;
+                  position: number;
+                  /** @enum {string} */
+                  message_type: "text" | "image" | "document" | "video";
+                  text_content?: string | null;
+                  media_url?: string | null;
+                  filename?: string | null;
+                  caption?: string | null;
+                }[];
+              }[];
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/products": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Products */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            name: string;
-                            slug: string;
-                            is_active: boolean;
-                            system_prompt: string;
-                            dispatch_keywords: string;
-                            config: {
-                                [key: string]: unknown;
-                            };
-                            updated_at?: string | null;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        name: string;
-                        slug: string;
-                        /** @default  */
-                        systemPrompt?: string;
-                        /** @default  */
-                        dispatchKeywords?: string;
-                        /** @default true */
-                        isActive?: boolean;
-                    };
-                };
-            };
-            responses: {
-                /** @description Product created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            name: string;
-                            slug: string;
-                            is_active: boolean;
-                            system_prompt: string;
-                            dispatch_keywords: string;
-                            config: {
-                                [key: string]: unknown;
-                            };
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/instances/{id}/flow": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/products/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        slug?: string;
-                        systemPrompt?: string;
-                        dispatchKeywords?: string;
-                        isActive?: boolean;
-                    };
-                };
-            };
-            responses: {
-                /** @description Product updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            name: string;
-                            slug: string;
-                            is_active: boolean;
-                            system_prompt: string;
-                            dispatch_keywords: string;
-                            config: {
-                                [key: string]: unknown;
-                            };
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path: {
+          id: string;
         };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            flowId: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/product-referrals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description CTWA mapping */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            product_id: string;
-                            ctwa_clid: string;
-                            source_id?: string | null;
-                            source_type?: string | null;
-                            source_url?: string | null;
-                            created_at?: string | null;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        productId: string;
-                        ctwaClid: string;
-                        sourceId?: string;
-                        sourceType?: string;
-                        sourceUrl?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description CTWA mapping created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            product_id: string;
-                            ctwa_clid: string;
-                            source_id?: string | null;
-                            source_type?: string | null;
-                            source_url?: string | null;
-                            created_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flow-referrals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/org/members": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organization members */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            organization_id: string;
-                            /** @enum {string} */
-                            role: "owner" | "admin" | "agent" | "viewer";
-                            user_id: string;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Flow referrals */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              flow_id: string;
+              ctwa_clid: string;
+              source_id?: string | null;
+              source_type?: string | null;
+              source_url?: string | null;
+              created_at?: string | null;
+            }[];
+          };
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/org/invites": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organization invites */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            email: string;
-                            /** @enum {string} */
-                            role: "owner" | "admin" | "agent" | "viewer";
-                            status: string;
-                            expires_at: string;
-                            created_at: string;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            flowId: string;
+            ctwaClid: string;
+            sourceId?: string;
+            sourceType?: string;
+            sourceUrl?: string;
+          };
         };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
+      };
+      responses: {
+        /** @description Created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              flow_id: string;
+              ctwa_clid: string;
+              source_id?: string | null;
+              source_type?: string | null;
+              source_url?: string | null;
+              created_at?: string | null;
             };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: email */
-                        email: string;
-                        /**
-                         * @default agent
-                         * @enum {string}
-                         */
-                        role?: "owner" | "admin" | "agent" | "viewer";
-                    };
-                };
-            };
-            responses: {
-                /** @description Invite created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            email: string;
-                            /** @enum {string} */
-                            role: "owner" | "admin" | "agent" | "viewer";
-                            status: string;
-                            expires_at: string;
-                            created_at: string;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+          };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/campaigns": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Campaigns */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            name: string;
-                            /** @enum {string} */
-                            status: "draft" | "active" | "paused" | "archived";
-                            channel: string;
-                            product_id?: string | null;
-                            product?: string | null;
-                            system_prompt: string;
-                            dispatch_keywords: string;
-                            config: {
-                                [key: string]: unknown;
-                            };
-                            updated_at: string;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        name: string;
-                        /**
-                         * @default draft
-                         * @enum {string}
-                         */
-                        status?: "draft" | "active" | "paused" | "archived";
-                        product?: string;
-                        productId?: string;
-                        /** @default  */
-                        systemPrompt?: string;
-                        /** @default  */
-                        dispatchKeywords?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Campaign created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            name: string;
-                            /** @enum {string} */
-                            status: "draft" | "active" | "paused" | "archived";
-                            channel: string;
-                            product_id?: string | null;
-                            product?: string | null;
-                            system_prompt: string;
-                            dispatch_keywords: string;
-                            config: {
-                                [key: string]: unknown;
-                            };
-                            updated_at: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/files/upload": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/campaigns/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        /** @enum {string} */
-                        status?: "draft" | "active" | "paused" | "archived";
-                        product?: string | null;
-                        productId?: string | null;
-                        systemPrompt?: string;
-                        dispatchKeywords?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Campaign updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            name: string;
-                            /** @enum {string} */
-                            status: "draft" | "active" | "paused" | "archived";
-                            channel: string;
-                            product_id?: string | null;
-                            product?: string | null;
-                            system_prompt: string;
-                            dispatch_keywords: string;
-                            config: {
-                                [key: string]: unknown;
-                            };
-                            updated_at: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
         };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
+      responses: {
+        /** @description Flow media uploaded */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              url: string;
+              path: string;
+              bucket: string;
+              filename: string;
+              mimeType: string;
+            };
+          };
+        };
+        /** @description Bad request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/legacy/flows": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    campaignId?: string;
-                    productId?: string;
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Flow versions */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            campaign_id: string;
-                            version_number: number;
-                            /** @enum {string} */
-                            status: "draft" | "published" | "archived";
-                            notes?: string | null;
-                            published_at?: string | null;
-                            updated_at: string;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        campaignId?: string;
-                        productId?: string;
-                        notes?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Flow version created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            campaign_id: string;
-                            version_number: number;
-                            /** @enum {string} */
-                            status: "draft" | "published" | "archived";
-                            notes?: string | null;
-                            published_at?: string | null;
-                            updated_at: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stats/today": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/legacy/flows/{id}/simulate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Today stats */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              total: number;
+              count: number;
+              average: number;
             };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        text?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Flow simulation response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            matched: boolean;
-                            response: string;
-                            source: string;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+          };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/legacy/flows/{id}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Flow published */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            campaign_id: string;
-                            version_number: number;
-                            /** @enum {string} */
-                            status: "draft" | "published" | "archived";
-                            notes?: string | null;
-                            published_at?: string | null;
-                            updated_at: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stats/reports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/templates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: {
+          from?: string;
+          to?: string;
+          /** @description CSV of instance IDs */
+          instanceId?: string;
+          /** @description CSV of flow IDs */
+          flowId?: string;
+          granularity?: "day" | "week" | "month";
+          page?: number | null;
+          pageSize?: number | null;
         };
-        get: {
-            parameters: {
-                query?: {
-                    flowId?: string;
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Message templates */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            flow_id?: string | null;
-                            name: string;
-                            category: string;
-                            /** @enum {string} */
-                            kind: "text" | "image" | "document" | "link";
-                            content: string;
-                            media_url?: string | null;
-                            variables: string[];
-                            is_active: boolean;
-                            updated_at: string;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Reports analytics */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              kpis: {
+                revenueTotal: number;
+                salesCount: number;
+                avgTicket: number;
+                conversationsCount: number;
+                conversionRate: number;
+              };
+              timeseries: {
+                bucket: string;
+                revenue: number;
+                sales: number;
+                conversations: number;
+              }[];
+              byFlow: {
+                id: string;
+                label: string;
+                revenue: number;
+                sales: number;
+              }[];
+              byInstance: {
+                id: string;
+                label: string;
+                revenue: number;
+                sales: number;
+              }[];
+              funnel: {
+                stage: string;
+                count: number;
+              }[];
+              table: {
+                items: {
+                  paymentId: string;
+                  validatedAt?: string | null;
+                  amount: number;
+                  currency?: string | null;
+                  phone: string;
+                  flowId?: string | null;
+                  flowName?: string | null;
+                  instanceId?: string | null;
+                  instanceLabel?: string | null;
+                  state?: string | null;
+                }[];
+                page: number;
+                pageSize: number;
+                total: number;
+              };
             };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        flowId?: string;
-                        name: string;
-                        /** @default general */
-                        category?: string;
-                        /**
-                         * @default text
-                         * @enum {string}
-                         */
-                        kind?: "text" | "image" | "document" | "link";
-                        /** @default  */
-                        content?: string;
-                        mediaUrl?: string;
-                        /** @default [] */
-                        variables?: string[];
-                    };
-                };
-            };
-            responses: {
-                /** @description Template created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            flow_id?: string | null;
-                            name: string;
-                            category: string;
-                            /** @enum {string} */
-                            kind: "text" | "image" | "document" | "link";
-                            content: string;
-                            media_url?: string | null;
-                            variables: string[];
-                            is_active: boolean;
-                            updated_at: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+          };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/stats/range": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    from?: string;
-                    to?: string;
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Range stats */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            date: string;
-                            total: number;
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stats/ad-referrals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/conversations/filters": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: {
+          from?: string;
+          to?: string;
+          /** @description CSV of flow IDs */
+          flowId?: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Filter options */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            flows: {
-                                id: string;
-                                name: string;
-                            }[];
-                            ads: {
-                                source_id: string;
-                                ad_name: string | null;
-                                campaign_name: string | null;
-                            }[];
-                        };
-                    };
-                };
-            };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Ad referral stats */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              items: {
+                sourceId: string | null;
+                headline: string | null;
+                clicks: number;
+                uniqueLeads: number;
+                conversions: number;
+                revenue: number;
+                conversionRate: number;
+              }[];
+              totals: {
+                clicks: number;
+                uniqueLeads: number;
+                conversions: number;
+                revenue: number;
+                conversionRate: number;
+              };
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/conversations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    state?: string;
-                    search?: string;
-                    fromAd?: boolean | null;
-                    adSourceId?: string;
-                    flowId?: string;
-                    page?: number | null;
-                    pageSize?: number | null;
-                    sortBy?: string;
-                    sortDir?: "asc" | "desc";
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated conversations */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: {
-                                id: string;
-                                phone: string;
-                                stage: string;
-                                flow_id?: string | null;
-                                flow_name?: string | null;
-                                started_at?: string | null;
-                                updated_at?: string | null;
-                                ad_source?: {
-                                    source_id: string | null;
-                                    headline: string | null;
-                                    ad_name: string | null;
-                                    campaign_name: string | null;
-                                    adset_name: string | null;
-                                    created_at: string | null;
-                                } | null;
-                            }[];
-                            page: number;
-                            pageSize: number;
-                            total: number;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/session": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/conversations/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Current session */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              userId: string;
+              email: string | null;
+              organizationId: string | null;
+              /** @enum {string} */
+              role: "owner" | "admin" | "agent" | "viewer";
+              isPlatformAdmin: boolean;
             };
-            requestBody?: never;
-            responses: {
-                /** @description Conversation detail */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            phone: string;
-                            stage: string;
-                            flow_id?: string | null;
-                            flow_name?: string | null;
-                            started_at?: string | null;
-                            updated_at?: string | null;
-                            ad_source?: {
-                                source_id: string | null;
-                                headline: string | null;
-                                ad_name: string | null;
-                                campaign_name: string | null;
-                                adset_name: string | null;
-                                created_at: string | null;
-                            } | null;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+          };
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
     };
-    "/api/conversations/{id}/messages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    page?: number | null;
-                    pageSize?: number | null;
-                    sortDesc?: boolean | null;
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated messages */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: {
-                                id: string;
-                                conversation_id?: string | null;
-                                phone: string;
-                                /** @enum {string} */
-                                direction: "inbound" | "outbound";
-                                message_type: string;
-                                text_body?: string | null;
-                                media_url?: string | null;
-                                payload?: {
-                                    [key: string]: unknown;
-                                } | null;
-                                meta_message_id?: string | null;
-                                created_at?: string | null;
-                            }[];
-                            page: number;
-                            pageSize: number;
-                            total: number;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** @enum {string} */
-                        type: "text" | "image" | "document";
-                        text?: string;
-                        mediaUrl?: string;
-                        caption?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Sent */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/org/current": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/conversations/{id}/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Current organization */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              organization: {
+                id: string;
+                slug: string;
+                name: string;
+              };
+              membership: {
+                organization_id: string;
+                /** @enum {string} */
+                role: "owner" | "admin" | "agent" | "viewer";
+              };
             };
-            requestBody: {
-                content: {
-                    "multipart/form-data": {
-                        /**
-                         * @default document
-                         * @enum {string}
-                         */
-                        kind?: "image" | "document";
-                        caption?: string;
-                        /** Format: binary */
-                        file?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Uploaded and sent */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                            metaMediaId?: string;
-                            mimeType: string;
-                            /** @enum {string} */
-                            kind: "image" | "document";
-                            filename?: string;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+          };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/payments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    page?: number | null;
-                    pageSize?: number | null;
-                    sortBy?: string;
-                    sortDir?: "asc" | "desc";
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated payments */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: {
-                                id: string;
-                                phone: string;
-                                product?: string | null;
-                                amount?: number | null;
-                                currency?: string | null;
-                                receipt_date?: string | null;
-                                state?: string | null;
-                                validated_at?: string | null;
-                            }[];
-                            page: number;
-                            pageSize: number;
-                            total: number;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/instances/webhook-config": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/config/bot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Webhook config */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              webhookUrl: string;
+              verifyToken: string;
             };
-            requestBody?: never;
-            responses: {
-                /** @description Bot config */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            systemPrompt: string;
-                            keywords: string;
-                            receiptPendingMessage: string;
-                            receiptRejectedMessage: string;
-                            receiptConfirmedMessage: string;
-                        };
-                    };
-                };
-            };
+          };
         };
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        systemPrompt?: string;
-                        keywords?: string;
-                        receiptPendingMessage?: string;
-                        receiptRejectedMessage?: string;
-                        receiptConfirmedMessage?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated config */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                            config: {
-                                systemPrompt: string;
-                                keywords: string;
-                                receiptPendingMessage: string;
-                                receiptRejectedMessage: string;
-                                receiptConfirmedMessage: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
     };
-    "/api/bot/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Bot health */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {string} */
-                            status: "active" | "no_instance" | "no_product" | "error";
-                            lastActivity: string | null;
-                            messageCount24h: number;
-                            detail: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/instances/{id}/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/flow-definitions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get: {
-            parameters: {
-                query?: {
-                    productId?: string;
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Flow definitions */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            product_id?: string | null;
-                            name: string;
-                            /** @enum {string} */
-                            flow_type: "keyword" | "sequential";
-                            is_active: boolean;
-                            created_at?: string | null;
-                            updated_at?: string | null;
-                            steps?: {
-                                id: string;
-                                flow_id: string;
-                                organization_id: string;
-                                position: number;
-                                delay_seconds: number;
-                                trigger_keywords: string[];
-                                label?: string | null;
-                                updated_at?: string | null;
-                                messages: {
-                                    id: string;
-                                    step_id: string;
-                                    organization_id: string;
-                                    position: number;
-                                    /** @enum {string} */
-                                    message_type: "text" | "image" | "document" | "video";
-                                    text_content?: string | null;
-                                    media_url?: string | null;
-                                    filename?: string | null;
-                                    caption?: string | null;
-                                    created_at?: string | null;
-                                }[];
-                            }[];
-                        }[];
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path: {
+          id: string;
         };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Instance health */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              /** @enum {string} */
+              status: "connected" | "invalid_token" | "error";
+              /** @enum {string} */
+              reason?:
+                | "ok"
+                | "token_expired"
+                | "token_invalid"
+                | "insufficient_permissions"
+                | "phone_number_not_found"
+                | "app_not_subscribed"
+                | "rate_limited"
+                | "unknown";
+              errorCode?: number;
+              errorSubcode?: number;
+              detail?: string | null;
+              meta?: {
+                phone_number_id?: string;
+                display_phone_number?: string | null;
+                verified_name?: string | null;
+              } | null;
             };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        name: string;
-                        /** @enum {string} */
-                        flowType: "keyword" | "sequential";
-                        productId?: string;
-                        /** @default true */
-                        isActive?: boolean;
-                    };
-                };
-            };
-            responses: {
-                /** @description Created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            product_id?: string | null;
-                            name: string;
-                            /** @enum {string} */
-                            flow_type: "keyword" | "sequential";
-                            is_active: boolean;
-                            created_at?: string | null;
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+          };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/flow-definitions/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        isActive?: boolean;
-                        productId?: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            organization_id: string;
-                            product_id?: string | null;
-                            name: string;
-                            /** @enum {string} */
-                            flow_type: "keyword" | "sequential";
-                            is_active: boolean;
-                            created_at?: string | null;
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/instances": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/flow-steps": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        flowId: string;
-                        label?: string;
-                        /** @default 0 */
-                        position?: number;
-                        /** @default 0 */
-                        delaySeconds?: number;
-                        /** @default [] */
-                        triggerKeywords?: string[];
-                    };
-                };
-            };
-            responses: {
-                /** @description Created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            flow_id: string;
-                            organization_id: string;
-                            position: number;
-                            delay_seconds: number;
-                            trigger_keywords: string[];
-                            label?: string | null;
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description WhatsApp instances */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              /** @enum {string} */
+              provider: "meta";
+              label: string;
+              waba_id?: string | null;
+              meta_app_id?: string | null;
+              phone_number_id: string;
+              display_phone_number?: string | null;
+              meta_token?: string | null;
+              flow_id?: string | null;
+              is_active: boolean;
+              updated_at?: string | null;
+            }[];
+          };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/flow-steps/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        label?: string | null;
-                        position?: number;
-                        delaySeconds?: number;
-                        triggerKeywords?: string[];
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            flow_id: string;
-                            organization_id: string;
-                            position: number;
-                            delay_seconds: number;
-                            trigger_keywords: string[];
-                            label?: string | null;
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            label: string;
+            phoneNumberId: string;
+            metaToken?: string;
+            wabaId?: string;
+            metaAppId?: string;
+            displayPhoneNumber?: string;
+            /** @default true */
+            isActive?: boolean;
+          };
         };
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
+      };
+      responses: {
+        /** @description Instance created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              /** @enum {string} */
+              provider: "meta";
+              label: string;
+              waba_id?: string | null;
+              meta_app_id?: string | null;
+              phone_number_id: string;
+              display_phone_number?: string | null;
+              meta_token?: string | null;
+              flow_id?: string | null;
+              is_active: boolean;
+              updated_at?: string | null;
             };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+          };
         };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/flow-step-messages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        stepId: string;
-                        /** @default 0 */
-                        position?: number;
-                        /**
-                         * @default text
-                         * @enum {string}
-                         */
-                        messageType?: "text" | "image" | "document" | "video";
-                        textContent?: string | null;
-                        mediaUrl?: string | null;
-                        filename?: string | null;
-                        caption?: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Created */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            step_id: string;
-                            organization_id: string;
-                            position: number;
-                            /** @enum {string} */
-                            message_type: "text" | "image" | "document" | "video";
-                            text_content?: string | null;
-                            media_url?: string | null;
-                            filename?: string | null;
-                            caption?: string | null;
-                            created_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/instances/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/flow-step-messages/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        position?: number;
-                        /** @enum {string} */
-                        messageType?: "text" | "image" | "document" | "video";
-                        textContent?: string | null;
-                        mediaUrl?: string | null;
-                        filename?: string | null;
-                        caption?: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            step_id: string;
-                            organization_id: string;
-                            position: number;
-                            /** @enum {string} */
-                            message_type: "text" | "image" | "document" | "video";
-                            text_content?: string | null;
-                            media_url?: string | null;
-                            filename?: string | null;
-                            caption?: string | null;
-                            created_at?: string | null;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path: {
+          id: string;
         };
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            label?: string;
+            metaToken?: string | null;
+            wabaId?: string | null;
+            metaAppId?: string | null;
+            displayPhoneNumber?: string | null;
+            isActive?: boolean;
+          };
         };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
+      responses: {
+        /** @description Instance updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              /** @enum {string} */
+              provider: "meta";
+              label: string;
+              waba_id?: string | null;
+              meta_app_id?: string | null;
+              phone_number_id: string;
+              display_phone_number?: string | null;
+              meta_token?: string | null;
+              flow_id?: string | null;
+              is_active: boolean;
+              updated_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/media": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    mediaType?: "image" | "video" | "document";
-                    page?: number | null;
-                    pageSize?: number | null;
-                };
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Org media list */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: {
-                                id: string;
-                                organization_id: string;
-                                filename: string;
-                                original_name: string;
-                                /** @enum {string} */
-                                media_type: "image" | "video" | "document";
-                                mime_type: string;
-                                size_bytes?: number | null;
-                                storage_path: string;
-                                public_url: string;
-                                created_at?: string | null;
-                            }[];
-                            page: number;
-                            pageSize: number;
-                            total: number;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/products": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/media/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "multipart/form-data": {
-                        /** Format: binary */
-                        file?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Media uploaded */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                            media: {
-                                id: string;
-                                organization_id: string;
-                                filename: string;
-                                original_name: string;
-                                /** @enum {string} */
-                                media_type: "image" | "video" | "document";
-                                mime_type: string;
-                                size_bytes?: number | null;
-                                storage_path: string;
-                                public_url: string;
-                                created_at?: string | null;
-                            };
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Products */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              slug: string;
+              is_active: boolean;
+              system_prompt: string;
+              dispatch_keywords: string;
+              config: {
+                [key: string]: unknown;
+              };
+              updated_at?: string | null;
+            }[];
+          };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
-    "/api/media/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
         };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header: {
-                    authorization: string;
-                    "x-organization-id"?: string;
-                };
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            name: string;
+            slug: string;
+            /** @default  */
+            systemPrompt?: string;
+            /** @default  */
+            dispatchKeywords?: string;
+            /** @default true */
+            isActive?: boolean;
+          };
         };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+      };
+      responses: {
+        /** @description Product created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              slug: string;
+              is_active: boolean;
+              system_prompt: string;
+              dispatch_keywords: string;
+              config: {
+                [key: string]: unknown;
+              };
+              updated_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
     };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/products/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            name?: string;
+            slug?: string;
+            systemPrompt?: string;
+            dispatchKeywords?: string;
+            isActive?: boolean;
+          };
+        };
+      };
+      responses: {
+        /** @description Product updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              slug: string;
+              is_active: boolean;
+              system_prompt: string;
+              dispatch_keywords: string;
+              config: {
+                [key: string]: unknown;
+              };
+              updated_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/product-referrals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description CTWA mapping */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              product_id: string;
+              ctwa_clid: string;
+              source_id?: string | null;
+              source_type?: string | null;
+              source_url?: string | null;
+              created_at?: string | null;
+            }[];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            productId: string;
+            ctwaClid: string;
+            sourceId?: string;
+            sourceType?: string;
+            sourceUrl?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description CTWA mapping created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              product_id: string;
+              ctwa_clid: string;
+              source_id?: string | null;
+              source_type?: string | null;
+              source_url?: string | null;
+              created_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/org/members": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Organization members */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              organization_id: string;
+              /** @enum {string} */
+              role: "owner" | "admin" | "agent" | "viewer";
+              user_id: string;
+            }[];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/org/invites": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Organization invites */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              email: string;
+              /** @enum {string} */
+              role: "owner" | "admin" | "agent" | "viewer";
+              status: string;
+              expires_at: string;
+              created_at: string;
+            }[];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: email */
+            email: string;
+            /**
+             * @default agent
+             * @enum {string}
+             */
+            role?: "owner" | "admin" | "agent" | "viewer";
+          };
+        };
+      };
+      responses: {
+        /** @description Invite created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              email: string;
+              /** @enum {string} */
+              role: "owner" | "admin" | "agent" | "viewer";
+              status: string;
+              expires_at: string;
+              created_at: string;
+            };
+          };
+        };
+        /** @description Bad request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/campaigns": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Campaigns */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              /** @enum {string} */
+              status: "draft" | "active" | "paused" | "archived";
+              channel: string;
+              product_id?: string | null;
+              product?: string | null;
+              system_prompt: string;
+              dispatch_keywords: string;
+              config: {
+                [key: string]: unknown;
+              };
+              updated_at: string;
+            }[];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            name: string;
+            /**
+             * @default draft
+             * @enum {string}
+             */
+            status?: "draft" | "active" | "paused" | "archived";
+            product?: string;
+            productId?: string;
+            /** @default  */
+            systemPrompt?: string;
+            /** @default  */
+            dispatchKeywords?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Campaign created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              /** @enum {string} */
+              status: "draft" | "active" | "paused" | "archived";
+              channel: string;
+              product_id?: string | null;
+              product?: string | null;
+              system_prompt: string;
+              dispatch_keywords: string;
+              config: {
+                [key: string]: unknown;
+              };
+              updated_at: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/campaigns/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            name?: string;
+            /** @enum {string} */
+            status?: "draft" | "active" | "paused" | "archived";
+            product?: string | null;
+            productId?: string | null;
+            systemPrompt?: string;
+            dispatchKeywords?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Campaign updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              /** @enum {string} */
+              status: "draft" | "active" | "paused" | "archived";
+              channel: string;
+              product_id?: string | null;
+              product?: string | null;
+              system_prompt: string;
+              dispatch_keywords: string;
+              config: {
+                [key: string]: unknown;
+              };
+              updated_at: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/legacy/flows": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          campaignId?: string;
+          productId?: string;
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Flow versions */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              campaign_id: string;
+              version_number: number;
+              /** @enum {string} */
+              status: "draft" | "published" | "archived";
+              notes?: string | null;
+              published_at?: string | null;
+              updated_at: string;
+            }[];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            campaignId?: string;
+            productId?: string;
+            notes?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Flow version created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              campaign_id: string;
+              version_number: number;
+              /** @enum {string} */
+              status: "draft" | "published" | "archived";
+              notes?: string | null;
+              published_at?: string | null;
+              updated_at: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/legacy/flows/{id}/simulate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": {
+            text?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Flow simulation response */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              matched: boolean;
+              response: string;
+              source: string;
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/legacy/flows/{id}/publish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Flow published */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              campaign_id: string;
+              version_number: number;
+              /** @enum {string} */
+              status: "draft" | "published" | "archived";
+              notes?: string | null;
+              published_at?: string | null;
+              updated_at: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          flowId?: string;
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Message templates */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              flow_id?: string | null;
+              name: string;
+              category: string;
+              /** @enum {string} */
+              kind: "text" | "image" | "document" | "link";
+              content: string;
+              media_url?: string | null;
+              variables: string[];
+              is_active: boolean;
+              updated_at: string;
+            }[];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            flowId?: string;
+            name: string;
+            /** @default general */
+            category?: string;
+            /**
+             * @default text
+             * @enum {string}
+             */
+            kind?: "text" | "image" | "document" | "link";
+            /** @default  */
+            content?: string;
+            mediaUrl?: string;
+            /** @default [] */
+            variables?: string[];
+          };
+        };
+      };
+      responses: {
+        /** @description Template created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              flow_id?: string | null;
+              name: string;
+              category: string;
+              /** @enum {string} */
+              kind: "text" | "image" | "document" | "link";
+              content: string;
+              media_url?: string | null;
+              variables: string[];
+              is_active: boolean;
+              updated_at: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/stats/range": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          from?: string;
+          to?: string;
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Range stats */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              date: string;
+              total: number;
+            }[];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/conversations/filters": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Filter options */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              flows: {
+                id: string;
+                name: string;
+              }[];
+              ads: {
+                source_id: string;
+                ad_name: string | null;
+                campaign_name: string | null;
+              }[];
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/conversations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          state?: string;
+          search?: string;
+          fromAd?: boolean | null;
+          adSourceId?: string;
+          flowId?: string;
+          page?: number | null;
+          pageSize?: number | null;
+          sortBy?: string;
+          sortDir?: "asc" | "desc";
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Paginated conversations */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              items: {
+                id: string;
+                phone: string;
+                stage: string;
+                flow_id?: string | null;
+                flow_name?: string | null;
+                started_at?: string | null;
+                updated_at?: string | null;
+                ad_source?: {
+                  source_id: string | null;
+                  headline: string | null;
+                  ad_name: string | null;
+                  campaign_name: string | null;
+                  adset_name: string | null;
+                  created_at: string | null;
+                } | null;
+              }[];
+              page: number;
+              pageSize: number;
+              total: number;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/conversations/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Conversation detail */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              phone: string;
+              stage: string;
+              flow_id?: string | null;
+              flow_name?: string | null;
+              started_at?: string | null;
+              updated_at?: string | null;
+              ad_source?: {
+                source_id: string | null;
+                headline: string | null;
+                ad_name: string | null;
+                campaign_name: string | null;
+                adset_name: string | null;
+                created_at: string | null;
+              } | null;
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/conversations/{id}/messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          page?: number | null;
+          pageSize?: number | null;
+          sortDesc?: boolean | null;
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Paginated messages */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              items: {
+                id: string;
+                conversation_id?: string | null;
+                phone: string;
+                /** @enum {string} */
+                direction: "inbound" | "outbound";
+                message_type: string;
+                text_body?: string | null;
+                media_url?: string | null;
+                payload?: {
+                  [key: string]: unknown;
+                } | null;
+                meta_message_id?: string | null;
+                created_at?: string | null;
+              }[];
+              page: number;
+              pageSize: number;
+              total: number;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            type: "text" | "image" | "document";
+            text?: string;
+            mediaUrl?: string;
+            caption?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Sent */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/conversations/{id}/upload": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /**
+             * @default document
+             * @enum {string}
+             */
+            kind?: "image" | "document";
+            caption?: string;
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Uploaded and sent */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              metaMediaId?: string;
+              mimeType: string;
+              /** @enum {string} */
+              kind: "image" | "document";
+              filename?: string;
+            };
+          };
+        };
+        /** @description Bad request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/payments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          page?: number | null;
+          pageSize?: number | null;
+          sortBy?: string;
+          sortDir?: "asc" | "desc";
+          state?: "pending_manual_review" | "validated" | "rejected";
+          flowId?: string;
+          instanceId?: string;
+          from?: string;
+          to?: string;
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Paginated payments */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              items: {
+                id: string;
+                phone: string;
+                flow_id?: string | null;
+                flow_name?: string | null;
+                whatsapp_instance_id?: string | null;
+                instance_label?: string | null;
+                amount?: number | null;
+                currency?: string | null;
+                receipt_date?: string | null;
+                /** @enum {string|null} */
+                state?:
+                  | "pending_manual_review"
+                  | "validated"
+                  | "rejected"
+                  | null;
+                validated_at?: string | null;
+              }[];
+              page: number;
+              pageSize: number;
+              total: number;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/config/bot": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Bot config */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              systemPrompt: string;
+              keywords: string;
+              receiptPendingMessage: string;
+              receiptRejectedMessage: string;
+              receiptConfirmedMessage: string;
+            };
+          };
+        };
+      };
+    };
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            systemPrompt?: string;
+            keywords?: string;
+            receiptPendingMessage?: string;
+            receiptRejectedMessage?: string;
+            receiptConfirmedMessage?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated config */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              config: {
+                systemPrompt: string;
+                keywords: string;
+                receiptPendingMessage: string;
+                receiptRejectedMessage: string;
+                receiptConfirmedMessage: string;
+              };
+            };
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/bot/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Bot health */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              status: "active" | "no_instance" | "no_product" | "error";
+              lastActivity: string | null;
+              messageCount24h: number;
+              detail: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flow-definitions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          productId?: string;
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Flow definitions */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              product_id?: string | null;
+              name: string;
+              /** @enum {string} */
+              flow_type: "keyword" | "sequential";
+              is_active: boolean;
+              created_at?: string | null;
+              updated_at?: string | null;
+              steps?: {
+                id: string;
+                flow_id: string;
+                organization_id: string;
+                position: number;
+                delay_seconds: number;
+                trigger_keywords: string[];
+                label?: string | null;
+                updated_at?: string | null;
+                messages: {
+                  id: string;
+                  step_id: string;
+                  organization_id: string;
+                  position: number;
+                  /** @enum {string} */
+                  message_type: "text" | "image" | "document" | "video";
+                  text_content?: string | null;
+                  media_url?: string | null;
+                  filename?: string | null;
+                  caption?: string | null;
+                  created_at?: string | null;
+                }[];
+              }[];
+            }[];
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            name: string;
+            /** @enum {string} */
+            flowType: "keyword" | "sequential";
+            productId?: string;
+            /** @default true */
+            isActive?: boolean;
+          };
+        };
+      };
+      responses: {
+        /** @description Created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              product_id?: string | null;
+              name: string;
+              /** @enum {string} */
+              flow_type: "keyword" | "sequential";
+              is_active: boolean;
+              created_at?: string | null;
+              updated_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flow-definitions/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            name?: string;
+            isActive?: boolean;
+            productId?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              product_id?: string | null;
+              name: string;
+              /** @enum {string} */
+              flow_type: "keyword" | "sequential";
+              is_active: boolean;
+              created_at?: string | null;
+              updated_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flow-steps": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            flowId: string;
+            label?: string;
+            /** @default 0 */
+            position?: number;
+            /** @default 0 */
+            delaySeconds?: number;
+            /** @default [] */
+            triggerKeywords?: string[];
+          };
+        };
+      };
+      responses: {
+        /** @description Created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              flow_id: string;
+              organization_id: string;
+              position: number;
+              delay_seconds: number;
+              trigger_keywords: string[];
+              label?: string | null;
+              updated_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flow-steps/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            label?: string | null;
+            position?: number;
+            delaySeconds?: number;
+            triggerKeywords?: string[];
+          };
+        };
+      };
+      responses: {
+        /** @description Updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              flow_id: string;
+              organization_id: string;
+              position: number;
+              delay_seconds: number;
+              trigger_keywords: string[];
+              label?: string | null;
+              updated_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flow-step-messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            stepId: string;
+            /** @default 0 */
+            position?: number;
+            /**
+             * @default text
+             * @enum {string}
+             */
+            messageType?: "text" | "image" | "document" | "video";
+            textContent?: string | null;
+            mediaUrl?: string | null;
+            filename?: string | null;
+            caption?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              step_id: string;
+              organization_id: string;
+              position: number;
+              /** @enum {string} */
+              message_type: "text" | "image" | "document" | "video";
+              text_content?: string | null;
+              media_url?: string | null;
+              filename?: string | null;
+              caption?: string | null;
+              created_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flow-step-messages/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            position?: number;
+            /** @enum {string} */
+            messageType?: "text" | "image" | "document" | "video";
+            textContent?: string | null;
+            mediaUrl?: string | null;
+            filename?: string | null;
+            caption?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              step_id: string;
+              organization_id: string;
+              position: number;
+              /** @enum {string} */
+              message_type: "text" | "image" | "document" | "video";
+              text_content?: string | null;
+              media_url?: string | null;
+              filename?: string | null;
+              caption?: string | null;
+              created_at?: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/media": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          mediaType?: "image" | "video" | "document";
+          page?: number | null;
+          pageSize?: number | null;
+        };
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Org media list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              items: {
+                id: string;
+                organization_id: string;
+                filename: string;
+                original_name: string;
+                /** @enum {string} */
+                media_type: "image" | "video" | "document";
+                mime_type: string;
+                size_bytes?: number | null;
+                storage_path: string;
+                public_url: string;
+                created_at?: string | null;
+              }[];
+              page: number;
+              pageSize: number;
+              total: number;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/media/upload": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Media uploaded */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              media: {
+                id: string;
+                organization_id: string;
+                filename: string;
+                original_name: string;
+                /** @enum {string} */
+                media_type: "image" | "video" | "document";
+                mime_type: string;
+                size_bytes?: number | null;
+                storage_path: string;
+                public_url: string;
+                created_at?: string | null;
+              };
+            };
+          };
+        };
+        /** @description Bad request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/media/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+  schemas: never;
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export type operations = Record<string, never>;

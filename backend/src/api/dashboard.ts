@@ -114,14 +114,19 @@ const ConversationSchema = z.object({
   updated_at: z.string().nullable().optional(),
   ad_source: AdSourceSchema.nullable().optional(),
 });
+const PAYMENT_STATES = ["pending_manual_review", "validated", "rejected"] as const;
+
 const PaymentSchema = z.object({
   id: z.string(),
   phone: z.string(),
-  product: z.string().nullable().optional(),
+  flow_id: z.string().nullable().optional(),
+  flow_name: z.string().nullable().optional(),
+  whatsapp_instance_id: z.string().nullable().optional(),
+  instance_label: z.string().nullable().optional(),
   amount: z.number().nullable().optional(),
   currency: z.string().nullable().optional(),
   receipt_date: z.string().nullable().optional(),
-  state: z.string().nullable().optional(),
+  state: z.enum(PAYMENT_STATES).nullable().optional(),
   validated_at: z.string().nullable().optional(),
 });
 const ChatMessageSchema = z.object({
@@ -2119,6 +2124,11 @@ dashboardApi.openapi(
         pageSize: z.coerce.number().default(20),
         sortBy: z.string().default("validated_at"),
         sortDir: z.enum(["asc", "desc"]).default("desc"),
+        state: z.enum(PAYMENT_STATES).optional(),
+        flowId: z.string().optional(),
+        instanceId: z.string().optional(),
+        from: z.string().optional(),
+        to: z.string().optional(),
       }),
     },
     responses: {
@@ -2128,22 +2138,58 @@ dashboardApi.openapi(
   }),
   async (c) => {
     if (!supabase) return c.json({ items: [], page: 1, pageSize: 20, total: 0 }, 200);
-    const session = getSession(c);
-    const { page, pageSize, sortBy, sortDir } = c.req.valid("query");
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    const { data, error } = await supabase
+    const { page, pageSize, sortBy, sortDir, state, flowId, instanceId, from: fromDate, to: toDate } = c.req.valid("query");
+    const rangeFrom = (page - 1) * pageSize;
+    const rangeTo = rangeFrom + pageSize - 1;
+    const organization = orgId(c);
+
+    const selectCols = [
+      "id, phone, flow_id, whatsapp_instance_id, amount, currency, receipt_date, state, validated_at",
+      "flows(name)",
+      "whatsapp_instances(label)",
+    ].join(", ");
+
+    let query = supabase
       .from("payments")
-      .select("id, phone, product, amount, currency, receipt_date, state, validated_at")
-      .eq("organization_id", orgId(c))
+      .select(selectCols)
+      .eq("organization_id", organization)
       .order(sortBy, { ascending: sortDir === "asc" })
-      .range(from, to);
+      .range(rangeFrom, rangeTo);
+    if (state) query = query.eq("state", state);
+    if (flowId) query = query.eq("flow_id", flowId);
+    if (instanceId) query = query.eq("whatsapp_instance_id", instanceId);
+    if (fromDate) query = query.gte("validated_at", fromDate);
+    if (toDate) query = query.lte("validated_at", toDate);
+
+    const { data, error } = await query;
     if (error) return c.json({ error: error.message }, 500);
-    const { count } = await supabase
+
+    let countQuery = supabase
       .from("payments")
       .select("*", { count: "exact", head: true })
-      .eq("organization_id", orgId(c));
-    return c.json({ items: data ?? [], page, pageSize, total: count ?? data?.length ?? 0 }, 200);
+      .eq("organization_id", organization);
+    if (state) countQuery = countQuery.eq("state", state);
+    if (flowId) countQuery = countQuery.eq("flow_id", flowId);
+    if (instanceId) countQuery = countQuery.eq("whatsapp_instance_id", instanceId);
+    if (fromDate) countQuery = countQuery.gte("validated_at", fromDate);
+    if (toDate) countQuery = countQuery.lte("validated_at", toDate);
+    const { count } = await countQuery;
+
+    const items = (data ?? []).map((p: Record<string, unknown>) => ({
+      id: p.id,
+      phone: p.phone,
+      flow_id: p.flow_id ?? null,
+      flow_name: (p.flows as { name?: string } | null)?.name ?? null,
+      whatsapp_instance_id: p.whatsapp_instance_id ?? null,
+      instance_label: (p.whatsapp_instances as { label?: string } | null)?.label ?? null,
+      amount: p.amount ?? null,
+      currency: p.currency ?? null,
+      receipt_date: p.receipt_date ?? null,
+      state: (p.state as typeof PAYMENT_STATES[number] | null) ?? null,
+      validated_at: p.validated_at ?? null,
+    }));
+
+    return c.json({ items, page, pageSize, total: count ?? items.length }, 200);
   },
 );
 

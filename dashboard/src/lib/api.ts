@@ -252,12 +252,22 @@ export const api = {
     pageSize?: number;
     sortBy?: string;
     sortDir?: "asc" | "desc";
+    state?: string;
+    flowId?: string;
+    instanceId?: string;
+    from?: string;
+    to?: string;
   }) => {
     const q = new URLSearchParams();
     if (params?.page) q.set("page", String(params.page));
     if (params?.pageSize) q.set("pageSize", String(params.pageSize));
     if (params?.sortBy) q.set("sortBy", params.sortBy);
     if (params?.sortDir) q.set("sortDir", params.sortDir);
+    if (params?.state) q.set("state", params.state);
+    if (params?.flowId) q.set("flowId", params.flowId);
+    if (params?.instanceId) q.set("instanceId", params.instanceId);
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
     return request<Paginated<Payment>>(`/api/payments?${q.toString()}`);
   },
   getBotConfig: () => request<BotConfig>("/api/config/bot"),

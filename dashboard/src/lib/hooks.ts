@@ -133,6 +133,11 @@ export function usePaymentsQuery(params?: {
   pageSize?: number;
   sortBy?: string;
   sortDir?: "asc" | "desc";
+  state?: string;
+  flowId?: string;
+  instanceId?: string;
+  from?: string;
+  to?: string;
 }) {
   return useQuery({
     queryKey: ["payments", params],
