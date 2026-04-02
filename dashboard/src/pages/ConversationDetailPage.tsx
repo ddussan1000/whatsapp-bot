@@ -299,69 +299,99 @@ function ClientInfoModal({
   const ad = conversation?.ad_source;
   const currentStage = conversation ? String(conversation.stage) : "";
   const knownStage = STAGE_OPTIONS.some((o) => o.value === currentStage);
+  const displayName = conversation?.contact_name ?? (conversation ? formatPhone(conversation.phone) : "");
+  const initials = displayName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "?";
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalles del cliente</DialogTitle>
         </DialogHeader>
 
         {!conversation ? (
-          <div className="flex flex-col gap-3 py-2">
+          <div className="flex flex-col gap-4 py-2">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex flex-col gap-1">
-                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-20" />
                 <Skeleton className="h-4 w-40" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-4 py-1">
-            {/* Contact */}
-            <div className="flex flex-col gap-3">
-              {conversation.contact_name && (
-                <InfoRow label="Nombre" value={conversation.contact_name} />
-              )}
-              <InfoRow
-                label="Teléfono"
-                value={formatPhone(conversation.phone)}
-              />
-              {/* Editable stage */}
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Estado
-                </span>
-                <Select
-                  value={knownStage ? currentStage : ""}
-                  onValueChange={(v) => {
-                    if (v) onStageChange(v);
-                  }}
-                  disabled={stageChangePending}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder={currentStage} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STAGE_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                    {!knownStage && (
-                      <SelectItem value="" disabled>
-                        {currentStage}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+          <div className="flex flex-col gap-5 py-1">
+            {/* Contact header */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-base">
+                {initials}
               </div>
-              {conversation.flow_name && (
-                <InfoRow label="Flujo activo" value={conversation.flow_name} />
+              <div className="min-w-0">
+                <p className="font-semibold text-sm leading-tight truncate">
+                  {displayName}
+                </p>
+                {conversation.contact_name && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {formatPhone(conversation.phone)}
+                  </p>
+                )}
+                {conversation.flow_name && (
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                    <Workflow size={11} className="shrink-0" />
+                    <span className="truncate">{conversation.flow_name}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Stage update — prominent */}
+            <div className="rounded-xl border bg-muted/30 p-3 flex flex-col gap-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Estado de la conversación
+              </p>
+              <Select
+                value={knownStage ? currentStage : ""}
+                onValueChange={(v) => {
+                  if (v) onStageChange(v);
+                }}
+                disabled={stageChangePending}
+              >
+                <SelectTrigger className="h-9 text-sm bg-background">
+                  <SelectValue placeholder={currentStage} />
+                </SelectTrigger>
+                <SelectContent>
+                  {STAGE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                  {!knownStage && (
+                    <SelectItem value="" disabled>
+                      {currentStage}
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {stageChangePending && (
+                <p className="text-xs text-muted-foreground">Actualizando…</p>
               )}
+            </div>
+
+            {/* Timestamps */}
+            <div className="flex flex-col gap-3">
               {conversation.started_at && (
                 <InfoRow
-                  label="Inicio"
+                  label="Inicio de conversación"
                   value={formatDateTime(conversation.started_at)}
                 />
               )}
@@ -380,10 +410,10 @@ function ClientInfoModal({
                 <div className="flex flex-col gap-3">
                   <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-violet-600">
                     <Megaphone size={12} />
-                    Origen del anuncio
+                    Origen del anuncio Meta
                   </p>
                   <InfoRow label="Anuncio" value={ad.ad_name} />
-                  <InfoRow label="Conjunto" value={ad.adset_name} />
+                  <InfoRow label="Conjunto de anuncios" value={ad.adset_name} />
                   <InfoRow label="Campaña" value={ad.campaign_name} />
                   {ad.headline && (
                     <InfoRow label="Titular" value={`"${ad.headline}"`} />

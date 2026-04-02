@@ -198,162 +198,146 @@ export function ConversationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Search */}
-        <div className="relative min-w-[180px] flex-1 max-w-xs">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            placeholder="Buscar por teléfono…"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-8 h-9 text-sm"
-          />
-          {search && (
+      <div className="rounded-xl border bg-muted/20 p-3 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Filtros
+          </p>
+          {hasFilters && (
             <button
               type="button"
-              onClick={() => {
-                setSearch("");
-                setPage(1);
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onClick={clearFilters}
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
             >
-              <X size={13} />
+              Limpiar
             </button>
           )}
         </div>
 
-        {/* Stage filter */}
-        <Select
-          value={stateFilter}
-          onValueChange={(v) => {
-            setStateFilter(v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-44 h-9 text-sm">
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los estados</SelectItem>
-            {STAGE_OPTIONS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Flow filter */}
-        {hasFlowOptions && (
-          <Select
-            value={flowFilter}
-            onValueChange={(v) => {
-              setFlowFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-44 h-9 text-sm">
-              <SelectValue placeholder="Flujo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los flujos</SelectItem>
-              {filters!.flows.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* Ad filter */}
-        {hasAdOptions && (
-          <Select
-            value={adFilter}
-            onValueChange={(v) => {
-              setAdFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-48 h-9 text-sm">
-              <SelectValue placeholder="Anuncio" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="any">
-                <span className="flex items-center gap-1.5">
-                  <Megaphone size={12} />
-                  Cualquier anuncio
-                </span>
-              </SelectItem>
-              {filters!.ads.map((a) => (
-                <SelectItem key={a.source_id} value={a.source_id}>
-                  {a.ad_name ?? a.campaign_name ?? a.source_id}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* Clear */}
-        {hasFilters && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-          >
-            Limpiar filtros
-          </button>
-        )}
-      </div>
-
-      {/* Active filter chips */}
-      {(flowFilter !== "all" || adFilter !== "all") && (
-        <div className="flex flex-wrap gap-2">
-          {flowFilter !== "all" && (
-            <span className="flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium">
-              <Workflow size={11} />
-              {filters?.flows.find((f) => f.id === flowFilter)?.name ??
-                flowFilter}
-              <button
-                type="button"
-                onClick={() => {
-                  setFlowFilter("all");
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Search */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Buscar
+            </label>
+            <div className="relative">
+              <Search
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                placeholder="Teléfono o nombre…"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="ml-0.5 text-muted-foreground hover:text-foreground"
-              >
-                <X size={11} />
-              </button>
-            </span>
-          )}
-          {adFilter !== "all" && (
-            <span className="flex items-center gap-1.5 rounded-full border bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-600">
-              <Megaphone size={11} />
-              {adFilter === "any"
-                ? "Cualquier anuncio"
-                : (filters?.ads.find((a) => a.source_id === adFilter)
-                    ?.ad_name ?? adFilter)}
-              <button
-                type="button"
-                onClick={() => {
-                  setAdFilter("all");
-                  setPage(1);
-                }}
-                className="ml-0.5 hover:text-violet-800"
-              >
-                <X size={11} />
-              </button>
-            </span>
-          )}
+                className="pl-7 h-9 text-sm"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Stage filter */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Estado
+            </label>
+            <Select
+              value={stateFilter}
+              onValueChange={(v) => {
+                setStateFilter(v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                {STAGE_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Flow filter */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Flujo
+            </label>
+            <Select
+              value={flowFilter}
+              onValueChange={(v) => {
+                setFlowFilter(v);
+                setPage(1);
+              }}
+              disabled={!hasFlowOptions}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Todos los flujos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los flujos</SelectItem>
+                {filters?.flows.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Ad filter */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Anuncio Meta
+            </label>
+            <Select
+              value={adFilter}
+              onValueChange={(v) => {
+                setAdFilter(v);
+                setPage(1);
+              }}
+              disabled={!hasAdOptions}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {hasAdOptions && (
+                  <SelectItem value="any">
+                    <span className="flex items-center gap-1.5">
+                      <Megaphone size={12} />
+                      Cualquier anuncio
+                    </span>
+                  </SelectItem>
+                )}
+                {filters?.ads.map((a) => (
+                  <SelectItem key={a.source_id} value={a.source_id}>
+                    {a.ad_name ?? a.campaign_name ?? a.source_id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* List */}
       {isLoading ? (
