@@ -39,6 +39,32 @@ export async function uploadOrgFlowMedia(params: {
   });
 }
 
+export async function deleteFromSupabaseStorage(params: {
+  bucket: string;
+  path: string;
+}) {
+  if (!supabase) throw new Error("Supabase no configurado");
+  const { error } = await supabase.storage.from(params.bucket).remove([params.path]);
+  if (error) throw new Error(error.message);
+}
+
+export async function uploadOrgMedia(params: {
+  organizationId: string;
+  bucket: string;
+  filename: string;
+  buffer: Buffer;
+  contentType: string;
+}) {
+  const safeName = sanitizeFileName(params.filename || "file.bin");
+  const path = `${params.organizationId}/media/${Date.now()}_${safeName}`;
+  return uploadToSupabaseStorage({
+    bucket: params.bucket,
+    path,
+    buffer: params.buffer,
+    contentType: params.contentType,
+  });
+}
+
 export async function uploadReceiptAsset(params: {
   organizationId: string;
   bucket: string;

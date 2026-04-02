@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MessageSquare,
   Image as ImageIcon,
@@ -6,7 +6,7 @@ import {
   Video,
   Plus,
   Trash2,
-  Upload,
+  Library,
   Clock,
   ChevronDown,
   ChevronUp,
@@ -24,11 +24,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { MediaPickerModal } from "@/components/ui/media-picker-modal";
 import type { FlowMessageTypeV2, FlowV2, UpsertFlowBody } from "@/types/api";
 import {
   useDeleteFlowV2Mutation,
   useFlowsV2Query,
-  useUploadFlowMediaMutation,
   useUpsertFlowV2Mutation,
 } from "@/lib/hooks";
 import { toast } from "sonner";
@@ -264,23 +264,23 @@ function MessageRow({
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {/* Upload area */}
+            {/* Media picker trigger */}
             <button
               type="button"
               onClick={onUploadClick}
               disabled={uploadPending}
               className="flex items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-50"
             >
-              <Upload size={15} className="shrink-0" />
+              <Library size={15} className="shrink-0" />
               {uploadPending ? (
-                <span>Subiendo…</span>
+                <span>Cargando…</span>
               ) : msg.filename ? (
                 <span className="max-w-[200px] truncate font-medium text-foreground">
                   {msg.filename}
                 </span>
               ) : (
                 <span>
-                  Subir {msgConfig(msg.messageType).label.toLowerCase()}
+                  Seleccionar {msgConfig(msg.messageType).label.toLowerCase()}
                 </span>
               )}
             </button>
@@ -497,7 +497,6 @@ export function FlowsPage() {
   const flows = useFlowsV2Query();
   const upsert = useUpsertFlowV2Mutation();
   const remove = useDeleteFlowV2Mutation();
-  const uploadMedia = useUploadFlowMediaMutation();
 
   const [selected, setSelected] = useState<string>("");
   const [draft, setDraft] = useState<DraftFlow>(() => {
@@ -537,7 +536,7 @@ export function FlowsPage() {
   }, []);
   const [keywordInput, setKeywordInput] = useState("");
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<{
     step: number;
     msg: number;
@@ -654,23 +653,6 @@ export function FlowsPage() {
     patch({ keywords: draft.keywords.filter((k) => k !== kw) });
   };
 
-  const uploadMessageMedia = async (
-    stepIndex: number,
-    msgIndex: number,
-    file: File
-  ) => {
-    try {
-      const uploaded = await uploadMedia.mutateAsync(file);
-      patchMessage(stepIndex, msgIndex, {
-        mediaUrl: uploaded.url,
-        filename: file.name,
-      });
-      toast.success("Archivo subido correctamente");
-    } catch {
-      toast.error("No se pudo subir el archivo");
-    }
-  };
-
   const save = () => {
     if (!draft.name.trim()) {
       toast.error("El nombre del flow es requerido");
@@ -721,19 +703,33 @@ export function FlowsPage() {
 
   const triggerWord = extractTriggerWord(draft.triggerPhrase);
 
+  const currentTargetType =
+    uploadTarget !== null
+      ? (draft.steps[uploadTarget.step]?.messages[uploadTarget.msg]
+          ?.messageType as "image" | "video" | "document" | undefined)
+      : undefined;
+
   return (
     <div className="flex h-full flex-col gap-0">
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
-        accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file || !uploadTarget) return;
-          void uploadMessageMedia(uploadTarget.step, uploadTarget.msg, file);
-          e.currentTarget.value = "";
+      {/* Media picker modal */}
+      <MediaPickerModal
+        open={mediaPickerOpen}
+        onClose={() => {
+          setMediaPickerOpen(false);
+          setUploadTarget(null);
+        }}
+        allowedType={
+          currentTargetType !== "text" ? currentTargetType : undefined
+        }
+        onSelect={(result) => {
+          if (uploadTarget) {
+            patchMessage(uploadTarget.step, uploadTarget.msg, {
+              mediaUrl: result.url,
+              filename: result.filename,
+            });
+          }
+          setMediaPickerOpen(false);
+          setUploadTarget(null);
         }}
       />
 
@@ -1028,7 +1024,7 @@ export function FlowsPage() {
                     step={step}
                     stepIndex={i}
                     uploadTarget={uploadTarget}
-                    uploadPending={uploadMedia.isPending}
+                    uploadPending={false}
                     onUpdate={(s) => patchStep(i, s)}
                     onDelete={() => deleteStep(i)}
                     onAddMessage={() => addMessage(i)}
@@ -1050,7 +1046,7 @@ export function FlowsPage() {
                     }
                     onUploadClick={(j) => {
                       setUploadTarget({ step: i, msg: j });
-                      fileInputRef.current?.click();
+                      setMediaPickerOpen(true);
                     }}
                     onDelayChange={(secs) =>
                       patchStep(i, { delaySeconds: secs })

@@ -9,7 +9,7 @@ import { registerAdminRoutes } from "./adminRoutes";
 import { registerFlowRoutes } from "./flowRoutes";
 import { env } from "../config/env";
 import { getPublicOrigin } from "../http/publicOrigin";
-import { uploadOrgFlowMedia } from "../storage/supabaseStorage";
+import { uploadOrgFlowMedia, uploadOrgMedia, deleteFromSupabaseStorage } from "../storage/supabaseStorage";
 
 function todayStartIso() {
   const d = new Date();
@@ -2586,6 +2586,167 @@ dashboardApi.openapi(
       .single();
     if (error) return c.json({ error: error.message }, 500);
     return c.json(data, 200);
+  },
+);
+
+// ── Media Library ─────────────────────────────────────────────────────────
+
+const OrgMediaSchema = z.object({
+  id: z.string(),
+  organization_id: z.string(),
+  filename: z.string(),
+  original_name: z.string(),
+  media_type: z.enum(["image", "video", "document"]),
+  mime_type: z.string(),
+  size_bytes: z.number().nullable().optional(),
+  storage_path: z.string(),
+  public_url: z.string(),
+  created_at: z.string().nullable().optional(),
+});
+
+const OrgMediaUploadResponseSchema = z.object({
+  ok: z.boolean(),
+  media: OrgMediaSchema,
+});
+
+function mimeToMediaType(mimeType: string): "image" | "video" | "document" {
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  return "document";
+}
+
+// GET /media
+dashboardApi.openapi(
+  createRoute({
+    method: "get",
+    path: "/media",
+    request: {
+      headers: AuthHeaderSchema,
+      query: z.object({
+        mediaType: z.enum(["image", "video", "document"]).optional(),
+        page: z.coerce.number().default(1),
+        pageSize: z.coerce.number().default(50),
+      }),
+    },
+    responses: {
+      200: { description: "Org media list", content: { "application/json": { schema: paginatedSchema(OrgMediaSchema) } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { mediaType, page, pageSize } = c.req.valid("query");
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    let q = supabase
+      .from("org_media")
+      .select("*", { count: "exact" })
+      .eq("organization_id", orgId(c))
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    if (mediaType) q = q.eq("media_type", mediaType);
+    const { data, error, count } = await q;
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ items: data ?? [], page, pageSize, total: count ?? 0 }, 200);
+  },
+);
+
+// POST /media/upload
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/media/upload",
+    request: {
+      headers: AuthHeaderSchema,
+      body: {
+        required: true,
+        content: {
+          "multipart/form-data": {
+            schema: z.object({
+              file: z.any().openapi({ type: "string", format: "binary" }),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: { description: "Media uploaded", content: { "application/json": { schema: OrgMediaUploadResponseSchema } } },
+      400: { description: "Bad request", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    if (env.STORAGE_MODE !== "supabase") {
+      return c.json({ error: "Activa STORAGE_MODE=supabase para subir media" }, 400);
+    }
+    const form = await c.req.formData();
+    const file = form.get("file");
+    if (!(file instanceof File)) return c.json({ error: "Archivo invalido" }, 400);
+    const bytes = await file.arrayBuffer();
+    const mimeType = file.type || "application/octet-stream";
+    const mediaType = mimeToMediaType(mimeType);
+    const uploaded = await uploadOrgMedia({
+      organizationId: orgId(c),
+      bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA,
+      filename: file.name || "asset.bin",
+      buffer: Buffer.from(bytes),
+      contentType: mimeType,
+    });
+    const { data, error } = await supabase
+      .from("org_media")
+      .insert({
+        organization_id: orgId(c),
+        filename: uploaded.path.split("/").pop() ?? file.name,
+        original_name: file.name || "asset.bin",
+        media_type: mediaType,
+        mime_type: mimeType,
+        size_bytes: bytes.byteLength,
+        storage_path: uploaded.path,
+        public_url: uploaded.publicUrl,
+      })
+      .select()
+      .single();
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true, media: data }, 200);
+  },
+);
+
+// DELETE /media/:id
+dashboardApi.openapi(
+  createRoute({
+    method: "delete",
+    path: "/media/{id}",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: { description: "Deleted", content: { "application/json": { schema: z.object({ ok: z.boolean() }) } } },
+      404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { data: row, error: fetchErr } = await supabase
+      .from("org_media")
+      .select("storage_path")
+      .eq("id", id)
+      .eq("organization_id", orgId(c))
+      .maybeSingle();
+    if (fetchErr) return c.json({ error: fetchErr.message }, 500);
+    if (!row) return c.json({ error: "No encontrado" }, 404);
+    // Delete from storage (best effort — don't block DB delete on storage error)
+    try {
+      await deleteFromSupabaseStorage({ bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA, path: row.storage_path });
+    } catch {
+      // storage delete failed — proceed to remove DB record anyway
+    }
+    const { error } = await supabase.from("org_media").delete().eq("id", id).eq("organization_id", orgId(c));
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true }, 200);
   },
 );
 

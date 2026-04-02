@@ -495,3 +495,32 @@ export function useDeleteFlowStepMessageMutation() {
       void qc.invalidateQueries({ queryKey: ["flow-definitions"] }),
   });
 }
+
+// ── Media library ──────────────────────────────────────────────────────────
+
+export function useOrgMediaQuery(params?: {
+  mediaType?: "image" | "video" | "document";
+  page?: number;
+  pageSize?: number;
+}) {
+  return useQuery({
+    queryKey: ["org-media", params],
+    queryFn: () => api.getOrgMedia(params),
+  });
+}
+
+export function useUploadOrgMediaMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => api.uploadOrgMedia(file),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["org-media"] }),
+  });
+}
+
+export function useDeleteOrgMediaMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteOrgMedia(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["org-media"] }),
+  });
+}

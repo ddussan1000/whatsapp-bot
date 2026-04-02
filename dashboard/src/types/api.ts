@@ -268,6 +268,24 @@ export type FlowMediaUploadResponse = {
   filename: string;
   mimeType: string;
 };
+
+export type OrgMedia = {
+  id: string;
+  organization_id: string;
+  filename: string;
+  original_name: string;
+  media_type: "image" | "video" | "document";
+  mime_type: string;
+  size_bytes?: number | null;
+  storage_path: string;
+  public_url: string;
+  created_at?: string | null;
+};
+
+export type OrgMediaUploadResponse = {
+  ok: boolean;
+  media: OrgMedia;
+};
 export type SendMessageResponse = Json200<
   "/api/conversations/{id}/messages",
   "post"

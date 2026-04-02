@@ -13,6 +13,7 @@ import { TemplatesPage } from "./pages/TemplatesPage";
 import { InstancesPage } from "./pages/InstancesPage";
 import { InstanceCreatePage } from "./pages/InstanceCreatePage";
 import { ReferralsPage } from "./pages/ReferralsPage";
+import { MediaPage } from "./pages/MediaPage";
 import { InstructionsPage } from "./pages/InstructionsPage";
 import { AdminGuard } from "./components/AdminGuard";
 import { AdminLayout } from "./layout/AdminLayout";
@@ -52,6 +53,7 @@ function App() {
         <Route path="/instances" element={<InstancesPage />} />
         <Route path="/instances/create" element={<InstanceCreatePage />} />
         <Route path="/referrals" element={<ReferralsPage />} />
+        <Route path="/media" element={<MediaPage />} />
         <Route path="/instructions" element={<InstructionsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

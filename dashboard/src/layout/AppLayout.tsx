@@ -13,6 +13,7 @@ import {
   Menu,
   LogOut,
   Shield,
+  Images,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ModeToggle } from "../components/mode-toggle";
@@ -69,6 +70,7 @@ const operationsLinks: NavItem[] = [
 
 const productLinks: NavItem[] = [
   { to: "/flows", label: "Flujos", icon: Workflow },
+  { to: "/media", label: "Media", icon: Images },
   { to: "/templates", label: "Plantillas", icon: Library },
   { to: "/referrals", label: "CTWA Ads", icon: Link2 },
 ];

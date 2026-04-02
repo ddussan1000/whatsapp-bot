@@ -7,6 +7,8 @@ import type {
   ChatMessage,
   Conversation,
   CreateCampaignBody,
+  OrgMedia,
+  OrgMediaUploadResponse,
   CreateFlowBody,
   CreateFlowDefinitionBody,
   CreateFlowStepBody,
@@ -505,6 +507,40 @@ export const api = {
 
   // ── Bot health ───────────────────────────────────────────────────────────
   getBotHealth: () => request<BotHealth>("/api/bot/health"),
+
+  // ── Media library ────────────────────────────────────────────────────────
+  getOrgMedia: (params?: {
+    mediaType?: "image" | "video" | "document";
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const q = new URLSearchParams();
+    if (params?.mediaType) q.set("mediaType", params.mediaType);
+    if (params?.page) q.set("page", String(params.page));
+    if (params?.pageSize) q.set("pageSize", String(params.pageSize));
+    return request<Paginated<OrgMedia>>(`/api/media?${q.toString()}`);
+  },
+  uploadOrgMedia: async (file: File) => {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    const headers = await buildHeaders(false);
+    const res = await fetch(`${API_URL}/api/media/upload`, {
+      method: "POST",
+      headers,
+      body: form,
+    });
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    return (await res.json()) as OrgMediaUploadResponse;
+  },
+  deleteOrgMedia: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/media/${id}`, { method: "DELETE", headers }).then(
+        (r) => {
+          if (!r.ok) throw new Error(`API ${r.status}`);
+          return r.json() as Promise<{ ok: boolean }>;
+        }
+      )
+    ),
 
   // ── Flow definitions ─────────────────────────────────────────────────────
   getFlowDefinitions: (params?: { productId?: string }) => {
