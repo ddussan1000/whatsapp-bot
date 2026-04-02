@@ -703,10 +703,13 @@ export function FlowsPage() {
 
   const triggerWord = extractTriggerWord(draft.triggerPhrase);
 
-  const currentTargetType =
+  const _rawTargetType =
     uploadTarget !== null
-      ? (draft.steps[uploadTarget.step]?.messages[uploadTarget.msg]
-          ?.messageType as "image" | "video" | "document" | undefined)
+      ? draft.steps[uploadTarget.step]?.messages[uploadTarget.msg]?.messageType
+      : undefined;
+  const currentTargetType: "image" | "video" | "document" | undefined =
+    _rawTargetType === "image" || _rawTargetType === "video" || _rawTargetType === "document"
+      ? _rawTargetType
       : undefined;
 
   return (
@@ -718,9 +721,7 @@ export function FlowsPage() {
           setMediaPickerOpen(false);
           setUploadTarget(null);
         }}
-        allowedType={
-          currentTargetType !== "text" ? currentTargetType : undefined
-        }
+        allowedType={currentTargetType}
         onSelect={(result) => {
           if (uploadTarget) {
             patchMessage(uploadTarget.step, uploadTarget.msg, {
