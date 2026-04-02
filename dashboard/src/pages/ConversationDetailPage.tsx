@@ -299,12 +299,15 @@ function ClientInfoModal({
   const ad = conversation?.ad_source;
   const currentStage = conversation ? String(conversation.stage) : "";
   const knownStage = STAGE_OPTIONS.some((o) => o.value === currentStage);
-  const displayName = conversation?.contact_name ?? (conversation ? formatPhone(conversation.phone) : "");
-  const initials = displayName
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("") || "?";
+  const displayName =
+    conversation?.contact_name ??
+    (conversation ? formatPhone(conversation.phone) : "");
+  const initials =
+    displayName
+      .split(" ")
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("") || "?";
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>

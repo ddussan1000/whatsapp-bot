@@ -240,6 +240,12 @@ export function useCreateInviteMutation() {
   });
 }
 
+export function useResendInviteMutation() {
+  return useMutation({
+    mutationFn: (id: string) => api.resendInvite(id),
+  });
+}
+
 export function useCampaignsQuery() {
   return useQuery({ queryKey: ["campaigns"], queryFn: api.getCampaigns });
 }

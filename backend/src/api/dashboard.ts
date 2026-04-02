@@ -10,6 +10,8 @@ import { registerFlowRoutes } from "./flowRoutes";
 import { env } from "../config/env";
 import { getPublicOrigin } from "../http/publicOrigin";
 import { uploadOrgFlowMedia, uploadOrgMedia, deleteFromSupabaseStorage } from "../storage/supabaseStorage";
+import { sendEmail } from "../email/resend";
+import { buildInviteEmail } from "../email/templates/invite";
 
 function todayStartIso() {
   const d = new Date();
@@ -1379,7 +1381,71 @@ dashboardApi.openapi(
       .select("id, email, role, status, expires_at, created_at")
       .single();
     if (error) return c.json({ error: error.message }, 500);
+
+    // Enviar email de invitación (fire-and-forget — no bloquea la respuesta)
+    void (async () => {
+      const orgRes = await supabase
+        .from("organizations")
+        .select("name")
+        .eq("id", orgId(c))
+        .single();
+      const orgName = orgRes.data?.name ?? "tu organización";
+      const dashboardUrl = env.DASHBOARD_PUBLIC_URL || getPublicOrigin(c).replace(/\/api$/, "");
+      const { subject, html } = buildInviteEmail({
+        orgName,
+        role: body.role,
+        inviterEmail: session.email,
+        dashboardUrl,
+      });
+      await sendEmail({ to: body.email.toLowerCase(), subject, html });
+    })();
+
     return c.json(data, 200);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/org/invites/{id}/resend",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: { description: "Email reenviado", content: { "application/json": { schema: z.object({ ok: z.boolean() }) } } },
+      400: { description: "Bad request", content: { "application/json": { schema: ErrorSchema } } },
+      404: { description: "No encontrado", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const session = getSession(c);
+    if (!["owner", "admin"].includes(session.role)) return c.json({ error: "Permiso insuficiente" }, 400);
+    const { id } = c.req.valid("param");
+
+    const { data: invite, error } = await supabase
+      .from("organization_invites")
+      .select("id, email, role, status")
+      .eq("id", id)
+      .eq("organization_id", orgId(c))
+      .single();
+    if (error || !invite) return c.json({ error: "Invitación no encontrada" }, 404);
+    if (invite.status === "accepted") return c.json({ error: "La invitación ya fue aceptada" }, 400);
+
+    const orgRes = await supabase.from("organizations").select("name").eq("id", orgId(c)).single();
+    const orgName = orgRes.data?.name ?? "tu organización";
+    const dashboardUrl = env.DASHBOARD_PUBLIC_URL || getPublicOrigin(c).replace(/\/api$/, "");
+    const { subject, html } = buildInviteEmail({
+      orgName,
+      role: invite.role,
+      inviterEmail: session.email,
+      dashboardUrl,
+    });
+    await sendEmail({ to: invite.email, subject, html });
+
+    return c.json({ ok: true }, 200);
   },
 );
 

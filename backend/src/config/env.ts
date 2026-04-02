@@ -23,6 +23,10 @@ const envSchema = z.object({
   DASHBOARD_SECRET: z.string().default(""),
   /** URL pública del backend (ej. https://xxx.up.railway.app). Opcional; si no se define se usa X-Forwarded-* */
   PUBLIC_BASE_URL: z.string().default(""),
+  RESEND_API_KEY: z.string().default(""),
+  RESEND_FROM_EMAIL: z.string().default("onboarding@resend.dev"),
+  /** URL pública del dashboard frontend (ej. https://dashboard.tudominio.com) */
+  DASHBOARD_PUBLIC_URL: z.string().default(""),
   STORAGE_MODE: z.enum(["local", "supabase"]).default("local"),
   SUPABASE_STORAGE_BUCKET_RECEIPTS: z.string().default("receipts"),
   SUPABASE_STORAGE_BUCKET_FLOW_MEDIA: z.string().default("flow-media"),

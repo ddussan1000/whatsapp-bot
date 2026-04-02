@@ -5,6 +5,7 @@ import {
   Check,
   Hash,
   Pencil,
+  RefreshCw,
   Shield,
   UserPlus,
   X,
@@ -32,6 +33,7 @@ import {
   useCreateInviteMutation,
   useCurrentOrgQuery,
   useInvitesQuery,
+  useResendInviteMutation,
   useUpdateOrgMutation,
 } from "@/lib/hooks";
 import type { OrgRole } from "@/types/api";
@@ -129,6 +131,7 @@ export function OrganizationPage() {
   const org = useCurrentOrgQuery();
   const invites = useInvitesQuery();
   const createInvite = useCreateInviteMutation();
+  const resendInvite = useResendInviteMutation();
   const updateOrg = useUpdateOrgMutation();
 
   // Sync name input when data loads
@@ -377,11 +380,15 @@ export function OrganizationPage() {
                     <TableHead>Rol</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Expira</TableHead>
+                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(invites.data ?? []).map((invite) => {
                     const cfg = inviteStatusConfig(invite.status);
+                    const canResend =
+                      invite.status === "pending" ||
+                      invite.status === "expired";
                     return (
                       <TableRow key={invite.id}>
                         <TableCell className="font-medium">
@@ -405,6 +412,31 @@ export function OrganizationPage() {
                               month: "short",
                               year: "numeric",
                             }
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {canResend && (
+                            <button
+                              type="button"
+                              title="Reenviar invitación"
+                              disabled={resendInvite.isPending}
+                              onClick={() =>
+                                resendInvite.mutate(invite.id, {
+                                  onSuccess: () =>
+                                    toast.success(
+                                      `Invitación reenviada a ${invite.email}`
+                                    ),
+                                  onError: () =>
+                                    toast.error(
+                                      "No se pudo reenviar la invitación"
+                                    ),
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                            >
+                              <RefreshCw size={12} />
+                              Reenviar
+                            </button>
                           )}
                         </TableCell>
                       </TableRow>

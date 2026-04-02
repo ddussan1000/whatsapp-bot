@@ -344,6 +344,16 @@ export const api = {
         return r.json() as Promise<OrganizationInvite>;
       })
     ),
+  resendInvite: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/org/invites/${id}/resend`, {
+        method: "POST",
+        headers,
+      }).then((r) => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
   getCampaigns: () => request<Campaign[]>("/api/campaigns"),
   createCampaign: (payload: CreateCampaignBody) =>
     buildHeaders(true).then((headers) =>
