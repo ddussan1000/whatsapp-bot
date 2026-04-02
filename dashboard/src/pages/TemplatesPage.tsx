@@ -4,24 +4,44 @@ import {
   MessageSquare,
   Image as ImageIcon,
   FileText,
+  Video,
   Clock,
-  ShoppingCart,
-  HeadphonesIcon,
-  Megaphone,
-  Star,
-  Users,
   Zap,
-  ChevronDown,
-  ChevronUp,
   ArrowRight,
   Plus,
+  Trash2,
+  BookMarked,
+  Eye,
+  LayoutTemplate,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import {
+  useFlowTemplatesQuery,
+  useCreateFlowTemplateMutation,
+  useDeleteFlowTemplateMutation,
+} from "@/lib/hooks";
+import type { FlowTemplate } from "@/types/api";
 
-// ── Draft types (same as FlowsPage, kept local) ──────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────
 
 type MsgType = "text" | "image" | "document" | "video";
 
@@ -51,522 +71,494 @@ type FlowTemplateDraft = {
   steps: TemplateStepDraft[];
 };
 
-// ── Template definitions ──────────────────────────────────────────────────
-
-type FlowTemplate = {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  icon: React.ElementType;
-  color: string;
-  draft: FlowTemplateDraft;
-};
-
-const MSG_ICONS: Record<MsgType, React.ElementType> = {
-  text: MessageSquare,
-  image: ImageIcon,
-  document: FileText,
-  video: Megaphone,
-};
-
-const TEMPLATES: FlowTemplate[] = [
-  {
-    id: "bienvenida-captacion",
-    name: "Bienvenida y captación",
-    description:
-      "Saluda al cliente, presenta tu oferta y hace seguimiento 24h después si no hubo respuesta.",
-    category: "Ventas",
-    icon: Star,
-    color: "text-amber-500",
-    draft: {
-      name: "Bienvenida y captación",
-      triggerPhrase: "Hola, quiero información",
-      keywords: ["hola", "info", "información", "buenas"],
-      noMatchBehavior: "trigger",
-      systemPrompt:
-        "Eres un asistente de ventas amable. Responde preguntas sobre el producto de forma clara y concisa. Si el cliente quiere comprar, pídele sus datos de contacto.",
-      isActive: true,
-      steps: [
-        {
-          position: 0,
-          delaySeconds: 0,
-          label: "Bienvenida",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "👋 ¡Hola! Gracias por contactarnos.\n\nSoy el asistente virtual de [tu empresa]. Estoy aquí para ayudarte con cualquier consulta sobre nuestros productos y servicios.",
-            },
-            {
-              position: 1,
-              messageType: "text",
-              textContent:
-                "¿En qué te puedo ayudar hoy? Puedes preguntarme sobre:\n• Precios y disponibilidad\n• Características del producto\n• Proceso de compra\n• Tiempo de entrega",
-            },
-          ],
-        },
-        {
-          position: 1,
-          delaySeconds: 300,
-          label: "Seguimiento rápido",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¿Pudiste ver la información? Si tenés alguna duda o querés avanzar con tu pedido, estoy aquí para ayudarte. 😊",
-            },
-          ],
-        },
-        {
-          position: 2,
-          delaySeconds: 86400,
-          label: "Seguimiento 24h",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¡Hola de nuevo! Queríamos saber si pudiste revisar nuestra propuesta.\n\nSi tenés preguntas o querés conocer más opciones, con gusto te ayudamos. ¿Hablamos?",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "consulta-precios",
-    name: "Consulta de precios",
-    description:
-      "Responde de forma inmediata a consultas de precio con tu lista o catálogo, y ofrece asesoría personalizada.",
-    category: "Ventas",
-    icon: ShoppingCart,
-    color: "text-emerald-500",
-    draft: {
-      name: "Consulta de precios",
-      triggerPhrase: "precio",
-      keywords: [
-        "precio",
-        "costo",
-        "cuánto",
-        "cuanto",
-        "cotización",
-        "cotizacion",
-        "vale",
-        "valor",
-      ],
-      noMatchBehavior: "trigger",
-      systemPrompt:
-        "Eres un asesor de ventas especializado en precios. Proporciona información clara sobre los precios disponibles y ofrece alternativas según el presupuesto del cliente.",
-      isActive: true,
-      steps: [
-        {
-          position: 0,
-          delaySeconds: 0,
-          label: "Lista de precios",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¡Hola! Con gusto te cuento sobre nuestros precios 💰\n\nAquí te comparto nuestras opciones:\n\n📦 *Plan Básico*: $XXX\n📦 *Plan Estándar*: $XXX\n📦 *Plan Premium*: $XXX\n\n_(Reemplaza con tus precios reales)_",
-            },
-          ],
-        },
-        {
-          position: 1,
-          delaySeconds: 60,
-          label: "Oferta de asesoría",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¿Te gustaría que te ayude a elegir la opción que mejor se adapta a lo que necesitás? Cuéntame un poco más sobre tu caso y te doy una recomendación personalizada. 🎯",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "soporte-tecnico",
-    name: "Soporte técnico",
-    description:
-      "Recibe consultas de soporte, pide detalles del problema y ofrece una resolución guiada.",
-    category: "Soporte",
-    icon: HeadphonesIcon,
-    color: "text-blue-500",
-    draft: {
-      name: "Soporte técnico",
-      triggerPhrase: "ayuda",
-      keywords: [
-        "ayuda",
-        "problema",
-        "error",
-        "falla",
-        "no funciona",
-        "soporte",
-        "help",
-      ],
-      noMatchBehavior: "trigger",
-      systemPrompt:
-        "Eres un agente de soporte técnico. Escucha el problema del cliente, pide información específica si la necesitas (modelo, versión, síntomas) y proporciona pasos claros para resolver el inconveniente.",
-      isActive: true,
-      steps: [
-        {
-          position: 0,
-          delaySeconds: 0,
-          label: "Recepción de ticket",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¡Hola! Soy el asistente de soporte de [empresa]. Voy a ayudarte a resolver tu consulta 🔧\n\nPara poder asistirte mejor, ¿podés contarme con más detalle qué está pasando?\n\n• ¿Qué producto o servicio te está dando problemas?\n• ¿Cuándo empezó el inconveniente?\n• ¿Hay algún mensaje de error que veas?",
-            },
-          ],
-        },
-        {
-          position: 1,
-          delaySeconds: 180,
-          label: "Check de resolución",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¿Pudiste avanzar con la solución? Si seguís teniendo problemas o necesitás asistencia adicional, no dudes en contarme. Estoy aquí para ayudarte. 💪",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "seguimiento-post-venta",
-    name: "Seguimiento post-venta",
-    description:
-      "Confirma la recepción del pago o compra, da instrucciones de siguiente paso y pide feedback.",
-    category: "Ventas",
-    icon: Users,
-    color: "text-violet-500",
-    draft: {
-      name: "Seguimiento post-venta",
-      triggerPhrase: "compré",
-      keywords: [
-        "compré",
-        "compre",
-        "pagué",
-        "pague",
-        "pedido",
-        "compra",
-        "pago",
-      ],
-      noMatchBehavior: "ignore",
-      systemPrompt:
-        "Eres un asistente post-venta. Tu objetivo es asegurar que el cliente tenga todo lo que necesita después de su compra y recoger su experiencia.",
-      isActive: true,
-      steps: [
-        {
-          position: 0,
-          delaySeconds: 0,
-          label: "Confirmación",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¡Muchas gracias por tu compra! 🎉\n\nTu pedido fue recibido correctamente. En breve recibirás la confirmación con todos los detalles.\n\n¿Hay algo más en lo que te pueda ayudar?",
-            },
-          ],
-        },
-        {
-          position: 1,
-          delaySeconds: 86400,
-          label: "Seguimiento entrega",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¡Hola! ¿Cómo va todo con tu pedido? Queríamos asegurarnos de que recibiste todo correctamente y que estás satisfecho con tu compra. 😊",
-            },
-          ],
-        },
-        {
-          position: 2,
-          delaySeconds: 259200,
-          label: "Pedido de feedback (3 días)",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¡Esperamos que estés disfrutando tu compra! 🌟\n\nNos encantaría saber tu experiencia. ¿Podés contarnos cómo te fue? Tu opinión nos ayuda mucho a mejorar.",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "campana-ctwa",
-    name: "Campaña desde anuncio",
-    description:
-      "Flujo optimizado para usuarios que llegan desde un anuncio de Meta. Oferta directa + CTA.",
-    category: "Marketing",
-    icon: Megaphone,
-    color: "text-rose-500",
-    draft: {
-      name: "Campaña desde anuncio",
-      triggerPhrase: "quiero saber más",
-      keywords: ["anuncio", "oferta", "promoción", "promocion", "descuento"],
-      noMatchBehavior: "trigger",
-      systemPrompt:
-        "Eres un asistente de ventas enfocado en convertir leads de anuncios. Sé directo, presenta la oferta claramente y facilita el siguiente paso de compra.",
-      isActive: true,
-      steps: [
-        {
-          position: 0,
-          delaySeconds: 0,
-          label: "Oferta principal",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¡Hola! Vi que te interesó nuestra oferta 🎯\n\n*[Nombre del producto/servicio]*\n✅ [Beneficio 1]\n✅ [Beneficio 2]\n✅ [Beneficio 3]\n\n💥 *Precio especial: $XXX* (oferta válida por tiempo limitado)",
-            },
-          ],
-        },
-        {
-          position: 1,
-          delaySeconds: 120,
-          label: "Call to action",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¿Te interesa aprovechar esta oferta? Puedo asesorarte en el proceso de compra ahora mismo. Solo dime «quiero» y te explico cómo continuar. 🚀",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: "agenda-cita",
-    name: "Agendamiento de cita",
-    description:
-      "Recoge datos básicos del cliente para agendar una reunión o cita presencial/virtual.",
-    category: "Servicios",
-    icon: Clock,
-    color: "text-cyan-500",
-    draft: {
-      name: "Agendamiento de cita",
-      triggerPhrase: "cita",
-      keywords: [
-        "cita",
-        "reunión",
-        "reunion",
-        "agendar",
-        "turno",
-        "appointment",
-        "reserva",
-      ],
-      noMatchBehavior: "trigger",
-      systemPrompt:
-        "Eres un asistente de agendamiento. Recoge el nombre del cliente, la fecha y hora preferida, y confirma la disponibilidad. Sé claro con las instrucciones.",
-      isActive: true,
-      steps: [
-        {
-          position: 0,
-          delaySeconds: 0,
-          label: "Solicitud de datos",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¡Hola! Con gusto te ayudo a agendar tu cita 📅\n\nPara coordinar, necesito algunos datos:\n\n1️⃣ Tu nombre completo\n2️⃣ ¿Qué servicio necesitás?\n3️⃣ ¿Qué días y horarios te vendrían bien?\n\nCuéntame y te confirmo disponibilidad.",
-            },
-          ],
-        },
-        {
-          position: 1,
-          delaySeconds: 3600,
-          label: "Confirmación de cita",
-          messages: [
-            {
-              position: 0,
-              messageType: "text",
-              textContent:
-                "¡Perfecto! Tu cita está en proceso de confirmación. En breve te enviamos los detalles finales. Si necesitás cambiar algo, avisanos con anticipación. ✅",
-            },
-          ],
-        },
-      ],
-    },
-  },
+const USER_CATEGORIES = [
+  "Personalizado",
+  "Ventas",
+  "Soporte",
+  "Marketing",
+  "Servicios",
+  "Otro",
 ];
 
-const CATEGORIES = [
-  "Todos",
-  ...Array.from(new Set(TEMPLATES.map((t) => t.category))),
-];
+// ── Helpers ───────────────────────────────────────────────────────────────
 
-// ── Step preview ──────────────────────────────────────────────────────────
+const MSG_META: Record<
+  MsgType,
+  { icon: React.ElementType; label: string; color: string }
+> = {
+  text: { icon: MessageSquare, label: "Texto", color: "text-blue-500" },
+  image: { icon: ImageIcon, label: "Imagen", color: "text-green-500" },
+  document: { icon: FileText, label: "Documento", color: "text-orange-500" },
+  video: { icon: Video, label: "Video", color: "text-purple-500" },
+};
+
+function msgMeta(type: string) {
+  return MSG_META[type as MsgType] ?? MSG_META.text;
+}
 
 function delayLabel(seconds: number): string {
   if (seconds === 0) return "Inmediato";
-  if (seconds >= 86400) return `${Math.round(seconds / 86400)}d`;
-  if (seconds >= 3600) return `${Math.round(seconds / 3600)}h`;
-  if (seconds >= 60) return `${Math.round(seconds / 60)}min`;
-  return `${seconds}s`;
+  if (seconds >= 86400) return `${Math.round(seconds / 86400)}d después`;
+  if (seconds >= 3600) return `${Math.round(seconds / 3600)}h después`;
+  if (seconds >= 60) return `${Math.round(seconds / 60)}min después`;
+  return `${seconds}s después`;
 }
 
-function StepPreview({ steps }: { steps: TemplateStepDraft[] }) {
+function StepBubbles({ steps }: { steps: TemplateStepDraft[] }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {steps.map((step, i) => (
-        <div key={i} className="flex items-center gap-1.5">
-          {i > 0 && (
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock size={9} />
-              {delayLabel(step.delaySeconds)}
+      {steps.map((step, i) => {
+        return (
+          <div key={i} className="flex items-center gap-1.5">
+            {i > 0 && (
+              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                <Clock size={9} />
+                {delayLabel(step.delaySeconds)}
+              </span>
+            )}
+            <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
+              <span className="text-muted-foreground">P{i + 1}</span>
+              {step.messages.map((m, j) => {
+                const { icon: Icon } = msgMeta(m.messageType);
+                return (
+                  <Icon key={j} size={10} className="text-muted-foreground" />
+                );
+              })}
             </span>
-          )}
-          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
-            <span className="text-muted-foreground">P{i + 1}</span>
-            {step.messages.map((m, j) => {
-              const Icon = MSG_ICONS[m.messageType];
-              return (
-                <Icon key={j} size={10} className="text-muted-foreground" />
-              );
-            })}
-          </span>
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-// ── Template card ─────────────────────────────────────────────────────────
+// ── Steps Modal ───────────────────────────────────────────────────────────
+
+function StepsModal({
+  open,
+  onClose,
+  templateName,
+  steps,
+}: {
+  open: boolean;
+  onClose: () => void;
+  templateName: string;
+  steps: TemplateStepDraft[];
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="flex max-h-[85vh] w-full max-w-lg flex-col gap-0 p-0 sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b px-6 py-4">
+          <DialogTitle className="text-base">{templateName}</DialogTitle>
+          <p className="text-xs text-muted-foreground">
+            {steps.length} paso{steps.length !== 1 ? "s" : ""}
+          </p>
+        </DialogHeader>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="flex flex-col gap-1">
+            {steps.map((step, i) => {
+              const { icon: Icon, label, color } = msgMeta("text");
+              void Icon;
+              void label;
+              void color;
+              return (
+                <div key={i} className="flex flex-col">
+                  {/* Delay connector */}
+                  {i > 0 && (
+                    <div className="flex items-center gap-3 py-2 pl-5">
+                      <div className="flex flex-col items-center">
+                        <div className="h-4 w-px bg-border" />
+                      </div>
+                      <span className="flex items-center gap-1.5 rounded-full border border-dashed bg-muted/50 px-2.5 py-1 text-[11px] text-muted-foreground">
+                        <Clock size={10} />
+                        {delayLabel(step.delaySeconds)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Step card */}
+                  <div className="flex gap-3">
+                    {/* Step number */}
+                    <div className="flex flex-col items-center gap-1 pt-0.5">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                        {i + 1}
+                      </span>
+                      {step.messages.length > 1 && (
+                        <div className="flex-1 w-px bg-border" />
+                      )}
+                    </div>
+
+                    {/* Step content */}
+                    <div className="flex flex-1 flex-col gap-2 pb-2 min-w-0">
+                      {step.label && (
+                        <p className="text-xs font-semibold text-foreground leading-none">
+                          {step.label}
+                        </p>
+                      )}
+                      {step.messages.map((m, j) => {
+                        const meta = msgMeta(m.messageType);
+                        const MIcon = meta.icon;
+                        return (
+                          <div
+                            key={j}
+                            className="flex gap-2 rounded-xl border bg-card p-3 shadow-sm"
+                          >
+                            <div className={`mt-0.5 shrink-0 ${meta.color}`}>
+                              <MIcon size={13} />
+                            </div>
+                            <div className="flex flex-1 flex-col gap-0.5 min-w-0">
+                              <span
+                                className={`text-[10px] font-semibold uppercase tracking-wider ${meta.color}`}
+                              >
+                                {meta.label}
+                              </span>
+                              {m.textContent ? (
+                                <p className="whitespace-pre-wrap text-sm leading-snug text-foreground wrap-break-word">
+                                  {m.textContent}
+                                </p>
+                              ) : m.filename ? (
+                                <p className="text-sm text-muted-foreground">
+                                  📎 {m.filename}
+                                </p>
+                              ) : m.caption ? (
+                                <p className="text-sm text-muted-foreground italic">
+                                  {m.caption}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground italic">
+                                  [{meta.label}]
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t px-6 py-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={onClose}
+          >
+            Cerrar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Template Card ─────────────────────────────────────────────────────────
 
 function TemplateCard({
   template,
   onUse,
+  onDelete,
+  deleteLoading,
 }: {
   template: FlowTemplate;
   onUse: (t: FlowTemplate) => void;
+  onDelete: (id: string) => void;
+  deleteLoading: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const Icon = template.icon;
+  const [stepsOpen, setStepsOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const draft = template.draft as Record<string, unknown>;
+  const steps = (draft.steps as TemplateStepDraft[] | undefined) ?? [];
+  const triggerPhrase =
+    typeof draft.triggerPhrase === "string" ? draft.triggerPhrase : null;
+  const totalMessages = steps.reduce((acc, s) => acc + s.messages.length, 0);
 
   return (
-    <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-md">
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-3">
-          <div className={`mt-0.5 rounded-lg bg-muted p-2 ${template.color}`}>
-            <Icon size={18} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold leading-tight">{template.name}</h3>
-              <Badge variant="outline" className="shrink-0 text-[10px]">
-                {template.category}
-              </Badge>
+    <>
+      <Card className="group flex flex-col overflow-hidden transition-all hover:shadow-md hover:-translate-y-px">
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <BookMarked size={17} />
             </div>
-            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-              {template.description}
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
-        {/* Step preview */}
-        <StepPreview steps={template.draft.steps} />
-
-        {/* Trigger info */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Zap size={11} className="text-muted-foreground" />
-          <span>
-            Trigger:{" "}
-            <span className="font-mono text-foreground">
-              "{template.draft.triggerPhrase}"
-            </span>
-          </span>
-        </div>
-
-        {/* Expand steps detail */}
-        <button
-          type="button"
-          onClick={() => setExpanded((o) => !o)}
-          className="flex items-center gap-1 self-start text-xs text-muted-foreground hover:text-foreground"
-        >
-          {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          {expanded
-            ? "Ocultar pasos"
-            : `Ver ${template.draft.steps.length} pasos`}
-        </button>
-
-        {expanded && (
-          <div className="flex flex-col gap-2 rounded-lg bg-muted/40 p-3">
-            {template.draft.steps.map((step, i) => (
-              <div key={i} className="flex flex-col gap-1">
-                {i > 0 && (
-                  <div className="flex items-center gap-1.5 py-0.5 text-xs text-muted-foreground">
-                    <Clock size={10} />
-                    Espera: {delayLabel(step.delaySeconds)}
-                  </div>
-                )}
-                <div className="flex items-start gap-2">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                    {i + 1}
-                  </span>
-                  <div className="flex flex-col gap-1">
-                    {step.label && (
-                      <span className="text-xs font-medium">{step.label}</span>
-                    )}
-                    {step.messages.map((m, j) => {
-                      const MIcon = MSG_ICONS[m.messageType];
-                      return (
-                        <div key={j} className="flex items-start gap-1.5">
-                          <MIcon
-                            size={11}
-                            className="mt-0.5 shrink-0 text-muted-foreground"
-                          />
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {m.textContent || `[${m.messageType}]`}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-semibold leading-tight text-sm truncate pr-1">
+                  {template.name}
+                </h3>
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 text-[10px] font-medium"
+                >
+                  {template.category}
+                </Badge>
               </div>
-            ))}
+              {template.description && (
+                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                  {template.description}
+                </p>
+              )}
+            </div>
           </div>
-        )}
+        </CardHeader>
 
-        {/* Action */}
-        <div className="mt-auto pt-2">
-          <Button
-            size="sm"
-            className="w-full gap-2"
-            onClick={() => onUse(template)}
-          >
-            Usar plantilla
-            <ArrowRight size={14} />
-          </Button>
+        <CardContent className="flex flex-1 flex-col gap-3 pt-0">
+          {/* Step bubbles */}
+          {steps.length > 0 ? (
+            <StepBubbles steps={steps} />
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              Sin pasos definidos
+            </p>
+          )}
+
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {triggerPhrase && (
+              <span className="flex items-center gap-1">
+                <Zap size={10} />
+                <span className="font-mono">"{triggerPhrase}"</span>
+              </span>
+            )}
+            {steps.length > 0 && (
+              <span className="flex items-center gap-1">
+                <MessageSquare size={10} />
+                {totalMessages} mensaje{totalMessages !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+
+          {/* View steps button */}
+          {steps.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setStepsOpen(true)}
+              className="flex items-center gap-1 self-start text-xs text-primary/70 hover:text-primary transition-colors"
+            >
+              <Eye size={11} />
+              Ver {steps.length} paso{steps.length !== 1 ? "s" : ""}
+            </button>
+          )}
+
+          {/* Actions */}
+          <div className="mt-auto flex gap-2 pt-1">
+            <Button
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={() => onUse(template)}
+            >
+              Usar plantilla
+              <ArrowRight size={13} />
+            </Button>
+            {confirmDelete ? (
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={deleteLoading}
+                  onClick={() => {
+                    onDelete(template.id);
+                    setConfirmDelete(false);
+                  }}
+                >
+                  Sí, eliminar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConfirmDelete(false)}
+                >
+                  No
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 text-muted-foreground hover:border-destructive/50 hover:text-destructive"
+                onClick={() => setConfirmDelete(true)}
+                aria-label="Eliminar plantilla"
+              >
+                <Trash2 size={14} />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <StepsModal
+        open={stepsOpen}
+        onClose={() => setStepsOpen(false)}
+        templateName={template.name}
+        steps={steps}
+      />
+    </>
+  );
+}
+
+// ── Create dialog ─────────────────────────────────────────────────────────
+
+function CreateTemplateDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const createMutation = useCreateFlowTemplateMutation();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Personalizado");
+  const [triggerPhrase, setTriggerPhrase] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState("");
+
+  const reset = () => {
+    setName("");
+    setDescription("");
+    setCategory("Personalizado");
+    setTriggerPhrase("");
+    setSystemPrompt("");
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const handleSave = () => {
+    if (!name.trim()) {
+      toast.error("El nombre es requerido");
+      return;
+    }
+    const draft: FlowTemplateDraft = {
+      name: name.trim(),
+      triggerPhrase: triggerPhrase.trim() || "hola",
+      keywords: [],
+      noMatchBehavior: "trigger",
+      systemPrompt: systemPrompt.trim() || null,
+      isActive: true,
+      steps: [],
+    };
+    createMutation.mutate(
+      {
+        name: name.trim(),
+        description: description.trim() || undefined,
+        category,
+        draft,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Plantilla creada");
+          handleClose();
+        },
+        onError: () => toast.error("No se pudo crear la plantilla"),
+      }
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent className="w-full max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nueva plantilla</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 py-1">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Nombre *
+            </label>
+            <Input
+              placeholder="Ej: Mi flujo de ventas"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              autoFocus
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Descripción
+            </label>
+            <Textarea
+              placeholder="¿Para qué sirve esta plantilla?"
+              value={description}
+              rows={2}
+              className="resize-none text-sm"
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Categoría
+              </label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {USER_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Trigger inicial
+              </label>
+              <Input
+                placeholder="Ej: hola"
+                value={triggerPhrase}
+                onChange={(e) => setTriggerPhrase(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Prompt del bot (opcional)
+            </label>
+            <Textarea
+              placeholder="Instrucciones para el asistente IA…"
+              value={systemPrompt}
+              rows={3}
+              className="resize-none text-sm"
+              onChange={(e) => setSystemPrompt(e.target.value)}
+            />
+          </div>
+
+          <p className="text-[11px] text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
+            💡 Después de crear la plantilla, usa "Usar plantilla" para abrirla
+            en el editor de flujos y agregar los pasos.
+          </p>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={handleClose}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={!name.trim() || createMutation.isPending}
+            >
+              {createMutation.isPending ? "Creando…" : "Crear plantilla"}
+            </Button>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -574,77 +566,162 @@ function TemplateCard({
 
 export function TemplatesPage() {
   const navigate = useNavigate();
+  const [createOpen, setCreateOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("Todos");
+
+  const { data: templates = [], isLoading } = useFlowTemplatesQuery();
+  const deleteMutation = useDeleteFlowTemplateMutation();
+
+  const categories = [
+    "Todos",
+    ...Array.from(new Set(templates.map((t) => t.category))).sort(),
+  ];
 
   const filtered =
     activeCategory === "Todos"
-      ? TEMPLATES
-      : TEMPLATES.filter((t) => t.category === activeCategory);
+      ? templates
+      : templates.filter((t) => t.category === activeCategory);
 
-  const useTemplate = (template: FlowTemplate) => {
-    // Store the draft in localStorage so FlowsPage picks it up
-    localStorage.setItem("flow_new_draft", JSON.stringify(template.draft));
-    // Dispatch event in case FlowsPage is already mounted
+  const loadDraft = (draft: FlowTemplateDraft) => {
+    localStorage.setItem("flow_new_draft", JSON.stringify(draft));
     window.dispatchEvent(new Event("flow_template_loaded"));
     navigate("/flows");
   };
 
-  const startBlank = () => {
-    navigate("/flows");
+  const handleUse = (template: FlowTemplate) => {
+    loadDraft(template.draft as unknown as FlowTemplateDraft);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id, {
+      onError: () => toast.error("No se pudo eliminar la plantilla"),
+    });
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Plantillas</h2>
-          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Elegí una plantilla y el editor se abre con todo listo. Solo cambiás
-            los textos por los tuyos y guardás.
+          <h2 className="text-xl font-semibold sm:text-2xl">Plantillas</h2>
+          <p className="mt-1 max-w-lg text-sm text-muted-foreground">
+            Crea y reutiliza configuraciones de flujos. Usa "Guardar como
+            plantilla" desde el editor para capturar un flujo existente.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="shrink-0 gap-2"
-          onClick={startBlank}
-        >
-          <Plus size={14} />
-          Flow en blanco
-        </Button>
-      </div>
-
-      <Separator />
-
-      {/* Category filter */}
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setActiveCategory(cat)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              activeCategory === cat
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:bg-muted"
-            }`}
+        <div className="flex gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => navigate("/flows")}
           >
-            {cat}
-          </button>
-        ))}
+            Flow en blanco
+          </Button>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus size={14} />
+            <span className="hidden sm:inline">Nueva plantilla</span>
+            <span className="sm:hidden">Nueva</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Templates grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((template) => (
-          <TemplateCard
-            key={template.id}
-            template={template}
-            onUse={useTemplate}
-          />
-        ))}
-      </div>
+      {/* Category filter — only show when there are templates */}
+      {!isLoading && templates.length > 0 && categories.length > 2 && (
+        <div className="flex flex-wrap gap-2">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setActiveCategory(cat)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                activeCategory === cat
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Content */}
+      {isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex flex-col gap-3 rounded-xl border p-5">
+              <div className="flex items-start gap-3">
+                <Skeleton className="h-9 w-9 shrink-0 rounded-lg" />
+                <div className="flex flex-1 flex-col gap-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-full" />
+                </div>
+              </div>
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-8 w-full mt-2" />
+            </div>
+          ))}
+        </div>
+      ) : templates.length === 0 ? (
+        /* Empty state */
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed py-16 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+            <LayoutTemplate size={24} className="text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-medium">Sin plantillas aún</p>
+            <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+              Crea una plantilla desde aquí o guarda un flujo existente con
+              "Guardar como plantilla" en el editor.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus size={14} />
+              Nueva plantilla
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/flows")}
+            >
+              Ir al editor
+            </Button>
+          </div>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-xl border border-dashed py-10 text-center">
+          <p className="text-sm text-muted-foreground">
+            Sin plantillas en "{activeCategory}"
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((template) => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              onUse={handleUse}
+              onDelete={handleDelete}
+              deleteLoading={deleteMutation.isPending}
+            />
+          ))}
+        </div>
+      )}
+
+      <CreateTemplateDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   Zap,
   GripVertical,
   X,
+  BookMarked,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,12 +25,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MediaPickerModal } from "@/components/ui/media-picker-modal";
 import type { FlowMessageTypeV2, FlowV2, UpsertFlowBody } from "@/types/api";
 import {
   useDeleteFlowV2Mutation,
   useFlowsV2Query,
   useUpsertFlowV2Mutation,
+  useCreateFlowTemplateMutation,
 } from "@/lib/hooks";
 import { toast } from "sonner";
 
@@ -63,6 +71,9 @@ type DraftFlow = {
   isActive: boolean;
   sessionTimeoutHours: number;
   steps: DraftStep[];
+  receiptPendingMessage?: string;
+  receiptRejectedMessage?: string;
+  receiptConfirmedMessage?: string;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -78,8 +89,12 @@ function toDraft(flow?: FlowV2): DraftFlow {
       isActive: true,
       sessionTimeoutHours: 24,
       steps: [],
+      receiptPendingMessage: "",
+      receiptRejectedMessage: "",
+      receiptConfirmedMessage: "",
     };
   }
+  const overrides = (flow.message_overrides ?? {}) as Record<string, string>;
   return {
     id: flow.id,
     name: flow.name,
@@ -89,6 +104,9 @@ function toDraft(flow?: FlowV2): DraftFlow {
     systemPrompt: flow.system_prompt ?? "",
     isActive: flow.is_active,
     sessionTimeoutHours: flow.session_timeout_hours ?? 24,
+    receiptPendingMessage: overrides.receiptPendingMessage ?? "",
+    receiptRejectedMessage: overrides.receiptRejectedMessage ?? "",
+    receiptConfirmedMessage: overrides.receiptConfirmedMessage ?? "",
     steps: (flow.steps ?? []).map((s) => ({
       id: s.id,
       position: s.position,
@@ -541,6 +559,12 @@ export function FlowsPage() {
     step: number;
     msg: number;
   } | null>(null);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateDescription, setTemplateDescription] = useState("");
+  const [templateCategory, setTemplateCategory] = useState("Personalizado");
+
+  const createTemplateMutation = useCreateFlowTemplateMutation();
 
   // ── Setters ──────────────────────────────────────────────────────────────
 
@@ -663,6 +687,17 @@ export function FlowsPage() {
       return;
     }
 
+    const messageOverrides: Record<string, string> = {};
+    if (draft.receiptPendingMessage?.trim())
+      messageOverrides.receiptPendingMessage =
+        draft.receiptPendingMessage.trim();
+    if (draft.receiptRejectedMessage?.trim())
+      messageOverrides.receiptRejectedMessage =
+        draft.receiptRejectedMessage.trim();
+    if (draft.receiptConfirmedMessage?.trim())
+      messageOverrides.receiptConfirmedMessage =
+        draft.receiptConfirmedMessage.trim();
+
     const payload: UpsertFlowBody = {
       id: draft.id,
       name: draft.name.trim(),
@@ -672,6 +707,8 @@ export function FlowsPage() {
       systemPrompt: draft.systemPrompt || null,
       isActive: draft.isActive,
       sessionTimeoutHours: draft.sessionTimeoutHours,
+      messageOverrides:
+        Object.keys(messageOverrides).length > 0 ? messageOverrides : undefined,
       steps: draft.steps.map((s, i) => ({
         id: s.id,
         position: i,
@@ -954,6 +991,65 @@ export function FlowsPage() {
                     className="resize-none"
                     onChange={(e) => patch({ systemPrompt: e.target.value })}
                   />
+                  <p className="text-[11px] text-muted-foreground">
+                    Sobreescribe el prompt global del bot solo para este flujo.
+                    Déjalo vacío para usar el predeterminado.
+                  </p>
+                </div>
+
+                {/* Message overrides */}
+                <div className="flex flex-col gap-3 rounded-lg border border-dashed p-4">
+                  <div>
+                    <p className="text-xs font-medium">
+                      Mensajes de pago (opcionales)
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Sobreescriben los mensajes globales de comprobante solo
+                      para este flujo.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                      Comprobante recibido (en revisión)
+                    </label>
+                    <Textarea
+                      placeholder="Dejar vacío para usar el mensaje predeterminado…"
+                      value={draft.receiptPendingMessage ?? ""}
+                      rows={2}
+                      className="resize-none text-sm"
+                      onChange={(e) =>
+                        patch({ receiptPendingMessage: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                      Pago confirmado
+                    </label>
+                    <Textarea
+                      placeholder="Dejar vacío para usar el mensaje predeterminado…"
+                      value={draft.receiptConfirmedMessage ?? ""}
+                      rows={2}
+                      className="resize-none text-sm"
+                      onChange={(e) =>
+                        patch({ receiptConfirmedMessage: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                      Comprobante rechazado
+                    </label>
+                    <Textarea
+                      placeholder="Dejar vacío para usar el mensaje predeterminado…"
+                      value={draft.receiptRejectedMessage ?? ""}
+                      rows={2}
+                      className="resize-none text-sm"
+                      onChange={(e) =>
+                        patch({ receiptRejectedMessage: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
 
                 {/* Session timeout */}
@@ -1071,7 +1167,7 @@ export function FlowsPage() {
 
           {/* Action bar */}
           <Separator />
-          <div className="flex items-center gap-2 pb-6">
+          <div className="flex flex-wrap items-center gap-2 pb-6">
             <Button
               onClick={save}
               loading={upsert.isPending}
@@ -1090,6 +1186,20 @@ export function FlowsPage() {
               disabled={!dirty}
             >
               Descartar cambios
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => {
+                setTemplateName(draft.name || "");
+                setTemplateDescription("");
+                setTemplateCategory("Personalizado");
+                setSaveTemplateOpen(true);
+              }}
+              disabled={!draft.name.trim()}
+            >
+              <BookMarked size={14} />
+              Guardar como plantilla
             </Button>
             {draft.id && (
               <Button
@@ -1112,6 +1222,114 @@ export function FlowsPage() {
               </Button>
             )}
           </div>
+
+          {/* Save as template dialog */}
+          <Dialog
+            open={saveTemplateOpen}
+            onOpenChange={(v) => !v && setSaveTemplateOpen(false)}
+          >
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Guardar como plantilla</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-4 py-1">
+                <p className="text-sm text-muted-foreground">
+                  Se guardará el flow actual (configuración + pasos) como
+                  plantilla reutilizable en la página de Plantillas.
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Nombre *
+                  </label>
+                  <Input
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="Nombre de la plantilla"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Descripción
+                  </label>
+                  <Textarea
+                    value={templateDescription}
+                    onChange={(e) => setTemplateDescription(e.target.value)}
+                    placeholder="¿Para qué sirve esta plantilla?"
+                    rows={2}
+                    className="resize-none text-sm"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Categoría
+                  </label>
+                  <select
+                    value={templateCategory}
+                    onChange={(e) => setTemplateCategory(e.target.value)}
+                    className="h-9 rounded-md border bg-background px-3 text-sm"
+                  >
+                    {[
+                      "Personalizado",
+                      "Ventas",
+                      "Soporte",
+                      "Marketing",
+                      "Servicios",
+                      "Otro",
+                    ].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSaveTemplateOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={
+                      !templateName.trim() || createTemplateMutation.isPending
+                    }
+                    onClick={() => {
+                      const templateDraft = {
+                        name: draft.name,
+                        triggerPhrase: draft.triggerPhrase,
+                        keywords: draft.keywords,
+                        noMatchBehavior: draft.noMatchBehavior,
+                        systemPrompt: draft.systemPrompt || null,
+                        isActive: draft.isActive,
+                        sessionTimeoutHours: draft.sessionTimeoutHours,
+                        steps: draft.steps,
+                      };
+                      createTemplateMutation.mutate(
+                        {
+                          name: templateName.trim(),
+                          description: templateDescription.trim() || undefined,
+                          category: templateCategory,
+                          draft: templateDraft,
+                        },
+                        {
+                          onSuccess: () => {
+                            toast.success("Plantilla guardada");
+                            setSaveTemplateOpen(false);
+                          },
+                          onError: () =>
+                            toast.error("No se pudo guardar la plantilla"),
+                        }
+                      );
+                    }}
+                  >
+                    Guardar plantilla
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ type UpsertConversationInput = {
   flowId?: string | null;
   flowName?: string | null;
   whatsappInstanceId?: string | null;
+  contactName?: string | null;
 };
 
 export async function upsertConversation(input: UpsertConversationInput) {
@@ -31,6 +32,7 @@ export async function upsertConversation(input: UpsertConversationInput) {
         started_at: existing.started_at,
         organization_id: input.organizationId,
         updated_at: new Date().toISOString(),
+        ...(input.contactName != null ? { contact_name: input.contactName } : {}),
       }
     : {
         phone: input.phone,
@@ -40,6 +42,7 @@ export async function upsertConversation(input: UpsertConversationInput) {
         whatsapp_instance_id: input.whatsappInstanceId ?? null,
         organization_id: input.organizationId,
         updated_at: new Date().toISOString(),
+        ...(input.contactName != null ? { contact_name: input.contactName } : {}),
       };
   const action = existing
     ? supabase.from("conversations").update(payload).eq("id", existing.id)

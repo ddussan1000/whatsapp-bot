@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
+import { supabase } from "./supabase";
 import type {
   AdReferralQueryParams,
   CreateCampaignBody,
@@ -107,6 +108,17 @@ export function useSendConversationMessageMutation(id: string) {
   });
 }
 
+export function useUpdateConversationStageMutation(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (stage: string) => api.updateConversationStage(id, stage),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["conversation", id] });
+      void qc.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+}
+
 export function useUploadAndSendFileMutation(id: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -159,14 +171,59 @@ export function useUpdateBotConfigMutation() {
   });
 }
 
+export function useFlowTemplatesQuery() {
+  return useQuery({
+    queryKey: ["flow-templates"],
+    queryFn: api.getFlowTemplates,
+  });
+}
+
+export function useCreateFlowTemplateMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.createFlowTemplate,
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["flow-templates"] }),
+  });
+}
+
+export function useDeleteFlowTemplateMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteFlowTemplate,
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["flow-templates"] }),
+  });
+}
+
 export function useSessionQuery() {
   return useQuery({ queryKey: ["auth", "session"], queryFn: api.getSession });
+}
+
+export function useSupabaseUser() {
+  return useQuery({
+    queryKey: ["supabase", "user"],
+    queryFn: async () => {
+      const { data } = (await supabase?.auth.getUser()) ?? {};
+      return data?.user ?? null;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 }
 
 export function useCurrentOrgQuery() {
   return useQuery({
     queryKey: ["org", "current"],
     queryFn: api.getCurrentOrganization,
+  });
+}
+
+export function useUpdateOrgMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { name: string }) => api.updateOrganization(payload),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["org", "current"] }),
   });
 }
 

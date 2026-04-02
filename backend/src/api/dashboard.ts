@@ -107,11 +107,13 @@ const AdSourceSchema = z.object({
 const ConversationSchema = z.object({
   id: z.string(),
   phone: z.string(),
+  contact_name: z.string().nullable().optional(),
   stage: z.string(),
   flow_id: z.string().nullable().optional(),
   flow_name: z.string().nullable().optional(),
   started_at: z.string().nullable().optional(),
   updated_at: z.string().nullable().optional(),
+  ad_name: z.string().nullable().optional(),
   ad_source: AdSourceSchema.nullable().optional(),
 });
 const PAYMENT_STATES = ["pending_manual_review", "validated", "rejected"] as const;
@@ -757,6 +759,40 @@ dashboardApi.openapi(
       },
       200,
     );
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
+    method: "put",
+    path: "/org/current",
+    request: {
+      headers: AuthHeaderSchema,
+      body: {
+        content: { "application/json": { schema: z.object({ name: z.string().min(2) }) } },
+      },
+    },
+    responses: {
+      200: { description: "Updated organization", content: { "application/json": { schema: OrganizationSchema } } },
+      403: { description: "Forbidden", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const session = getSession(c);
+    if (!["owner", "admin"].includes(session.role ?? "")) {
+      return c.json({ error: "Solo el propietario o administrador puede editar la organización" }, 403);
+    }
+    const body = c.req.valid("json");
+    const { data, error } = await supabase
+      .from("organizations")
+      .update({ name: body.name })
+      .eq("id", orgId(c))
+      .select("id, slug, name")
+      .maybeSingle();
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json(data!, 200);
   },
 );
 
@@ -1726,6 +1762,139 @@ dashboardApi.openapi(
   },
 );
 
+// ── Flow templates (user-created) ────────────────────────────────────────
+
+const FlowTemplateDraftMessageSchema = z.object({
+  position: z.number(),
+  messageType: z.enum(["text", "image", "document", "video"]),
+  textContent: z.string().nullable().optional(),
+  mediaUrl: z.string().nullable().optional(),
+  filename: z.string().nullable().optional(),
+  caption: z.string().nullable().optional(),
+});
+
+const FlowTemplateDraftStepSchema = z.object({
+  position: z.number(),
+  delaySeconds: z.number(),
+  label: z.string().optional(),
+  messages: z.array(FlowTemplateDraftMessageSchema),
+});
+
+const FlowTemplateDraftSchema = z.object({
+  name: z.string(),
+  triggerPhrase: z.string(),
+  keywords: z.array(z.string()),
+  noMatchBehavior: z.enum(["trigger", "ignore"]),
+  systemPrompt: z.string().nullable().optional(),
+  isActive: z.boolean(),
+  sessionTimeoutHours: z.number().optional(),
+  steps: z.array(FlowTemplateDraftStepSchema),
+  receiptPendingMessage: z.string().optional(),
+  receiptRejectedMessage: z.string().optional(),
+  receiptConfirmedMessage: z.string().optional(),
+});
+
+const FlowTemplateSchema = z.object({
+  id: z.string(),
+  organization_id: z.string(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  category: z.string(),
+  draft: FlowTemplateDraftSchema,
+  created_by: z.string().nullable().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+dashboardApi.openapi(
+  createRoute({
+    method: "get",
+    path: "/flow-templates",
+    request: { headers: AuthHeaderSchema },
+    responses: {
+      200: { description: "Flow templates", content: { "application/json": { schema: z.array(FlowTemplateSchema) } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json([], 200);
+    const { data } = await supabase
+      .from("flow_templates")
+      .select("id, organization_id, name, description, category, draft, created_by, created_at, updated_at")
+      .eq("organization_id", orgId(c))
+      .order("created_at", { ascending: false });
+    return c.json(data ?? [], 200);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/flow-templates",
+    request: {
+      headers: AuthHeaderSchema,
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              name: z.string().min(1),
+              description: z.string().optional(),
+              category: z.string().default("Personalizado"),
+              draft: FlowTemplateDraftSchema,
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: { description: "Created", content: { "application/json": { schema: FlowTemplateSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const session = getSession(c);
+    const body = c.req.valid("json");
+    const { data, error } = await supabase
+      .from("flow_templates")
+      .insert({
+        organization_id: orgId(c),
+        name: body.name,
+        description: body.description ?? null,
+        category: body.category,
+        draft: body.draft,
+        created_by: session.userId === "dashboard-secret" ? null : session.userId,
+      })
+      .select("id, organization_id, name, description, category, draft, created_by, created_at, updated_at")
+      .single();
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json(data, 200);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
+    method: "delete",
+    path: "/flow-templates/{id}",
+    request: { headers: AuthHeaderSchema, params: z.object({ id: z.string() }) },
+    responses: {
+      200: { description: "Deleted", content: { "application/json": { schema: z.object({ ok: z.boolean() }) } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { error } = await supabase
+      .from("flow_templates")
+      .delete()
+      .eq("id", id)
+      .eq("organization_id", orgId(c));
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true }, 200);
+  },
+);
+
 dashboardApi.openapi(
   createRoute({
     method: "get",
@@ -1872,7 +2041,7 @@ dashboardApi.openapi(
 
     let query = supabase
       .from("conversations")
-      .select("id, phone, stage, flow_id, flow_name, started_at, updated_at")
+      .select("id, phone, contact_name, stage, flow_id, flow_name, started_at, updated_at")
       .eq("organization_id", organization)
       .order(sortBy, { ascending: sortDir === "asc" })
       .range(from, to);
@@ -1883,6 +2052,29 @@ dashboardApi.openapi(
     const { data, error } = await query;
     if (error) return c.json({ error: error.message }, 500);
 
+    // Batch-fetch most recent ad click per phone to show ad name in list
+    const phones = (data ?? []).map((c) => (c as Record<string, unknown>).phone as string);
+    let adNameByPhone: Map<string, string | null> = new Map();
+    if (phones.length > 0) {
+      const { data: adRows } = await supabase
+        .from("ad_click_logs")
+        .select("phone, ad_name, headline")
+        .eq("organization_id", organization)
+        .in("phone", phones)
+        .order("created_at", { ascending: false });
+      for (const row of adRows ?? []) {
+        const p = row.phone as string;
+        if (!adNameByPhone.has(p)) {
+          adNameByPhone.set(p, (row.ad_name as string | null) ?? (row.headline as string | null) ?? null);
+        }
+      }
+    }
+
+    const items = (data ?? []).map((conv) => ({
+      ...(conv as Record<string, unknown>),
+      ad_name: adNameByPhone.get((conv as Record<string, unknown>).phone as string) ?? null,
+    }));
+
     let countQuery = supabase
       .from("conversations")
       .select("*", { count: "exact", head: true })
@@ -1892,7 +2084,7 @@ dashboardApi.openapi(
     if (flowId) countQuery = countQuery.eq("flow_id", flowId);
     if (adPhones) countQuery = countQuery.in("phone", adPhones);
     const { count } = await countQuery;
-    return c.json({ items: data ?? [], page, pageSize, total: count ?? data?.length ?? 0 }, 200);
+    return c.json({ items, page, pageSize, total: count ?? items.length }, 200);
   },
 );
 
@@ -1913,7 +2105,7 @@ dashboardApi.openapi(
     const organization = orgId(c);
     const { data, error } = await supabase
       .from("conversations")
-      .select("id, phone, stage, flow_id, flow_name, started_at, updated_at")
+      .select("id, phone, contact_name, stage, flow_id, flow_name, started_at, updated_at")
       .eq("id", id)
       .eq("organization_id", organization)
       .maybeSingle();
@@ -1929,6 +2121,39 @@ dashboardApi.openapi(
       .limit(1)
       .maybeSingle();
     return c.json({ ...data, ad_source: adRow ?? null }, 200);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
+    method: "put",
+    path: "/conversations/{id}/stage",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+      body: {
+        required: true,
+        content: { "application/json": { schema: z.object({ stage: z.string() }) } },
+      },
+    },
+    responses: {
+      200: { description: "Updated", content: { "application/json": { schema: z.object({ ok: z.boolean() }) } } },
+      404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { stage } = c.req.valid("json");
+    const organization = orgId(c);
+    const { error } = await supabase
+      .from("conversations")
+      .update({ stage, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("organization_id", organization);
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true }, 200);
   },
 );
 

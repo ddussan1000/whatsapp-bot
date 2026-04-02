@@ -35,6 +35,9 @@ import type {
   FlowVersion,
   FlowMediaUploadResponse,
   MessageTemplate,
+  FlowTemplate,
+  CreateFlowTemplateBody,
+  Organization,
   OrganizationInfo,
   OrganizationInvite,
   Paginated,
@@ -207,6 +210,17 @@ export const api = {
     request<Paginated<ChatMessage>>(
       `/api/conversations/${id}/messages?page=${page}&pageSize=${pageSize}&sortDesc=${sortDesc}`
     ),
+  updateConversationStage: (id: string, stage: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/conversations/${id}/stage`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ stage }),
+      }).then((r) => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
   sendConversationMessage: (id: string, payload: SendConversationMessageBody) =>
     buildHeaders(true).then((headers) =>
       fetch(`${API_URL}/api/conversations/${id}/messages`, {
@@ -282,8 +296,42 @@ export const api = {
         return r.json() as Promise<UpdateBotConfigResponse>;
       })
     ),
+  getFlowTemplates: () => request<FlowTemplate[]>("/api/flow-templates"),
+  createFlowTemplate: (payload: CreateFlowTemplateBody) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/flow-templates`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json() as Promise<FlowTemplate>;
+      })
+    ),
+  deleteFlowTemplate: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/flow-templates/${id}`, {
+        method: "DELETE",
+        headers,
+      }).then((r) => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
   getSession: () => fetchSessionResolved(),
   getCurrentOrganization: () => request<OrganizationInfo>("/api/org/current"),
+  updateOrganization: (payload: { name: string }) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/org/current`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      }).then((r) => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json() as Promise<Organization>;
+      })
+    ),
   getInvites: () => request<OrganizationInvite[]>("/api/org/invites"),
   createInvite: (payload: CreateInviteBody) =>
     buildHeaders(true).then((headers) =>

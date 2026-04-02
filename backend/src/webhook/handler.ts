@@ -103,6 +103,7 @@ export async function handleWebhook(c: Context) {
     if (!msg) return c.text("ok");
 
     const phone = msg.from;
+    const contactName = (change?.contacts as Array<{ profile?: { name?: string } }> | undefined)?.[0]?.profile?.name ?? null;
     const previousConversation = await supabase
       ?.from("conversations")
       .select("id, updated_at, flow_id, product")
@@ -168,6 +169,7 @@ export async function handleWebhook(c: Context) {
       flowId: runtimeFlow.id,
       flowName: runtimeFlow.name,
       whatsappInstanceId: instance?.id ?? state.whatsappInstanceId ?? null,
+      contactName,
     });
     const conversationId = conv?.id ?? state.id ?? null;
     const nextBaseState: ConversationState = {

@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DragEventHandler } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/ui/button";
+import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
 import { StatusBadge } from "../components/StatusBadge";
 import {
@@ -22,9 +23,17 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import {
   useConversationQuery,
   useSendConversationMessageMutation,
   useUploadAndSendFileMutation,
+  useUpdateConversationStageMutation,
 } from "../lib/hooks";
 import { api } from "../lib/api";
 import type { ChatMessage, Conversation } from "../types/api";
@@ -261,16 +270,35 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+const STAGE_OPTIONS = [
+  { value: "saludo", label: "Saludo" },
+  { value: "catalogo", label: "Catálogo" },
+  { value: "esperando_comprobante", label: "Esp. comprobante" },
+  { value: "confirmar_comprobante", label: "En revisión" },
+  { value: "pago_confirmado", label: "Pago confirmado" },
+  { value: "comprobante_rechazado", label: "Rechazado" },
+  { value: "comprobante_ilegible", label: "Ilegible" },
+  { value: "flow_started", label: "En flujo" },
+  { value: "ayuda", label: "Ayuda" },
+  { value: "interesado", label: "Interesado" },
+];
+
 function ClientInfoModal({
   open,
   onClose,
   conversation,
+  onStageChange,
+  stageChangePending,
 }: {
   open: boolean;
   onClose: () => void;
   conversation: Conversation | undefined;
+  onStageChange: (stage: string) => void;
+  stageChangePending: boolean;
 }) {
   const ad = conversation?.ad_source;
+  const currentStage = conversation ? String(conversation.stage) : "";
+  const knownStage = STAGE_OPTIONS.some((o) => o.value === currentStage);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -292,11 +320,42 @@ function ClientInfoModal({
           <div className="flex flex-col gap-4 py-1">
             {/* Contact */}
             <div className="flex flex-col gap-3">
+              {conversation.contact_name && (
+                <InfoRow label="Nombre" value={conversation.contact_name} />
+              )}
               <InfoRow
                 label="Teléfono"
                 value={formatPhone(conversation.phone)}
               />
-              <InfoRow label="Estado" value={String(conversation.stage)} />
+              {/* Editable stage */}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Estado
+                </span>
+                <Select
+                  value={knownStage ? currentStage : ""}
+                  onValueChange={(v) => {
+                    if (v) onStageChange(v);
+                  }}
+                  disabled={stageChangePending}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder={currentStage} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STAGE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                    {!knownStage && (
+                      <SelectItem value="" disabled>
+                        {currentStage}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
               {conversation.flow_name && (
                 <InfoRow label="Flujo activo" value={conversation.flow_name} />
               )}
@@ -366,6 +425,7 @@ export function ConversationDetailPage() {
     useConversationQuery(id);
   const sendMutation = useSendConversationMessageMutation(id);
   const uploadMutation = useUploadAndSendFileMutation(id);
+  const stageMutation = useUpdateConversationStageMutation(id);
 
   // Initial load
   useEffect(() => {
@@ -673,6 +733,13 @@ export function ConversationDetailPage() {
         open={infoOpen}
         onClose={() => setInfoOpen(false)}
         conversation={conversation}
+        onStageChange={(stage) => {
+          stageMutation.mutate(stage, {
+            onSuccess: () => toast.success("Estado actualizado"),
+            onError: () => toast.error("No se pudo actualizar el estado"),
+          });
+        }}
+        stageChangePending={stageMutation.isPending}
       />
     </>
   );

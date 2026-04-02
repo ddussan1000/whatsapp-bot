@@ -103,6 +103,7 @@ export type AdminAllowlistEntry = {
   created_at?: string | null;
 };
 export type OrganizationInfo = Json200<"/api/org/current", "get">;
+export type Organization = OrganizationInfo["organization"];
 export type OrganizationMember = Json200ListItem<"/api/org/members", "get">;
 export type OrganizationInvite = Json200ListItem<"/api/org/invites", "get">;
 
@@ -113,6 +114,8 @@ export type FlowSimulateResult = Json200<
   "post"
 >;
 export type MessageTemplate = Json200ListItem<"/api/templates", "get">;
+export type FlowTemplate = Json200ListItem<"/api/flow-templates", "get">;
+export type CreateFlowTemplateBody = JsonRequest<"/api/flow-templates", "post">;
 export type Product = {
   id: string;
   organization_id: string;

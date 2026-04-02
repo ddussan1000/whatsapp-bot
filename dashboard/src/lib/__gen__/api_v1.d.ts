@@ -1356,7 +1356,61 @@ export interface paths {
         };
       };
     };
-    put?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": {
+            name: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated organization */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              slug: string;
+              name: string;
+            };
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
     post?: never;
     delete?: never;
     options?: never;
@@ -2742,6 +2796,238 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/flow-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Flow templates */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              description?: string | null;
+              category: string;
+              draft: {
+                name: string;
+                triggerPhrase: string;
+                keywords: string[];
+                /** @enum {string} */
+                noMatchBehavior: "trigger" | "ignore";
+                systemPrompt?: string | null;
+                isActive: boolean;
+                sessionTimeoutHours?: number;
+                steps: {
+                  position: number;
+                  delaySeconds: number;
+                  label?: string;
+                  messages: {
+                    position: number;
+                    /** @enum {string} */
+                    messageType: "text" | "image" | "document" | "video";
+                    textContent?: string | null;
+                    mediaUrl?: string | null;
+                    filename?: string | null;
+                    caption?: string | null;
+                  }[];
+                }[];
+                receiptPendingMessage?: string;
+                receiptRejectedMessage?: string;
+                receiptConfirmedMessage?: string;
+              };
+              created_by?: string | null;
+              created_at: string;
+              updated_at: string;
+            }[];
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            name: string;
+            description?: string;
+            /** @default Personalizado */
+            category?: string;
+            draft: {
+              name: string;
+              triggerPhrase: string;
+              keywords: string[];
+              /** @enum {string} */
+              noMatchBehavior: "trigger" | "ignore";
+              systemPrompt?: string | null;
+              isActive: boolean;
+              sessionTimeoutHours?: number;
+              steps: {
+                position: number;
+                delaySeconds: number;
+                label?: string;
+                messages: {
+                  position: number;
+                  /** @enum {string} */
+                  messageType: "text" | "image" | "document" | "video";
+                  textContent?: string | null;
+                  mediaUrl?: string | null;
+                  filename?: string | null;
+                  caption?: string | null;
+                }[];
+              }[];
+              receiptPendingMessage?: string;
+              receiptRejectedMessage?: string;
+              receiptConfirmedMessage?: string;
+            };
+          };
+        };
+      };
+      responses: {
+        /** @description Created */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              id: string;
+              organization_id: string;
+              name: string;
+              description?: string | null;
+              category: string;
+              draft: {
+                name: string;
+                triggerPhrase: string;
+                keywords: string[];
+                /** @enum {string} */
+                noMatchBehavior: "trigger" | "ignore";
+                systemPrompt?: string | null;
+                isActive: boolean;
+                sessionTimeoutHours?: number;
+                steps: {
+                  position: number;
+                  delaySeconds: number;
+                  label?: string;
+                  messages: {
+                    position: number;
+                    /** @enum {string} */
+                    messageType: "text" | "image" | "document" | "video";
+                    textContent?: string | null;
+                    mediaUrl?: string | null;
+                    filename?: string | null;
+                    caption?: string | null;
+                  }[];
+                }[];
+                receiptPendingMessage?: string;
+                receiptRejectedMessage?: string;
+                receiptConfirmedMessage?: string;
+              };
+              created_by?: string | null;
+              created_at: string;
+              updated_at: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/flow-templates/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/stats/range": {
     parameters: {
       query?: never;
@@ -2884,11 +3170,13 @@ export interface paths {
               items: {
                 id: string;
                 phone: string;
+                contact_name?: string | null;
                 stage: string;
                 flow_id?: string | null;
                 flow_name?: string | null;
                 started_at?: string | null;
                 updated_at?: string | null;
+                ad_name?: string | null;
                 ad_source?: {
                   source_id: string | null;
                   headline: string | null;
@@ -2955,11 +3243,13 @@ export interface paths {
             "application/json": {
               id: string;
               phone: string;
+              contact_name?: string | null;
               stage: string;
               flow_id?: string | null;
               flow_name?: string | null;
               started_at?: string | null;
               updated_at?: string | null;
+              ad_name?: string | null;
               ad_source?: {
                 source_id: string | null;
                 headline: string | null;
@@ -2996,6 +3286,76 @@ export interface paths {
       };
     };
     put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/conversations/{id}/stage": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            stage: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
     post?: never;
     delete?: never;
     options?: never;

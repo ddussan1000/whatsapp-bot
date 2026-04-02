@@ -14,6 +14,8 @@ import {
   Shield,
   Images,
   Settings2,
+  ChevronsUpDown,
+  Zap,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ModeToggle } from "../components/mode-toggle";
@@ -34,9 +36,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase";
 import { setActiveOrgId } from "@/lib/api";
-import { useSessionQuery } from "@/lib/hooks";
+import {
+  useCurrentOrgQuery,
+  useSessionQuery,
+  useSupabaseUser,
+} from "@/lib/hooks";
 
 // ── Nav section ───────────────────────────────────────────────────────────
 
@@ -57,8 +72,6 @@ function NavSection({
   );
 }
 
-// ── Nav link items ────────────────────────────────────────────────────────
-
 type NavItem = { to: string; label: string; icon: React.ElementType };
 
 const operationsLinks: NavItem[] = [
@@ -76,7 +89,7 @@ const productLinks: NavItem[] = [
 
 const systemLinks: NavItem[] = [
   { to: "/instances", label: "WhatsApp", icon: Smartphone },
-  { to: "/organization", label: "Equipo", icon: Building2 },
+  { to: "/organization", label: "Organización", icon: Building2 },
   { to: "/config", label: "Configuración Bot", icon: Settings2 },
   { to: "/instructions", label: "Guía de inicio", icon: BookOpenText },
 ];
@@ -104,7 +117,7 @@ function NavItem({
   );
 }
 
-function SidebarContent({
+function NavLinks({
   onNavigate,
   popover = false,
 }: {
@@ -125,7 +138,6 @@ function SidebarContent({
           />
         ))}
       </NavSection>
-
       <NavSection label="Automatización">
         {productLinks.map((l) => (
           <NavItem
@@ -136,7 +148,6 @@ function SidebarContent({
           />
         ))}
       </NavSection>
-
       <NavSection label="Sistema">
         {systemLinks.map((l) => (
           <NavItem
@@ -158,6 +169,91 @@ function SidebarContent({
   );
 }
 
+// ── NavUser ───────────────────────────────────────────────────────────────
+
+function NavUser({ onLogout }: { onLogout: () => void }) {
+  const { data: supaUser } = useSupabaseUser();
+  const { data: org } = useCurrentOrgQuery();
+
+  const meta = supaUser?.user_metadata as
+    | { avatar_url?: string; full_name?: string; name?: string }
+    | undefined;
+
+  const avatarUrl = meta?.avatar_url;
+  const displayName =
+    meta?.full_name ??
+    meta?.name ??
+    supaUser?.email?.split("@")[0] ??
+    "Usuario";
+  const email = supaUser?.email ?? "";
+  const initials = displayName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none"
+        >
+          <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+            <AvatarImage src={avatarUrl} alt={displayName} />
+            <AvatarFallback className="rounded-lg bg-primary/20 text-primary text-xs font-semibold">
+              {initials || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-sm font-medium leading-tight">
+              {displayName}
+            </p>
+            {org?.organization.name && (
+              <p className="truncate text-[11px] text-muted-foreground/70 leading-tight">
+                {org.organization.name}
+              </p>
+            )}
+          </div>
+          <ChevronsUpDown
+            size={14}
+            className="shrink-0 text-muted-foreground/50"
+          />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side="top"
+        align="start"
+        sideOffset={6}
+        className="w-[--radix-dropdown-menu-trigger-width] min-w-52"
+      >
+        <DropdownMenuLabel className="p-0 font-normal">
+          <div className="flex items-center gap-2.5 px-2 py-2">
+            <Avatar className="h-9 w-9 shrink-0 rounded-lg">
+              <AvatarImage src={avatarUrl} alt={displayName} />
+              <AvatarFallback className="rounded-lg bg-primary/20 text-primary text-xs font-semibold">
+                {initials || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{displayName}</p>
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+            </div>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={onLogout}
+          className="text-destructive focus:text-destructive gap-2"
+        >
+          <LogOut size={14} />
+          Cerrar sesión
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 // ── AppLayout ─────────────────────────────────────────────────────────────
 
 export function AppLayout() {
@@ -165,6 +261,7 @@ export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const { data: org } = useCurrentOrgQuery();
 
   const openLogoutDialog = () => setLogoutOpen(true);
 
@@ -183,36 +280,40 @@ export function AppLayout() {
 
   return (
     <div className="app-shell">
+      {/* ── Desktop sidebar ── */}
       <aside className="sidebar" aria-label="Navegación principal">
+        {/* Brand */}
         <div className="brand">
-          <div className="brand-dot" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+            <Zap size={16} className="text-primary" />
+          </div>
           <div>
-            <h1>Sales Bot</h1>
-            <p>Admin Console</p>
+            <h1>DSS Bot</h1>
+            <p className="text-[11px] text-muted-foreground/60 leading-none mt-0.5">
+              {org?.organization.name ?? "Panel de control"}
+            </p>
           </div>
         </div>
+
+        {/* Nav */}
         <nav
           className="sidebar-nav flex-1 overflow-y-auto"
           aria-label="Secciones"
         >
-          <SidebarContent />
+          <NavLinks />
         </nav>
+
+        {/* User footer */}
         <div className="sidebar-footer">
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            onClick={openLogoutDialog}
-          >
-            <LogOut size={16} />
-            Cerrar sesión
-          </Button>
+          <NavUser onLogout={openLogoutDialog} />
         </div>
       </aside>
 
+      {/* ── Content ── */}
       <main className="content">
         <header className="topbar">
           <div className="topbar-start">
+            {/* Mobile menu trigger */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button
@@ -230,54 +331,64 @@ export function AppLayout() {
                 className="flex w-[min(100vw,280px)] flex-col gap-0 p-0 sm:max-w-[280px]"
               >
                 <SheetHeader className="border-b border-border px-4 py-4 text-left">
-                  <SheetTitle className="font-heading">Menú</SheetTitle>
+                  <SheetTitle className="flex items-center gap-2">
+                    <Zap size={15} className="text-primary" />
+                    DSS Bot
+                  </SheetTitle>
                 </SheetHeader>
                 <nav
                   className="flex flex-1 flex-col gap-1 overflow-y-auto p-3"
                   aria-label="Navegación móvil"
                 >
-                  <SidebarContent
-                    onNavigate={() => setMobileOpen(false)}
-                    popover
-                  />
+                  <NavLinks onNavigate={() => setMobileOpen(false)} popover />
                 </nav>
-                <SheetFooter className="border-t border-border sm:flex-col">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-center gap-2"
-                    onClick={() => {
+                <SheetFooter className="border-t border-border p-3 sm:flex-col">
+                  <NavUser
+                    onLogout={() => {
                       setMobileOpen(false);
                       openLogoutDialog();
                     }}
-                  >
-                    <LogOut size={16} />
-                    Cerrar sesión
-                  </Button>
+                  />
                 </SheetFooter>
               </SheetContent>
             </Sheet>
-            <div>
-              <p className="topbar-title">Dashboard</p>
-              <p className="muted">Operación en tiempo real</p>
+
+            {/* Org context */}
+            <div className="min-w-0">
+              <p className="topbar-title truncate">
+                {org?.organization.name ?? "DSS Bot"}
+              </p>
+              {org && (
+                <p className="muted text-[11px] leading-none truncate capitalize">
+                  {org.membership.role === "owner"
+                    ? "Propietario"
+                    : org.membership.role === "admin"
+                      ? "Administrador"
+                      : org.membership.role === "agent"
+                        ? "Agente"
+                        : "Solo lectura"}
+                </p>
+              )}
             </div>
           </div>
           <div className="topbar-actions">
             <ModeToggle />
           </div>
         </header>
+
         <div className="flex flex-1 flex-col min-h-0 overflow-y-auto">
           <Outlet />
         </div>
       </main>
 
+      {/* ── Logout confirm dialog ── */}
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <DialogContent showCloseButton className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Cerrar sesión</DialogTitle>
             <DialogDescription>
-              ¿Seguro que querés salir? Vas a tener que volver a iniciar sesión
-              para entrar al panel.
+              ¿Seguro que querés salir? Tendrás que volver a iniciar sesión para
+              acceder al panel.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">

@@ -54,9 +54,10 @@ const STAGE_OPTIONS = [
   { value: "saludo", label: "Saludo" },
   { value: "catalogo", label: "Catálogo" },
   { value: "esperando_comprobante", label: "Esp. comprobante" },
-  { value: "confirmar_comprobante", label: "Confirmar pago" },
+  { value: "confirmar_comprobante", label: "En revisión" },
   { value: "pago_confirmado", label: "Pago confirmado" },
   { value: "comprobante_rechazado", label: "Rechazado" },
+  { value: "comprobante_ilegible", label: "Ilegible" },
   { value: "flow_started", label: "En flujo" },
 ];
 
@@ -83,11 +84,18 @@ function ConversationRow({
 
       <div className="flex flex-1 flex-col gap-0.5 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-sm">{formatPhone(conv.phone)}</span>
+          <span className="font-medium text-sm">
+            {conv.contact_name ?? formatPhone(conv.phone)}
+          </span>
+          {conv.contact_name && (
+            <span className="text-xs text-muted-foreground">
+              {formatPhone(conv.phone)}
+            </span>
+          )}
           {hasAd && (
             <span className="flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-600">
               <Megaphone size={10} />
-              Anuncio
+              {conv.ad_name ?? "Anuncio"}
             </span>
           )}
         </div>
