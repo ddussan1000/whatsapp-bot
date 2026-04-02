@@ -50,9 +50,20 @@ export function useAdReferralsQuery(params?: AdReferralQueryParams) {
   });
 }
 
+export function useConversationFiltersQuery() {
+  return useQuery({
+    queryKey: ["conversation-filters"],
+    queryFn: api.getConversationFilters,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
 export function useConversationsQuery(params?: {
   state?: string;
   search?: string;
+  fromAd?: boolean;
+  adSourceId?: string;
+  flowId?: string;
   page?: number;
   pageSize?: number;
   sortBy?: string;

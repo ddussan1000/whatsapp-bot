@@ -9,7 +9,7 @@ import { supabase } from "../db/supabase";
 import { log } from "../logger";
 
 const DEFAULT_RECEIPT_PENDING_MESSAGE =
-  "Gracias por tu comprobante. Lo estamos validando manualmente y te confirmaremos pronto.";
+  "Gracias por tu comprobante. Lo estamos validando.";
 const DEFAULT_RECEIPT_REJECTED_MESSAGE =
   "No pudimos validar tu comprobante. Por favor verifica que la imagen sea legible y que la fecha sea de las ultimas 24 horas.";
 const DEFAULT_RECEIPT_RETRY_MESSAGE =

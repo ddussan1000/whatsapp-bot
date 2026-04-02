@@ -1,15 +1,6 @@
 import { useMemo, useRef } from "react";
 import { toast } from "sonner";
-import {
-  Bot,
-  MessageSquareText,
-  KeyRound,
-  Clock,
-  XCircle,
-  CheckCircle2,
-  Loader2,
-  Info,
-} from "lucide-react";
+import { Bot, Clock, XCircle, CheckCircle2, Loader2, Info } from "lucide-react";
 import { useBotConfigQuery, useUpdateBotConfigMutation } from "../lib/hooks";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -83,7 +74,6 @@ export function ConfigPage() {
   const defaults = useMemo(
     () => ({
       systemPrompt: data?.systemPrompt ?? "",
-      keywords: data?.keywords ?? "",
       receiptPendingMessage: data?.receiptPendingMessage ?? "",
       receiptRejectedMessage: data?.receiptRejectedMessage ?? "",
       receiptConfirmedMessage: data?.receiptConfirmedMessage ?? "",
@@ -92,7 +82,6 @@ export function ConfigPage() {
   );
 
   const systemPromptRef = useRef<HTMLTextAreaElement | null>(null);
-  const keywordsRef = useRef<HTMLTextAreaElement | null>(null);
   const pendingRef = useRef<HTMLTextAreaElement | null>(null);
   const rejectedRef = useRef<HTMLTextAreaElement | null>(null);
   const confirmedRef = useRef<HTMLTextAreaElement | null>(null);
@@ -101,7 +90,6 @@ export function ConfigPage() {
     try {
       await saveMutation.mutateAsync({
         systemPrompt: systemPromptRef.current?.value ?? defaults.systemPrompt,
-        keywords: keywordsRef.current?.value ?? defaults.keywords,
         receiptPendingMessage:
           pendingRef.current?.value ?? defaults.receiptPendingMessage,
         receiptRejectedMessage:
@@ -167,23 +155,6 @@ export function ConfigPage() {
             className="resize-none font-mono text-sm"
           />
         </Field>
-
-        <Separator />
-
-        <Field
-          icon={KeyRound}
-          label="Palabras clave para activar el asistente"
-          description="Lista de palabras separadas por coma. Si el cliente escribe alguna de estas, el bot responde con IA aunque no haya un flujo activo."
-          hint="Escribí en minúsculas y sin tildes para mayor cobertura. Ejemplo: precio, pago, producto, ayuda, info"
-        >
-          <Textarea
-            ref={keywordsRef}
-            rows={2}
-            placeholder="precio, pago, producto, ayuda, info, costo…"
-            defaultValue={defaults.keywords}
-            className="resize-none font-mono text-sm"
-          />
-        </Field>
       </Section>
 
       {/* Sección Comprobantes */}
@@ -237,20 +208,6 @@ export function ConfigPage() {
             defaultValue={defaults.receiptRejectedMessage}
             className="resize-none text-sm"
           />
-        </Field>
-
-        <Separator />
-
-        <Field
-          icon={MessageSquareText}
-          label="Nota sobre mensajes por flujo"
-          description="Estos son los mensajes globales de la organización. Si necesitás un mensaje diferente para un flujo específico, podés sobreescribirlos desde el editor de flujos en la sección de configuración avanzada."
-        >
-          <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-            Los mensajes configurados en un flujo individual tienen prioridad
-            sobre estos. Si un flujo no tiene mensaje configurado, se usa el de
-            acá.
-          </div>
         </Field>
       </Section>
 

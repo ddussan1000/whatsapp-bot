@@ -269,8 +269,11 @@ p {
 }
 
 .content {
+  display: flex;
+  flex-direction: column;
   padding: 20px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   margin-left: 0;
 }
 

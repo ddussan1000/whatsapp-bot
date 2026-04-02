@@ -95,13 +95,24 @@ const ReportsResponseSchema = z.object({
     total: z.number(),
   }),
 });
+const AdSourceSchema = z.object({
+  source_id: z.string().nullable(),
+  headline: z.string().nullable(),
+  ad_name: z.string().nullable(),
+  campaign_name: z.string().nullable(),
+  adset_name: z.string().nullable(),
+  created_at: z.string().nullable(),
+});
+
 const ConversationSchema = z.object({
   id: z.string(),
   phone: z.string(),
   stage: z.string(),
-  product: z.string().nullable().optional(),
+  flow_id: z.string().nullable().optional(),
+  flow_name: z.string().nullable().optional(),
   started_at: z.string().nullable().optional(),
   updated_at: z.string().nullable().optional(),
+  ad_source: AdSourceSchema.nullable().optional(),
 });
 const PaymentSchema = z.object({
   id: z.string(),
@@ -1745,6 +1756,63 @@ dashboardApi.openapi(
   },
 );
 
+// ── Conversation filter options ───────────────────────────────────────────
+
+const ConversationFiltersSchema = z.object({
+  flows: z.array(z.object({ id: z.string(), name: z.string() })),
+  ads: z.array(z.object({ source_id: z.string(), ad_name: z.string().nullable(), campaign_name: z.string().nullable() })),
+});
+
+dashboardApi.openapi(
+  createRoute({
+    method: "get",
+    path: "/conversations/filters",
+    request: { headers: AuthHeaderSchema },
+    responses: {
+      200: { description: "Filter options", content: { "application/json": { schema: ConversationFiltersSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ flows: [], ads: [] }, 200);
+    const organization = orgId(c);
+
+    // Distinct flows that have at least one conversation
+    const { data: flowRows } = await supabase
+      .from("conversations")
+      .select("flow_id, flow_name")
+      .eq("organization_id", organization)
+      .not("flow_id", "is", null);
+
+    const seenFlows = new Map<string, string>();
+    for (const r of flowRows ?? []) {
+      if (r.flow_id && !seenFlows.has(r.flow_id)) {
+        seenFlows.set(r.flow_id as string, (r.flow_name as string) ?? r.flow_id as string);
+      }
+    }
+    const flows = Array.from(seenFlows.entries()).map(([id, name]) => ({ id, name }));
+
+    // Distinct ads that have click logs
+    const { data: adRows } = await supabase
+      .from("ad_click_logs")
+      .select("source_id, ad_name, campaign_name")
+      .eq("organization_id", organization)
+      .not("source_id", "is", null);
+
+    const seenAds = new Map<string, { ad_name: string | null; campaign_name: string | null }>();
+    for (const r of adRows ?? []) {
+      if (r.source_id && !seenAds.has(r.source_id as string)) {
+        seenAds.set(r.source_id as string, {
+          ad_name: r.ad_name as string | null,
+          campaign_name: r.campaign_name as string | null,
+        });
+      }
+    }
+    const ads = Array.from(seenAds.entries()).map(([source_id, meta]) => ({ source_id, ...meta }));
+
+    return c.json({ flows, ads }, 200);
+  },
+);
+
 dashboardApi.openapi(
   createRoute({
     method: "get",
@@ -1754,6 +1822,9 @@ dashboardApi.openapi(
       query: z.object({
         state: z.string().optional(),
         search: z.string().optional(),
+        fromAd: z.coerce.boolean().optional(),
+        adSourceId: z.string().optional(),
+        flowId: z.string().optional(),
         page: z.coerce.number().default(1),
         pageSize: z.coerce.number().default(20),
         sortBy: z.string().default("updated_at"),
@@ -1770,25 +1841,52 @@ dashboardApi.openapi(
   }),
   async (c) => {
     if (!supabase) return c.json({ items: [], page: 1, pageSize: 20, total: 0 }, 200);
-    const session = getSession(c);
-    const { state, search, page, pageSize, sortBy, sortDir } = c.req.valid("query");
+    const { state, search, fromAd, adSourceId, flowId, page, pageSize, sortBy, sortDir } = c.req.valid("query");
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
+    const organization = orgId(c);
+
+    // Resolve phones from ad_click_logs when filtering by ad
+    let adPhones: string[] | null = null;
+    if (adSourceId) {
+      const { data: adRows } = await supabase
+        .from("ad_click_logs")
+        .select("phone")
+        .eq("organization_id", organization)
+        .eq("source_id", adSourceId);
+      adPhones = [...new Set((adRows ?? []).map((r) => r.phone as string))];
+      if (adPhones.length === 0) return c.json({ items: [], page, pageSize, total: 0 }, 200);
+    } else if (fromAd) {
+      const { data: adRows } = await supabase
+        .from("ad_click_logs")
+        .select("phone")
+        .eq("organization_id", organization);
+      adPhones = [...new Set((adRows ?? []).map((r) => r.phone as string))];
+      if (adPhones.length === 0) return c.json({ items: [], page, pageSize, total: 0 }, 200);
+    }
+
     let query = supabase
       .from("conversations")
-      .select("id, phone, stage, product, started_at, updated_at")
-      .eq("organization_id", orgId(c))
+      .select("id, phone, stage, flow_id, flow_name, started_at, updated_at")
+      .eq("organization_id", organization)
       .order(sortBy, { ascending: sortDir === "asc" })
       .range(from, to);
     if (state) query = query.eq("stage", state);
     if (search) query = query.ilike("phone", `%${search}%`);
+    if (flowId) query = query.eq("flow_id", flowId);
+    if (adPhones) query = query.in("phone", adPhones);
     const { data, error } = await query;
     if (error) return c.json({ error: error.message }, 500);
-    const { count } = await supabase
+
+    let countQuery = supabase
       .from("conversations")
       .select("*", { count: "exact", head: true })
-      .eq("organization_id", orgId(c))
-      .match(state ? { stage: state } : {});
+      .eq("organization_id", organization);
+    if (state) countQuery = countQuery.eq("stage", state);
+    if (search) countQuery = countQuery.ilike("phone", `%${search}%`);
+    if (flowId) countQuery = countQuery.eq("flow_id", flowId);
+    if (adPhones) countQuery = countQuery.in("phone", adPhones);
+    const { count } = await countQuery;
     return c.json({ items: data ?? [], page, pageSize, total: count ?? data?.length ?? 0 }, 200);
   },
 );
@@ -1806,17 +1904,26 @@ dashboardApi.openapi(
   }),
   async (c) => {
     if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
-    const session = getSession(c);
     const { id } = c.req.valid("param");
+    const organization = orgId(c);
     const { data, error } = await supabase
       .from("conversations")
-      .select("id, phone, stage, product, started_at, updated_at")
+      .select("id, phone, stage, flow_id, flow_name, started_at, updated_at")
       .eq("id", id)
-      .eq("organization_id", orgId(c))
+      .eq("organization_id", organization)
       .maybeSingle();
     if (error) return c.json({ error: error.message }, 500);
     if (!data) return c.json({ error: "Conversacion no encontrada" }, 404);
-    return c.json(data, 200);
+    // Enrich with ad source if available
+    const { data: adRow } = await supabase
+      .from("ad_click_logs")
+      .select("source_id, headline, ad_name, campaign_name, adset_name, created_at")
+      .eq("organization_id", organization)
+      .eq("phone", data.phone)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return c.json({ ...data, ad_source: adRow ?? null }, 200);
   },
 );
 

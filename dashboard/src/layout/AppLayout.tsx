@@ -7,7 +7,6 @@ import {
   Building2,
   Workflow,
   Library,
-  Link2,
   Smartphone,
   BookOpenText,
   Menu,
@@ -73,13 +72,12 @@ const productLinks: NavItem[] = [
   { to: "/flows", label: "Flujos", icon: Workflow },
   { to: "/media", label: "Media", icon: Images },
   { to: "/templates", label: "Plantillas", icon: Library },
-  { to: "/referrals", label: "CTWA Ads", icon: Link2 },
 ];
 
 const systemLinks: NavItem[] = [
   { to: "/instances", label: "WhatsApp", icon: Smartphone },
   { to: "/organization", label: "Equipo", icon: Building2 },
-  { to: "/config", label: "Configuración", icon: Settings2 },
+  { to: "/config", label: "Configuración Bot", icon: Settings2 },
   { to: "/instructions", label: "Guía de inicio", icon: BookOpenText },
 ];
 
@@ -268,7 +266,9 @@ export function AppLayout() {
             <ModeToggle />
           </div>
         </header>
-        <Outlet />
+        <div className="flex flex-1 flex-col min-h-0 overflow-y-auto">
+          <Outlet />
+        </div>
       </main>
 
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>

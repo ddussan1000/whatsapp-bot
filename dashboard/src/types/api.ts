@@ -69,6 +69,8 @@ export type ReportsQueryParams = {
 
 export type PaginatedConversation = Json200<"/api/conversations", "get">;
 export type Conversation = ArrayElement<PaginatedConversation["items"]>;
+export type AdSource = NonNullable<Conversation["ad_source"]>;
+export type ConversationFilters = Json200<"/api/conversations/filters", "get">;
 
 export type PaginatedChatMessage = Json200<
   "/api/conversations/{id}/messages",

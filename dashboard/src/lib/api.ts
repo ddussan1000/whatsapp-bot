@@ -6,6 +6,7 @@ import type {
   Campaign,
   ChatMessage,
   Conversation,
+  ConversationFilters,
   CreateCampaignBody,
   OrgMedia,
   OrgMediaUploadResponse,
@@ -168,9 +169,14 @@ export const api = {
     if (params.pageSize) q.set("pageSize", String(params.pageSize));
     return request<ReportsResponse>(`/api/stats/reports?${q.toString()}`);
   },
+  getConversationFilters: () =>
+    request<ConversationFilters>("/api/conversations/filters"),
   getConversations: (params?: {
     state?: string;
     search?: string;
+    fromAd?: boolean;
+    adSourceId?: string;
+    flowId?: string;
     page?: number;
     pageSize?: number;
     sortBy?: string;
@@ -179,6 +185,9 @@ export const api = {
     const q = new URLSearchParams();
     if (params?.state) q.set("state", params.state);
     if (params?.search) q.set("search", params.search);
+    if (params?.fromAd) q.set("fromAd", "true");
+    if (params?.adSourceId) q.set("adSourceId", params.adSourceId);
+    if (params?.flowId) q.set("flowId", params.flowId);
     if (params?.page) q.set("page", String(params.page));
     if (params?.pageSize) q.set("pageSize", String(params.pageSize));
     if (params?.sortBy) q.set("sortBy", params.sortBy);

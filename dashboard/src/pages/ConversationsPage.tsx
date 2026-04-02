@@ -1,214 +1,343 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  type ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import { useConversationsQuery } from "../lib/hooks";
-import { Card } from "../components/ui/card";
+  Search,
+  X,
+  MessagesSquare,
+  Megaphone,
+  ChevronLeft,
+  ChevronRight,
+  Workflow,
+} from "lucide-react";
+import { useConversationFiltersQuery, useConversationsQuery } from "../lib/hooks";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../components/ui/table";
-import type { Conversation } from "../types/api";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StatusBadge } from "../components/StatusBadge";
-import { Button } from "../components/ui/button";
+import type { Conversation } from "../types/api";
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+function formatPhone(phone: string) {
+  return phone.startsWith("57") && phone.length === 12
+    ? `+57 ${phone.slice(2, 5)} ${phone.slice(5, 8)} ${phone.slice(8)}`
+    : `+${phone}`;
+}
+
+function timeAgo(iso?: string | null) {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "hace un momento";
+  if (mins < 60) return `hace ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `hace ${hrs} h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `hace ${days} d`;
+  return new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
+}
+
+const STAGE_OPTIONS = [
+  { value: "saludo", label: "Saludo" },
+  { value: "catalogo", label: "Catálogo" },
+  { value: "esperando_comprobante", label: "Esp. comprobante" },
+  { value: "confirmar_comprobante", label: "Confirmar pago" },
+  { value: "pago_confirmado", label: "Pago confirmado" },
+  { value: "comprobante_rechazado", label: "Rechazado" },
+  { value: "flow_started", label: "En flujo" },
+];
+
+// ── ConversationRow ───────────────────────────────────────────────────────
+
+function ConversationRow({ conv, onClick }: { conv: Conversation; onClick: () => void }) {
+  const hasAd = Boolean(conv.ad_source);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex w-full items-center gap-4 rounded-xl border bg-card px-4 py-3.5 text-left transition-all hover:bg-muted/40 hover:shadow-sm"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+        {conv.phone.slice(-2)}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-0.5 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm">{formatPhone(conv.phone)}</span>
+          {hasAd && (
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-600">
+              <Megaphone size={10} />
+              Anuncio
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {conv.flow_name && (
+            <>
+              <Workflow size={11} className="shrink-0" />
+              <span className="truncate max-w-40">{conv.flow_name}</span>
+              <span className="opacity-40">·</span>
+            </>
+          )}
+          <StatusBadge state={String(conv.stage)} />
+        </div>
+      </div>
+
+      <div className="shrink-0 text-right">
+        <span className="text-xs text-muted-foreground">{timeAgo(conv.updated_at)}</span>
+      </div>
+    </button>
+  );
+}
+
+// ── ConversationsPage ─────────────────────────────────────────────────────
 
 export function ConversationsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [stateFilter, setStateFilter] = useState("");
+  const [stateFilter, setStateFilter] = useState("all");
+  const [flowFilter, setFlowFilter] = useState("all");
+  const [adFilter, setAdFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(12);
-  const [sortBy, setSortBy] = useState("updated_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const pageSize = 15;
+
+  const { data: filters } = useConversationFiltersQuery();
 
   const { data, isLoading } = useConversationsQuery({
     page,
     pageSize,
     search: search || undefined,
-    state: stateFilter || undefined,
-    sortBy,
+    state: stateFilter !== "all" ? stateFilter : undefined,
+    flowId: flowFilter !== "all" ? flowFilter : undefined,
+    adSourceId: adFilter !== "all" && adFilter !== "any" ? adFilter : undefined,
+    fromAd: adFilter === "any" ? true : undefined,
+    sortBy: "updated_at",
     sortDir,
   });
+
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
-  const columns = useMemo<ColumnDef<Conversation>[]>(
-    () => [
-      { accessorKey: "phone", header: "Telefono" },
-      {
-        accessorKey: "stage",
-        header: "Estado",
-        cell: ({ row }) => <StatusBadge state={String(row.original.stage)} />,
-      },
-      {
-        accessorKey: "product",
-        header: "Producto",
-        cell: ({ row }) => row.original.product ?? "-",
-      },
-      {
-        accessorKey: "updated_at",
-        header: "Actualizado",
-        cell: ({ row }) =>
-          row.original.updated_at
-            ? new Date(row.original.updated_at).toLocaleString("es-CO")
-            : "-",
-      },
-    ],
-    []
-  );
+  const clearFilters = () => {
+    setSearch("");
+    setStateFilter("all");
+    setFlowFilter("all");
+    setAdFilter("all");
+    setPage(1);
+  };
 
-  const table = useReactTable({
-    data: items,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
+  const hasFilters = search || stateFilter !== "all" || flowFilter !== "all" || adFilter !== "all";
+
+  const hasFlowOptions = (filters?.flows?.length ?? 0) > 0;
+  const hasAdOptions = (filters?.ads?.length ?? 0) > 0;
 
   return (
-    <section>
-      <div className="page-header">
-        <h2>Conversaciones</h2>
-        <div className="table-actions">
-          <input
-            className="input"
-            placeholder="Buscar por telefono"
-            value={search}
-            onChange={(e) => {
-              setPage(1);
-              setSearch(e.target.value);
-            }}
-          />
-          <select
-            className="input"
-            value={stateFilter}
-            onChange={(e) => {
-              setPage(1);
-              setStateFilter(e.target.value);
-            }}
-          >
-            <option value="">Todos los estados</option>
-            <option value="saludo">saludo</option>
-            <option value="catalogo">catalogo</option>
-            <option value="esperando_comprobante">esperando comprobante</option>
-            <option value="confirmar_comprobante">confirmar comprobante</option>
-            <option value="pago_confirmado">pago confirmado</option>
-            <option value="comprobante_rechazado">comprobante rechazado</option>
-          </select>
-          <select
-            className="input"
-            value={`${sortBy}:${sortDir}`}
-            onChange={(e) => {
-              const [newSortBy, newSortDir] = e.target.value.split(":");
-              setSortBy(newSortBy);
-              setSortDir(newSortDir as "asc" | "desc");
-            }}
-          >
-            <option value="updated_at:desc">Mas recientes</option>
-            <option value="updated_at:asc">Mas antiguas</option>
-            <option value="phone:asc">Telefono A-Z</option>
-            <option value="phone:desc">Telefono Z-A</option>
-          </select>
-        </div>
-      </div>
-      <Card>
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="text-center text-muted-foreground"
-                >
-                  Cargando conversaciones...
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="text-center text-muted-foreground"
-                >
-                  No hay conversaciones para mostrar.
-                </TableCell>
-              </TableRow>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="clickable-row"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Abrir conversación con ${row.original.phone}`}
-                  onClick={() => navigate(`/conversations/${row.original.id}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      navigate(`/conversations/${row.original.id}`);
-                    }
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        <div className="pagination">
-          <p className="muted">
-            Pagina {page} de {pageCount} - {total} registros
+    <section className="flex flex-col gap-5 p-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">Conversaciones</h2>
+          <p className="text-sm text-muted-foreground">
+            {total > 0 ? `${total.toLocaleString("es-CO")} conversaciones` : "Historial de chats con clientes"}
           </p>
-          <div>
-            <Button
-              variant="outline"
-              loading={isLoading && page > 1}
-              loadingText="Cargando..."
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
+        </div>
+        <Select
+          value={`updated_at:${sortDir}`}
+          onValueChange={(v) => {
+            const [, dir] = v.split(":");
+            setSortDir(dir as "asc" | "desc");
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-44 h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="updated_at:desc">Más recientes</SelectItem>
+            <SelectItem value="updated_at:asc">Más antiguas</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Search */}
+        <div className="relative min-w-[180px] flex-1 max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por teléfono…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="pl-8 h-9 text-sm"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => { setSearch(""); setPage(1); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Stage filter */}
+        <Select value={stateFilter} onValueChange={(v) => { setStateFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-44 h-9 text-sm">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los estados</SelectItem>
+            {STAGE_OPTIONS.map((s) => (
+              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Flow filter */}
+        {hasFlowOptions && (
+          <Select value={flowFilter} onValueChange={(v) => { setFlowFilter(v); setPage(1); }}>
+            <SelectTrigger className="w-44 h-9 text-sm">
+              <SelectValue placeholder="Flujo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los flujos</SelectItem>
+              {filters!.flows.map((f) => (
+                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Ad filter */}
+        {hasAdOptions && (
+          <Select value={adFilter} onValueChange={(v) => { setAdFilter(v); setPage(1); }}>
+            <SelectTrigger className="w-48 h-9 text-sm">
+              <SelectValue placeholder="Anuncio" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="any">
+                <span className="flex items-center gap-1.5">
+                  <Megaphone size={12} />
+                  Cualquier anuncio
+                </span>
+              </SelectItem>
+              {filters!.ads.map((a) => (
+                <SelectItem key={a.source_id} value={a.source_id}>
+                  {a.ad_name ?? a.campaign_name ?? a.source_id}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Clear */}
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
+      {/* Active filter chips */}
+      {(flowFilter !== "all" || adFilter !== "all") && (
+        <div className="flex flex-wrap gap-2">
+          {flowFilter !== "all" && (
+            <span className="flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs font-medium">
+              <Workflow size={11} />
+              {filters?.flows.find((f) => f.id === flowFilter)?.name ?? flowFilter}
+              <button type="button" onClick={() => { setFlowFilter("all"); setPage(1); }} className="ml-0.5 text-muted-foreground hover:text-foreground">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+          {adFilter !== "all" && (
+            <span className="flex items-center gap-1.5 rounded-full border bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-600">
+              <Megaphone size={11} />
+              {adFilter === "any"
+                ? "Cualquier anuncio"
+                : (filters?.ads.find((a) => a.source_id === adFilter)?.ad_name ?? adFilter)}
+              <button type="button" onClick={() => { setAdFilter("all"); setPage(1); }} className="ml-0.5 hover:text-violet-800">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* List */}
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 rounded-xl border px-4 py-3.5">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+          <MessagesSquare size={36} className="text-muted-foreground/30" />
+          <div>
+            <p className="font-medium text-muted-foreground">
+              {hasFilters ? "No hay conversaciones con esos filtros" : "No hay conversaciones todavía"}
+            </p>
+            {hasFilters && (
+              <button type="button" onClick={clearFilters} className="mt-1 text-sm text-primary underline underline-offset-2">
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {items.map((conv) => (
+            <ConversationRow
+              key={conv.id}
+              conv={conv}
+              onClick={() => navigate(`/conversations/${conv.id}`)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            Página {page} de {pageCount} · {total.toLocaleString("es-CO")} resultados
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1 || isLoading} onClick={() => setPage((p) => p - 1)} className="gap-1">
+              <ChevronLeft size={14} />
               Anterior
             </Button>
-            <Button
-              className="ml-8"
-              variant="outline"
-              loading={isLoading && page < pageCount}
-              loadingText="Cargando..."
-              disabled={page >= pageCount}
-              onClick={() => setPage((p) => p + 1)}
-            >
+            <Button variant="outline" size="sm" disabled={page >= pageCount || isLoading} onClick={() => setPage((p) => p + 1)} className="gap-1">
               Siguiente
+              <ChevronRight size={14} />
             </Button>
           </div>
         </div>
-      </Card>
+      )}
     </section>
   );
 }
