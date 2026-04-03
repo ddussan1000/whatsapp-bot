@@ -1,8 +1,6 @@
-import { env } from "../config/env";
-
 export async function downloadFromMeta(mediaId: string, token?: string): Promise<Buffer> {
-  const accessToken = token || env.META_TOKEN;
-  if (!accessToken) throw new Error("META_TOKEN no configurado");
+  const accessToken = token;
+  if (!accessToken) throw new Error("Token de acceso no proporcionado");
 
   const meta = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
     headers: { Authorization: `Bearer ${accessToken}` },

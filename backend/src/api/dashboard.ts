@@ -266,6 +266,10 @@ dashboardApi.openapi(
     const file = form.get("file");
     if (!(file instanceof File)) return c.json({ error: "Archivo invalido" }, 400);
     const bytes = await file.arrayBuffer();
+    const MAX_FLOW_MEDIA_BYTES = 50 * 1024 * 1024; // 50 MB
+    if (bytes.byteLength > MAX_FLOW_MEDIA_BYTES) {
+      return c.json({ error: "El archivo supera el límite de 50 MB" }, 413);
+    }
     const uploaded = await uploadOrgFlowMedia({
       organizationId: orgId(c),
       bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA,
@@ -811,7 +815,7 @@ dashboardApi.openapi(
     const org = orgId(c);
     const origin = getPublicOrigin(c);
 
-    let verifyToken = env.VERIFY_TOKEN || "";
+    let verifyToken = "";
 
     // Prefer the org-specific token stored in DB
     if (supabase) {
@@ -993,6 +997,7 @@ dashboardApi.openapi(
               label: z.string().min(2),
               phoneNumberId: z.string().min(3),
               metaToken: z.string().optional(),
+              appSecret: z.string().optional(),
               wabaId: z.string().optional(),
               metaAppId: z.string().optional(),
               displayPhoneNumber: z.string().optional(),
@@ -1019,6 +1024,7 @@ dashboardApi.openapi(
         label: body.label,
         phone_number_id: body.phoneNumberId,
         meta_token: body.metaToken ?? null,
+        app_secret: body.appSecret ?? null,
         waba_id: body.wabaId ?? null,
         meta_app_id: body.metaAppId ?? null,
         display_phone_number: body.displayPhoneNumber ?? null,
@@ -1045,6 +1051,7 @@ dashboardApi.openapi(
             schema: z.object({
               label: z.string().optional(),
               metaToken: z.string().nullable().optional(),
+              appSecret: z.string().nullable().optional(),
               wabaId: z.string().nullable().optional(),
               metaAppId: z.string().nullable().optional(),
               displayPhoneNumber: z.string().nullable().optional(),
@@ -1067,6 +1074,7 @@ dashboardApi.openapi(
     const patch = {
       ...(body.label !== undefined ? { label: body.label } : {}),
       ...(body.metaToken !== undefined ? { meta_token: body.metaToken } : {}),
+      ...(body.appSecret !== undefined ? { app_secret: body.appSecret } : {}),
       ...(body.wabaId !== undefined ? { waba_id: body.wabaId } : {}),
       ...(body.metaAppId !== undefined ? { meta_app_id: body.metaAppId } : {}),
       ...(body.displayPhoneNumber !== undefined ? { display_phone_number: body.displayPhoneNumber } : {}),
@@ -2372,6 +2380,14 @@ dashboardApi.openapi(
     const caption = form.get("caption")?.toString() ?? "";
     const file = form.get("file");
     if (!(file instanceof File)) return c.json({ error: "Archivo invalido" }, 400);
+
+    const MAX_IMAGE_BYTES = 10 * 1024 * 1024;  // 10 MB
+    const MAX_DOC_BYTES   = 50 * 1024 * 1024;  // 50 MB
+    const maxBytes = kind === "image" ? MAX_IMAGE_BYTES : MAX_DOC_BYTES;
+    if (file.size > maxBytes) {
+      const limitMb = maxBytes / (1024 * 1024);
+      return c.json({ error: `El archivo supera el límite de ${limitMb} MB para ${kind}` }, 413);
+    }
 
     const mimeType = file.type || (kind === "image" ? "image/jpeg" : "application/octet-stream");
     const metaMediaId = await uploadMediaToMeta(file, mimeType, {

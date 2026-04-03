@@ -1,4 +1,3 @@
-import { env } from "../config/env";
 import { getInstanceByPhoneNumberId } from "../db/instances";
 
 export async function uploadMediaToMeta(
@@ -8,8 +7,8 @@ export async function uploadMediaToMeta(
 ) {
   const organizationId = ctx?.organizationId ?? null;
   const metaPhoneNumberId = ctx?.metaPhoneNumberId ?? null;
-  let resolvedPhoneNumberId = env.META_PHONE_ID;
-  let resolvedToken = env.META_TOKEN;
+  let resolvedPhoneNumberId = "";
+  let resolvedToken = "";
 
   if (organizationId && metaPhoneNumberId) {
     const instance = await getInstanceByPhoneNumberId(organizationId, metaPhoneNumberId);

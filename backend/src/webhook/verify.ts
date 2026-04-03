@@ -1,6 +1,5 @@
 import type { Context } from "hono";
 import { supabase } from "../db/supabase";
-import { env } from "../config/env";
 
 export async function verifyWebhook(c: Context) {
   const mode = c.req.query("hub.mode");
@@ -9,11 +8,6 @@ export async function verifyWebhook(c: Context) {
 
   if (mode !== "subscribe" || !token || !challenge) {
     return c.text("forbidden", 403);
-  }
-
-  // Fallback: support legacy global VERIFY_TOKEN from env
-  if (env.VERIFY_TOKEN && token === env.VERIFY_TOKEN) {
-    return c.text(challenge);
   }
 
   // Check if the token matches any organization's verify_token

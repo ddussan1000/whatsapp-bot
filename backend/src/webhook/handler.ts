@@ -13,6 +13,7 @@ import { findFlowByCtwaClid, getFlowById, matchesFlowTrigger } from "../db/flows
 import { getActiveInstanceByPhoneNumberId } from "../db/instances";
 import { supabase } from "../db/supabase";
 import { fetchAdDetails } from "../meta/adDetails";
+import { validateWebhookSignature } from "./validateSignature";
 
 function extractReferral(msg: WhatsAppMessage): WhatsAppReferral | null {
   const ref = (msg as unknown as { referral?: WhatsAppReferral }).referral;
@@ -72,11 +73,22 @@ async function logAdClick(
 
 export async function handleWebhook(c: Context) {
   try {
-    const body = await c.req.json();
+    // Leer raw body antes de parsear — necesario para verificar firma HMAC-SHA256
+    const rawBody = await c.req.text();
+    const body = JSON.parse(rawBody);
     const entry = body.entry?.[0];
     const change = entry?.changes?.[0]?.value;
     const metaPhoneNumberId = (change?.metadata?.phone_number_id ?? "") as string;
     const instance = metaPhoneNumberId ? await getActiveInstanceByPhoneNumberId(metaPhoneNumberId) : null;
+
+    // Verificar firma del webhook si la instancia tiene app_secret configurado
+    if (instance?.app_secret) {
+      const signature = c.req.header("x-hub-signature-256");
+      if (!validateWebhookSignature(rawBody, signature, instance.app_secret)) {
+        log.warn({ metaPhoneNumberId }, "webhook: firma inválida, rechazando");
+        return c.text("Unauthorized", 401);
+      }
+    }
     const organizationId = instance?.organization_id ?? null;
     if (!organizationId) {
       log.warn({ metaPhoneNumberId }, "Webhook ignorado: no se encontro instancia activa para phone_number_id");

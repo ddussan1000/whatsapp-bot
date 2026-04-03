@@ -10,6 +10,7 @@ import { registerDailyReportCron } from "./cron/dailyReport";
 import { registerScheduledMessagesCron } from "./cron/processScheduledMessages";
 import { registerPurgeReceiptsCron } from "./cron/purgeReceipts";
 import { dashboardApi } from "./api/dashboard";
+import { globalRateLimiter, mutationRateLimiter, webhookRateLimiter } from "./middleware/rateLimiter";
 
 const app = new OpenAPIHono();
 app.doc("/openapi.json", {
@@ -17,12 +18,21 @@ app.doc("/openapi.json", {
   info: { title: "WhatsApp Bot API", version: "1.0.0" },
 });
 
+const allowedOrigins = env.ALLOWED_ORIGINS
+  ? env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
+  : [];
+
 app.use(
-  "*",
+  "/api/*",
   cors({
-    origin: "*",
+    origin: (origin) => {
+      // En dev (sin ALLOWED_ORIGINS configurado) se permite cualquier origen
+      if (allowedOrigins.length === 0) return origin;
+      return allowedOrigins.includes(origin) ? origin : null;
+    },
     allowHeaders: ["Authorization", "Content-Type", "X-Organization-Id"],
     allowMethods: ["GET", "POST", "PUT", "PATCH", "OPTIONS", "DELETE"],
+    credentials: true,
   }),
 );
 
@@ -60,7 +70,14 @@ app.openapi(
 
 app.get("/docs", swaggerUI({ url: "/openapi.json" }));
 app.get("/webhook", verifyWebhook);
-app.post("/webhook", handleWebhook);
+app.post("/webhook", webhookRateLimiter, handleWebhook);
+app.use("/api/*", globalRateLimiter);
+app.use("/api/*", async (c, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(c.req.method)) {
+    return mutationRateLimiter(c, next);
+  }
+  await next();
+});
 app.route("/api", dashboardApi);
 
 registerDailyReportCron();

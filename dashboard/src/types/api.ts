@@ -342,6 +342,7 @@ export type CreateInstanceBody = {
   label: string;
   phoneNumberId: string;
   metaToken?: string;
+  appSecret?: string;
   wabaId?: string;
   metaAppId?: string;
   displayPhoneNumber?: string;
@@ -349,6 +350,7 @@ export type CreateInstanceBody = {
 };
 export type UpdateInstanceBody = Partial<CreateInstanceBody> & {
   metaToken?: string | null;
+  appSecret?: string | null;
 };
 export type CreateProductReferralBody = {
   productId: string;

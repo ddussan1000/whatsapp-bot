@@ -1615,6 +1615,7 @@ export interface paths {
             label: string;
             phoneNumberId: string;
             metaToken?: string;
+            appSecret?: string;
             wabaId?: string;
             metaAppId?: string;
             displayPhoneNumber?: string;
@@ -1691,6 +1692,7 @@ export interface paths {
           "application/json": {
             label?: string;
             metaToken?: string | null;
+            appSecret?: string | null;
             wabaId?: string | null;
             metaAppId?: string | null;
             displayPhoneNumber?: string | null;

@@ -3,9 +3,8 @@ import { z } from "zod";
 const envSchema = z.object({
   PORT: z.string().default("3000"),
   LOG_LEVEL: z.string().default("info"),
-  META_TOKEN: z.string().default(""),
-  META_PHONE_ID: z.string().default(""),
-  VERIFY_TOKEN: z.string().default(""),
+  /** Orígenes permitidos para CORS, separados por coma. Ej: https://app.dssbot.site,https://dssbot.site */
+  ALLOWED_ORIGINS: z.string().default(""),
   SUPABASE_URL: z.string().default(""),
   /** Prefer service_role en el servidor API para leer membresías sin depender de RLS con anon. */
   SUPABASE_KEY: z.string().default(""),

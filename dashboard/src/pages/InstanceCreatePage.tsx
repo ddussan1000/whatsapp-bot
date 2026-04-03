@@ -45,10 +45,12 @@ export function InstanceCreatePage() {
   const [label, setLabel] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [metaToken, setMetaToken] = useState("");
+  const [appSecret, setAppSecret] = useState("");
   const [wabaId, setWabaId] = useState("");
   const [metaAppId, setMetaAppId] = useState("");
   const [displayPhone, setDisplayPhone] = useState("");
   const [showToken, setShowToken] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
 
   const submit = () => {
     if (!label.trim() || !phoneNumberId.trim() || !metaToken.trim()) {
@@ -62,6 +64,7 @@ export function InstanceCreatePage() {
         label: label.trim(),
         phoneNumberId: phoneNumberId.trim(),
         metaToken: metaToken.trim(),
+        appSecret: appSecret.trim() || undefined,
         wabaId: wabaId.trim() || undefined,
         metaAppId: metaAppId.trim() || undefined,
         displayPhoneNumber: displayPhone.trim() || undefined,
@@ -174,6 +177,29 @@ export function InstanceCreatePage() {
                   className="rounded-md border bg-background px-2.5 text-muted-foreground hover:bg-muted"
                 >
                   {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </Field>
+
+            <Field
+              label="App Secret"
+              optional
+              hint="Meta for Developers → tu app → App Settings → Basic → App Secret. Activa la verificación de firma en webhooks entrantes."
+            >
+              <div className="flex gap-2">
+                <Input
+                  type={showSecret ? "text" : "password"}
+                  value={appSecret}
+                  onChange={(e) => setAppSecret(e.target.value)}
+                  placeholder="abc123…"
+                  className="flex-1 font-mono text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecret((v) => !v)}
+                  className="rounded-md border bg-background px-2.5 text-muted-foreground hover:bg-muted"
+                >
+                  {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </Field>
