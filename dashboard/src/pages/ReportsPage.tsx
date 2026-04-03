@@ -6,7 +6,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   LabelList,
   Pie,
   PieChart,
@@ -136,6 +135,23 @@ function money(value: number) {
 function pct(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
+// Short currency for chart axis/labels (e.g. "$1.5M", "$300k", "$50k")
+function moneyShort(value: number) {
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}k`;
+  return `$${value}`;
+}
+// Format ISO bucket date as "26 mar" or "mar 26"
+function formatBucket(tick: string) {
+  if (!tick) return "";
+  const d = new Date(tick);
+  if (isNaN(d.getTime())) return tick;
+  return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
+}
+// Truncate long label for Y axis
+function truncateLabel(v: string, max = 14) {
+  return v.length > max ? v.slice(0, max) + "…" : v;
+}
 
 const AD_BAR_COLORS = [
   "#8b5cf6",
@@ -249,7 +265,7 @@ export function ReportsPage() {
   }));
 
   return (
-    <section className="flex flex-col gap-4 p-6">
+    <section className="flex flex-col gap-3 p-3 sm:gap-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">Reportes</h2>
@@ -271,7 +287,7 @@ export function ReportsPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           {/* Date range */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <input
               type="date"
               className="h-9 rounded-md border bg-background px-3 text-sm"
@@ -449,10 +465,26 @@ export function ReportsPage() {
                 }}
                 className="h-72 w-full"
               >
-                <AreaChart data={data?.timeseries ?? []}>
+                <AreaChart
+                  data={data?.timeseries ?? []}
+                  margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                >
                   <CartesianGrid vertical={false} />
-                  <XAxis dataKey="bucket" />
-                  <YAxis />
+                  <XAxis
+                    dataKey="bucket"
+                    tickFormatter={formatBucket}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tickFormatter={moneyShort}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={52}
+                  />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <ChartLegend content={<ChartLegendContent />} />
                   <Area
@@ -474,31 +506,39 @@ export function ReportsPage() {
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Embudo por etapa</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col flex-1 min-h-0">
             {loading ? (
-              <Skeleton className="h-72 w-full" />
+              <Skeleton className="flex-1 min-h-[180px]" />
             ) : (
               <ChartContainer
                 config={{
                   count: { label: "Conversaciones", color: "#f59e0b" },
                 }}
-                className="h-72 w-full"
+                className="flex-1 min-h-[120px] w-full"
               >
                 <BarChart
                   data={data?.funnel ?? []}
                   layout="vertical"
-                  margin={{ right: 30 }}
+                  margin={{ top: 4, right: 36, bottom: 4, left: 0 }}
+                  barSize={22}
+                  barCategoryGap="30%"
                 >
                   <CartesianGrid horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} />
+                  <XAxis
+                    type="number"
+                    allowDecimals={false}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
                   <YAxis
                     type="category"
                     dataKey="stage"
-                    width={155}
+                    width={120}
                     tick={<FunnelYAxisTick />}
                   />
                   <ChartTooltip
@@ -508,7 +548,7 @@ export function ReportsPage() {
                       stageLabel(props.payload?.stage ?? ""),
                     ]}
                   />
-                  <Bar dataKey="count" fill="var(--color-count)" radius={6}>
+                  <Bar dataKey="count" fill="var(--color-count)" radius={4}>
                     <LabelList
                       dataKey="count"
                       position="right"
@@ -523,18 +563,18 @@ export function ReportsPage() {
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Ingresos por flujo</CardTitle>
             <CardDescription>
               Cuánto genera cada flujo de ventas
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col flex-1 min-h-0">
             {loading ? (
-              <Skeleton className="h-72 w-full" />
+              <Skeleton className="flex-1 min-h-[180px]" />
             ) : (data?.byFlow ?? []).length === 0 ? (
-              <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
+              <div className="flex flex-1 min-h-[80px] items-center justify-center text-sm text-muted-foreground">
                 Sin datos para el periodo seleccionado
               </div>
             ) : (
@@ -543,33 +583,40 @@ export function ReportsPage() {
                   revenue: { label: "Ingresos", color: "#8b5cf6" },
                   sales: { label: "Ventas", color: "#e9d5ff" },
                 }}
-                className="h-72 w-full"
+                className="flex-1 min-h-[120px] w-full"
               >
                 <BarChart
                   data={data?.byFlow ?? []}
                   layout="vertical"
-                  margin={{ right: 60 }}
+                  margin={{ top: 4, right: 56, bottom: 4, left: 0 }}
+                  barSize={22}
+                  barCategoryGap="30%"
                 >
                   <CartesianGrid horizontal={false} />
-                  <XAxis
-                    type="number"
-                    tickFormatter={(v: number) => money(v)}
-                    hide
-                  />
+                  <XAxis type="number" hide />
                   <YAxis
                     type="category"
                     dataKey="label"
-                    width={110}
+                    width={100}
                     tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: string) => truncateLabel(v, 13)}
                   />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip
+                    content={<ChartTooltipContent />}
+                    formatter={(value) => [
+                      typeof value === "number" ? money(value) : String(value),
+                      "Ingresos",
+                    ]}
+                  />
                   <Bar dataKey="revenue" fill="var(--color-revenue)" radius={4}>
                     <LabelList
                       dataKey="revenue"
                       position="right"
                       style={{ fontSize: 11 }}
                       formatter={(v) =>
-                        typeof v === "number" ? money(v) : String(v ?? "")
+                        typeof v === "number" ? moneyShort(v) : String(v ?? "")
                       }
                     />
                   </Bar>
@@ -589,7 +636,7 @@ export function ReportsPage() {
             {loading ? (
               <Skeleton className="h-72 w-full" />
             ) : (data?.byInstance ?? []).length === 0 ? (
-              <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
+              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
                 Sin datos para el periodo seleccionado
               </div>
             ) : (
@@ -599,20 +646,16 @@ export function ReportsPage() {
               >
                 <PieChart>
                   <Pie
-                    data={data?.byInstance ?? []}
+                    data={(data?.byInstance ?? []).map((item, i) => ({
+                      ...item,
+                      fill: AD_BAR_COLORS[i % AD_BAR_COLORS.length],
+                    }))}
                     dataKey="revenue"
                     nameKey="label"
                     outerRadius={95}
                     innerRadius={40}
                     paddingAngle={3}
-                  >
-                    {(data?.byInstance ?? []).map((_, i) => (
-                      <Cell
-                        key={i}
-                        fill={AD_BAR_COLORS[i % AD_BAR_COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
+                  />
                   <Tooltip
                     formatter={(value, name) => [
                       typeof value === "number" ? money(value) : String(value),
@@ -687,10 +730,19 @@ export function ReportsPage() {
                       }}
                       className="h-64 w-full"
                     >
-                      <BarChart data={adChartData}>
+                      <BarChart
+                        data={adChartData}
+                        margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                      >
                         <CartesianGrid vertical={false} />
                         <XAxis dataKey="name" hide />
-                        <YAxis />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={{ fontSize: 11 }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={36}
+                        />
                         <ChartTooltip content={<ChartTooltipContent />} />
                         <ChartLegend content={<ChartLegendContent />} />
                         <Bar
@@ -726,7 +778,10 @@ export function ReportsPage() {
                     >
                       <PieChart>
                         <Pie
-                          data={adChartData}
+                          data={adChartData.map((item, i) => ({
+                            ...item,
+                            fill: AD_BAR_COLORS[i % AD_BAR_COLORS.length],
+                          }))}
                           dataKey="clicks"
                           nameKey="name"
                           outerRadius={90}
@@ -742,14 +797,7 @@ export function ReportsPage() {
                             return `${n.slice(0, 12)}${n.length > 12 ? "..." : ""} ${(p * 100).toFixed(0)}%`;
                           }}
                           labelLine={false}
-                        >
-                          {adChartData.map((_, i) => (
-                            <Cell
-                              key={i}
-                              fill={AD_BAR_COLORS[i % AD_BAR_COLORS.length]}
-                            />
-                          ))}
-                        </Pie>
+                        />
                         <Tooltip
                           formatter={(value) =>
                             typeof value === "number"
@@ -778,10 +826,10 @@ export function ReportsPage() {
                 <TableBody>
                   {adItems.map((item, idx) => (
                     <TableRow key={item.sourceId ?? idx}>
-                      <TableCell className="font-medium max-w-[200px] truncate">
+                      <TableCell className="font-medium max-w-50 truncate">
                         {item.headline || "-"}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">
+                      <TableCell className="text-xs text-muted-foreground max-w-30 truncate">
                         {item.sourceId || "-"}
                       </TableCell>
                       <TableCell className="text-right">

@@ -566,7 +566,7 @@ export function InstancesPage() {
   }, [flows.data]);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 p-3 sm:gap-6 sm:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

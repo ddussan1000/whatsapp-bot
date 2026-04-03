@@ -60,7 +60,7 @@ function Section({
         <h3 className="font-semibold">{title}</h3>
         <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
       </div>
-      <div className="flex flex-col gap-6 p-6">{children}</div>
+      <div className="flex flex-col gap-4 p-3 sm:gap-6 sm:p-6">{children}</div>
     </div>
   );
 }
@@ -105,7 +105,7 @@ export function ConfigPage() {
 
   if (isLoading) {
     return (
-      <section className="flex flex-col gap-6 p-6">
+      <section className="flex flex-col gap-4 p-3 sm:gap-6 sm:p-6">
         <div className="h-7 w-48 animate-pulse rounded bg-muted" />
         <div className="h-64 animate-pulse rounded-xl bg-muted" />
         <div className="h-96 animate-pulse rounded-xl bg-muted" />
@@ -114,7 +114,7 @@ export function ConfigPage() {
   }
 
   return (
-    <section className="flex flex-col gap-6 p-6">
+    <section className="flex flex-col gap-4 p-3 sm:gap-6 sm:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>

@@ -259,7 +259,7 @@ function MediaCard({
               e.stopPropagation();
               onDelete();
             }}
-            className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+            className="rounded p-1 text-muted-foreground transition-opacity hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
             title="Eliminar"
           >
             <Trash2 size={13} />
@@ -325,7 +325,7 @@ export function MediaPage() {
   };
 
   return (
-    <section className="flex flex-col gap-6 p-6">
+    <section className="flex flex-col gap-4 p-3 sm:gap-6 sm:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -385,7 +385,7 @@ export function MediaPage() {
         </div>
 
         {/* Search */}
-        <div className="relative flex-1 min-w-50 max-w-xs">
+        <div className="relative flex-1 min-w-0 max-w-xs">
           <Search
             size={13}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"

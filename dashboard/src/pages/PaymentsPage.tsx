@@ -103,46 +103,54 @@ function PaymentStateBadge({
 
 function PaymentRow({ p }: { p: Payment }) {
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-xl border bg-card px-4 py-3.5 text-sm transition-colors hover:bg-muted/30">
-      {/* Avatar / amount */}
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-600 font-bold text-xs">
-        COP
-      </div>
-
-      {/* Phone + meta */}
-      <div className="flex flex-1 flex-col gap-0.5 min-w-0">
-        <span className="font-medium truncate">{formatPhone(p.phone)}</span>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {p.flow_name && (
-            <span className="flex items-center gap-1">
-              <Workflow size={10} className="shrink-0" />
-              <span className="truncate max-w-[120px]">{p.flow_name}</span>
-            </span>
-          )}
-          {p.instance_label && (
-            <span className="flex items-center gap-1">
-              <Smartphone size={10} className="shrink-0" />
-              {p.instance_label}
-            </span>
-          )}
+    <div className="rounded-xl border bg-card px-4 py-3.5 text-sm transition-colors hover:bg-muted/30">
+      <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+        {/* Avatar */}
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-600 font-bold text-[11px]">
+          COP
         </div>
-      </div>
 
-      {/* Amount */}
-      <div className="shrink-0 text-right">
-        <span className="font-semibold tabular-nums">
-          {formatMoney(p.amount)}
-        </span>
-      </div>
+        {/* Phone + meta + mobile badge/date */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium truncate">{formatPhone(p.phone)}</span>
+            <span className="font-semibold tabular-nums shrink-0 sm:hidden">
+              {formatMoney(p.amount)}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+            {p.flow_name && (
+              <span className="flex items-center gap-1">
+                <Workflow size={10} className="shrink-0" />
+                <span className="truncate max-w-[120px]">{p.flow_name}</span>
+              </span>
+            )}
+            {p.instance_label && (
+              <span className="flex items-center gap-1">
+                <Smartphone size={10} className="shrink-0" />
+                {p.instance_label}
+              </span>
+            )}
+          </div>
+          {/* Mobile: badge + date row */}
+          <div className="flex items-center justify-between mt-2 sm:hidden">
+            <PaymentStateBadge state={p.state} />
+            <span className="text-xs text-muted-foreground">
+              {formatDate(p.validated_at ?? p.receipt_date)}
+            </span>
+          </div>
+        </div>
 
-      {/* State badge */}
-      <div className="shrink-0 w-36 flex justify-end">
-        <PaymentStateBadge state={p.state} />
-      </div>
-
-      {/* Date */}
-      <div className="shrink-0 w-36 text-right text-xs text-muted-foreground">
-        {formatDate(p.validated_at ?? p.receipt_date)}
+        {/* Desktop only: amount, badge, date */}
+        <div className="hidden sm:block shrink-0 text-right">
+          <span className="font-semibold tabular-nums">{formatMoney(p.amount)}</span>
+        </div>
+        <div className="hidden sm:flex shrink-0 w-36 justify-end">
+          <PaymentStateBadge state={p.state} />
+        </div>
+        <div className="hidden sm:block shrink-0 w-36 text-right text-xs text-muted-foreground">
+          {formatDate(p.validated_at ?? p.receipt_date)}
+        </div>
       </div>
     </div>
   );
@@ -197,7 +205,7 @@ export function PaymentsPage() {
     stateFilter !== "all" || flowFilter !== "all" || instanceFilter !== "all";
 
   return (
-    <section className="flex flex-col gap-5 p-6">
+    <section className="flex flex-col gap-4 p-3 sm:gap-5 sm:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -232,8 +240,8 @@ export function PaymentsPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Date range */}
-        <div className="flex items-center gap-1.5 rounded-lg border bg-background px-2 py-1.5 text-sm">
-          <Search size={13} className="text-muted-foreground" />
+        <div className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1.5 text-sm">
+          <Search size={13} className="shrink-0 text-muted-foreground" />
           <input
             type="date"
             value={fromDate}
@@ -241,9 +249,9 @@ export function PaymentsPage() {
               setFromDate(e.target.value);
               setPage(1);
             }}
-            className="bg-transparent text-sm outline-none w-32"
+            className="bg-transparent text-xs sm:text-sm outline-none w-[110px] sm:w-32"
           />
-          <span className="text-muted-foreground text-xs">—</span>
+          <span className="text-muted-foreground text-xs shrink-0">—</span>
           <input
             type="date"
             value={toDate}
@@ -251,7 +259,7 @@ export function PaymentsPage() {
               setToDate(e.target.value);
               setPage(1);
             }}
-            className="bg-transparent text-sm outline-none w-32"
+            className="bg-transparent text-xs sm:text-sm outline-none w-[110px] sm:w-32"
           />
         </div>
 

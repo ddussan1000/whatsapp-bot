@@ -341,7 +341,7 @@ function SubSteps({ steps }: { steps: string[] }) {
 
 export function InstructionsPage() {
   return (
-    <div className="flex flex-col gap-8 p-6 max-w-4xl">
+    <div className="flex flex-col gap-6 p-3 max-w-4xl sm:gap-8 sm:p-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">
           Guía de configuración

@@ -219,7 +219,7 @@ export function FlowsPage() {
 
   return (
     <div className="flex h-full flex-col gap-0">
-      <div className="grid flex-1 gap-5 overflow-hidden p-6 lg:grid-cols-[300px_1fr]">
+      <div className="grid flex-1 gap-5 overflow-hidden p-3 lg:grid-cols-[300px_1fr] sm:p-6">
         {/* ── Left: flow list ── */}
         <div className="flex flex-col gap-3 overflow-y-auto">
           <Button variant="outline" className="w-full gap-2" onClick={newFlow}>

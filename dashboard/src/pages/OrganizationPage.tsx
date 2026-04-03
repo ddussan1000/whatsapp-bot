@@ -163,7 +163,7 @@ export function OrganizationPage() {
   };
 
   return (
-    <section className="flex flex-col gap-6 p-6">
+    <section className="flex flex-col gap-4 p-3 sm:gap-6 sm:p-6">
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold">Organización</h2>

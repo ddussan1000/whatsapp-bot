@@ -172,7 +172,7 @@ export function ConversationsPage() {
   const hasAdOptions = (filters?.ads?.length ?? 0) > 0;
 
   return (
-    <section className="flex flex-col gap-5 p-6">
+    <section className="flex flex-col gap-4 p-3 sm:gap-5 sm:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
