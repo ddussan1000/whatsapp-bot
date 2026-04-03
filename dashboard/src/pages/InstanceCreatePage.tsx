@@ -25,16 +25,16 @@ function Field({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline gap-1.5">
-        <Label className="text-xs font-semibold">{label}</Label>
+        <Label className="text-sm font-semibold">{label}</Label>
         {required && (
-          <span className="text-[10px] text-destructive">Requerido</span>
+          <span className="text-xs text-destructive">Requerido</span>
         )}
         {optional && (
-          <span className="text-[10px] text-muted-foreground">(opcional)</span>
+          <span className="text-xs text-muted-foreground">(opcional)</span>
         )}
       </div>
       {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -158,7 +158,7 @@ export function InstanceCreatePage() {
             <Field
               label="Token de acceso"
               required
-              hint="Token permanente de Meta para enviar mensajes. Copialo desde 'API Setup' → 'Access Token'."
+              hint='Token permanente de Meta para enviar mensajes con permisos "whatsapp_business_messaging", "whatsapp_business_management" y "ads_read".'
             >
               <div className="flex gap-2">
                 <Input

@@ -23,15 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
@@ -40,6 +32,8 @@ import {
   useDeleteFlowTemplateMutation,
 } from "@/lib/hooks";
 import type { FlowTemplate } from "@/types/api";
+import { FlowEditor, emptyDraft } from "@/components/FlowEditor";
+import type { FlowEditorDraft } from "@/components/FlowEditor";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -413,42 +407,21 @@ function CreateTemplateDialog({
   onClose: () => void;
 }) {
   const createMutation = useCreateFlowTemplateMutation();
-  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Personalizado");
-  const [triggerPhrase, setTriggerPhrase] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState("");
-
-  const reset = () => {
-    setName("");
-    setDescription("");
-    setCategory("Personalizado");
-    setTriggerPhrase("");
-    setSystemPrompt("");
-  };
+  const [editorKey, setEditorKey] = useState(0);
 
   const handleClose = () => {
-    reset();
+    setDescription("");
+    setCategory("Personalizado");
+    setEditorKey((k) => k + 1);
     onClose();
   };
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      toast.error("El nombre es requerido");
-      return;
-    }
-    const draft: FlowTemplateDraft = {
-      name: name.trim(),
-      triggerPhrase: triggerPhrase.trim() || "hola",
-      keywords: [],
-      noMatchBehavior: "trigger",
-      systemPrompt: systemPrompt.trim() || null,
-      isActive: true,
-      steps: [],
-    };
+  const handleSave = (draft: FlowEditorDraft) => {
     createMutation.mutate(
       {
-        name: name.trim(),
+        name: draft.name.trim(),
         description: description.trim() || undefined,
         category,
         draft,
@@ -465,97 +438,58 @@ function CreateTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="w-full max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] w-full max-w-4xl sm:max-w-4xl flex-col gap-0 p-0">
+        <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle>Nueva plantilla</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-1">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              Nombre *
-            </label>
-            <Input
-              placeholder="Ej: Mi flujo de ventas"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
-              autoFocus
-            />
-          </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              Descripción
-            </label>
-            <Textarea
-              placeholder="¿Para qué sirve esta plantilla?"
-              value={description}
-              rows={2}
-              className="resize-none text-sm"
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+          {/* Template metadata (outside FlowEditor) */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 rounded-xl border bg-muted/20 p-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                Categoría
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Descripción
               </label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {USER_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                Trigger inicial
-              </label>
-              <Input
-                placeholder="Ej: hola"
-                value={triggerPhrase}
-                onChange={(e) => setTriggerPhrase(e.target.value)}
+              <Textarea
+                placeholder="¿Para qué sirve esta plantilla?"
+                value={description}
+                rows={2}
+                className="resize-none"
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Categoría
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+              >
+                {USER_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              Prompt del bot (opcional)
-            </label>
-            <Textarea
-              placeholder="Instrucciones para el asistente IA…"
-              value={systemPrompt}
-              rows={3}
-              className="resize-none text-sm"
-              onChange={(e) => setSystemPrompt(e.target.value)}
-            />
-          </div>
-
-          <p className="text-[11px] text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
-            💡 Después de crear la plantilla, usa "Usar plantilla" para abrirla
-            en el editor de flujos y agregar los pasos.
-          </p>
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={handleClose}>
-              Cancelar
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={!name.trim() || createMutation.isPending}
-            >
-              {createMutation.isPending ? "Creando…" : "Crear plantilla"}
-            </Button>
-          </div>
+          {/* Full flow editor */}
+          <FlowEditor
+            key={editorKey}
+            initialDraft={emptyDraft()}
+            onSave={handleSave}
+            savePending={createMutation.isPending}
+            saveLabel="Crear plantilla"
+            showPaymentConfig={false}
+            renderActions={() => (
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+            )}
+          />
         </div>
       </DialogContent>
     </Dialog>

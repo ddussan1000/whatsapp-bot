@@ -107,9 +107,9 @@ function SectionCard({
           <Icon size={15} />
         </div>
         <div>
-          <p className="font-semibold text-sm">{title}</p>
+          <p className="font-semibold">{title}</p>
           {description && (
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-sm text-muted-foreground mt-0.5">
               {description}
             </p>
           )}
@@ -301,7 +301,7 @@ export function OrganizationPage() {
       >
         <div className="flex flex-col gap-6">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1.5 min-w-[200px] flex-1 max-w-xs">
+            <div className="flex flex-col gap-1.5 min-w-50 flex-1 max-w-xs">
               <label
                 htmlFor="invite-email"
                 className="text-xs font-medium text-muted-foreground uppercase tracking-wide"

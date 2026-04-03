@@ -28,15 +28,15 @@ function Field({
           <Icon size={14} className="text-muted-foreground" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium leading-tight">{label}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+          <p className="font-medium leading-tight">{label}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
         </div>
       </div>
       {children}
       {hint && (
         <div className="flex items-start gap-1.5 rounded-md bg-muted/50 px-3 py-2">
           <Info size={12} className="mt-0.5 shrink-0 text-muted-foreground" />
-          <p className="text-[11px] text-muted-foreground">{hint}</p>
+          <p className="text-xs text-muted-foreground">{hint}</p>
         </div>
       )}
     </div>
@@ -199,7 +199,7 @@ export function ConfigPage() {
           icon={XCircle}
           label="Comprobante rechazado o ilegible"
           description="Se envía cuando el comprobante tiene una fecha mayor a 24 horas, o cuando la imagen no es legible y no se puede extraer el monto."
-          hint="Pedile al cliente que reenvíe con mejor calidad o que contacte a un agente si el problema persiste."
+          hint="Pedirle al cliente que reenvíe con mejor calidad o que contacte a un agente si el problema persiste."
         >
           <Textarea
             ref={rejectedRef}

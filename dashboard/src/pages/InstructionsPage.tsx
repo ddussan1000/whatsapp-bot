@@ -72,7 +72,7 @@ const SETUP_STEPS = [
     icon: Workflow,
     required: true,
     description:
-      "Un flow define qué mensajes envía el bot, en qué orden y con qué tiempos de espera entre pasos. Podés crear uno desde cero o usar una plantilla pre-armada.",
+      "Un flow define qué mensajes envía el bot, en qué orden y con qué tiempos de espera entre pasos. Podés crear uno desde cero o guardar uno existente como plantilla para reutilizarlo.",
     tip: "Los delays mínimos recomendados son 15-30 segundos. El cron de mensajes programados corre cada 5 segundos, así que delays menores a eso pueden no respetarse con exactitud.",
   },
   {
@@ -91,7 +91,7 @@ const SETUP_STEPS = [
     icon: MessageSquare,
     required: false,
     description:
-      "La plataforma soporta Groq, Gemini y Anthropic para responder mensajes libres fuera del flow. Configurá el proveedor en la sección Configuración con tu API key.",
+      "La plataforma soporta Groq, Gemini y Anthropic para responder mensajes libres fuera del flow. También podés definir un system prompt global en Configuración o sobreescribirlo individualmente por flow.",
     tip: "Groq (llama-3.3-70b-versatile) es la opción más rápida y económica. Gemini y Anthropic son alternativas si ya tenés API keys de esos proveedores.",
   },
   {
@@ -152,10 +152,10 @@ const MODULES = [
     nav: "Conversaciones",
     icon: MessagesSquare,
     description:
-      "Lista completa de conversaciones con historial de mensajes y composer para responder manualmente.",
+      "Lista completa de conversaciones con historial de mensajes, filtros avanzados y composer para responder manualmente.",
     details:
-      "El chat carga los últimos 50 mensajes al abrir. Al hacer scroll hacia arriba se cargan los anteriores en bloques de 50. Podés enviar texto, imágenes y documentos directamente.",
-    tip: "El stage de la conversación refleja el estado del flow: flow_started, flow, pago_confirmado, etc.",
+      "Filtrá por estado, flujo activo o anuncio de origen. El chat carga los últimos 50 mensajes; al hacer scroll arriba carga los anteriores. Desde el detalle podés ver el nombre del contacto, actualizar el estado manualmente y ver de qué anuncio provino el cliente.",
+    tip: "El nombre del contacto se obtiene automáticamente desde Meta cuando el cliente envía su primer mensaje.",
   },
   {
     name: "Pagos",
@@ -183,7 +183,7 @@ const MODULES = [
     description:
       "Editor de flows: steps con delay_seconds, mensajes (texto/imagen/documento/video) y configuración de trigger.",
     details:
-      "Cada flow tiene: trigger_phrase, trigger_first_word, keywords[], no_match_behavior (trigger|ignore), session_timeout_hours (0 = sin sesión persistente) y system_prompt para el proveedor de IA.",
+      "Cada flow tiene: trigger_phrase, keywords[], no_match_behavior (trigger|ignore), session_timeout_hours y un system_prompt propio para el proveedor de IA (sobreescribe el global). También podés configurar mensajes de pago personalizados por flow: pendiente, rechazado y confirmado.",
     tip: "session_timeout_hours=0 significa que cada mensaje del usuario es tratado como una sesión nueva, pero siempre requiere trigger explícito para iniciar el flow.",
   },
   {
@@ -191,9 +191,9 @@ const MODULES = [
     nav: "Plantillas",
     icon: Library,
     description:
-      "Flows pre-configurados para casos comunes: bienvenida, catálogo, soporte, post-venta.",
+      "Guardá flows como plantillas reutilizables para tu organización.",
     details:
-      "Al usar una plantilla se carga en el editor con todos los pasos. Podés modificar cualquier campo antes de guardar.",
+      'Desde el editor de flows usá el botón "Guardar como plantilla" para capturar la configuración actual. Podés ponerle nombre, descripción y categoría. Luego desde Plantillas podés previsualizar los pasos y cargar cualquier plantilla en el editor con un clic.',
   },
   {
     name: "Números de WhatsApp",
@@ -215,12 +215,12 @@ const MODULES = [
       'Cuando llega un mensaje con referral.source_type=="ad", la plataforma busca en flow_referrals si hay un flow mapeado para ese ctwa_clid. Si existe, usa ese flow en vez del asignado a la instancia.',
   },
   {
-    name: "Equipo",
-    nav: "Equipo",
+    name: "Organización",
+    nav: "Organización",
     icon: Building2,
     description: "Gestión de miembros con roles: owner, admin, agent, viewer.",
     details:
-      "Los owners y admins pueden modificar configuración. Los agents pueden ver conversaciones y pagos. Los viewers tienen acceso de solo lectura.",
+      "Los owners y admins pueden modificar configuración e invitar nuevos miembros por correo. Los agents pueden ver conversaciones y pagos. Los viewers tienen acceso de solo lectura. Las invitaciones pendientes pueden reenviarse desde la misma pantalla.",
   },
 ];
 
@@ -234,6 +234,14 @@ const FAQS = [
   {
     q: "¿Por qué los comprobantes de pago no se analizan?",
     a: "El error más común es que el META_TOKEN no tiene el permiso whatsapp_business_messaging — este permiso es el que permite descargar la imagen enviada por el usuario. Verificá los permisos del token en el Token Debugger de Meta.",
+  },
+  {
+    q: "¿Puedo personalizar los mensajes de respuesta de pago por flow?",
+    a: "Sí. En el editor de flows, en la sección Configuración de pagos, podés definir mensajes específicos para comprobante pendiente, rechazado y confirmado. Si no se configuran, se usan los mensajes globales de Configuración Bot.",
+  },
+  {
+    q: "¿Cómo actualizo el estado de una conversación manualmente?",
+    a: "Abrí la conversación y presioná el ícono de información (ⓘ) en la parte superior derecha. En el modal de detalles encontrarás el selector de Estado donde podés cambiarlo al valor que necesites.",
   },
   {
     q: "¿Qué diferencia hay entre session_timeout_hours=0 y un valor mayor?",
@@ -280,7 +288,7 @@ function FAQItem({ item }: { item: (typeof FAQS)[0] }) {
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-start justify-between gap-4 py-4 text-left"
       >
-        <span className="text-sm font-medium">{item.q}</span>
+        <span className="text-base font-medium">{item.q}</span>
         {open ? (
           <ChevronUp
             size={15}
@@ -305,7 +313,7 @@ function SubSteps({ steps }: { steps: string[] }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 text-xs text-primary hover:underline"
+        className="flex items-center gap-1 text-sm text-primary hover:underline"
       >
         {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
         {open ? "Ocultar pasos" : "Ver pasos detallados"}
@@ -315,7 +323,7 @@ function SubSteps({ steps }: { steps: string[] }) {
           {steps.map((s, i) => (
             <li
               key={i}
-              className="flex items-start gap-2 text-xs text-muted-foreground"
+              className="flex items-start gap-2 text-sm text-muted-foreground"
             >
               <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold">
                 {i + 1}
@@ -338,7 +346,7 @@ export function InstructionsPage() {
         <h2 className="text-2xl font-semibold tracking-tight">
           Guía de configuración
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-base text-muted-foreground">
           Todo lo que necesitás para conectar la plataforma con Meta y sacarle
           el máximo provecho.
         </p>
@@ -346,7 +354,7 @@ export function InstructionsPage() {
 
       {/* Setup steps */}
       <div>
-        <h3 className="mb-4 text-base font-semibold">Pasos de configuración</h3>
+        <h3 className="mb-4 text-lg font-semibold">Pasos de configuración</h3>
         <div className="flex flex-col gap-3">
           {SETUP_STEPS.map((s) => {
             const Icon = s.icon;
@@ -363,17 +371,17 @@ export function InstructionsPage() {
                     <div className="mt-1 h-full w-px bg-border" />
                   )}
                 </div>
-                <div className="flex flex-1 flex-col gap-1 pb-1">
+                <div className="flex flex-1 flex-col gap-1.5 pb-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Icon size={14} className="text-muted-foreground" />
-                    <span className="font-medium text-sm">{s.title}</span>
+                    <Icon size={15} className="text-muted-foreground" />
+                    <span className="font-medium text-base">{s.title}</span>
                     <Badge
                       variant={s.required ? "default" : "outline"}
                       className="text-[10px]"
                     >
                       {s.required ? "Requerido" : "Opcional"}
                     </Badge>
-                    <span className="ml-auto text-xs text-muted-foreground">
+                    <span className="ml-auto text-sm text-muted-foreground">
                       {s.nav}
                     </span>
                   </div>
@@ -381,7 +389,7 @@ export function InstructionsPage() {
                     {s.description}
                   </p>
                   {s.tip && (
-                    <p className="mt-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                    <p className="mt-1 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
                       <span className="font-medium text-foreground">Tip: </span>
                       {s.tip}
                     </p>
@@ -400,11 +408,11 @@ export function InstructionsPage() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck size={16} className="text-blue-500" />
-          <h3 className="text-base font-semibold">
+          <h3 className="text-lg font-semibold">
             Permisos necesarios en el token de Meta
           </h3>
         </div>
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className="mb-4 text-base text-muted-foreground">
           El token que configurás en cada número debe tener estos permisos
           activos. Podés verificarlos con el{" "}
           <a
@@ -425,7 +433,7 @@ export function InstructionsPage() {
               className="rounded-xl border bg-card p-4 flex flex-col gap-2"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">
+                <code className="text-sm bg-muted px-2 py-0.5 rounded font-mono">
                   {p.permission}
                 </code>
                 <span
@@ -434,12 +442,12 @@ export function InstructionsPage() {
                   {p.level}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">Permite: </span>
                 {p.what}
               </p>
-              <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
-                <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center justify-start gap-1.5">
+                <AlertTriangle size={13} className="shrink-0 mt-0.5" />
                 {p.without}
               </p>
             </div>
@@ -450,9 +458,9 @@ export function InstructionsPage() {
         <div className="rounded-xl border bg-card p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <Key size={14} className="text-muted-foreground" />
-            <span className="text-sm font-semibold">Tipos de token</span>
+            <span className="text-base font-semibold">Tipos de token</span>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3 text-xs">
+          <div className="grid gap-2 sm:grid-cols-3 text-sm">
             {[
               {
                 type: "Token de usuario",
@@ -490,10 +498,10 @@ export function InstructionsPage() {
 
       {/* How flows work */}
       <div>
-        <h3 className="mb-1 text-base font-semibold">
+        <h3 className="mb-1 text-lg font-semibold">
           Cómo funciona el motor de flows
         </h3>
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className="mb-4 text-base text-muted-foreground">
           Cada mensaje entrante pasa por este pipeline antes de llegar al
           cliente.
         </p>
@@ -525,8 +533,8 @@ export function InstructionsPage() {
                 className="flex flex-col gap-2 rounded-xl border bg-card p-4"
               >
                 <Icon size={20} className={item.color} />
-                <p className="font-medium text-sm">{item.title}</p>
-                <p className="text-xs text-muted-foreground">{item.desc}</p>
+                <p className="font-medium text-base">{item.title}</p>
+                <p className="text-sm text-muted-foreground">{item.desc}</p>
               </div>
             );
           })}
@@ -539,11 +547,11 @@ export function InstructionsPage() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <ImageIcon size={16} className="text-violet-500" />
-          <h3 className="text-base font-semibold">
+          <h3 className="text-lg font-semibold">
             Pipeline de comprobantes de pago
           </h3>
         </div>
-        <p className="mb-3 text-sm text-muted-foreground">
+        <p className="mb-3 text-base text-muted-foreground">
           Cuando llega una imagen se ejecuta este pipeline automáticamente.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -567,10 +575,10 @@ export function InstructionsPage() {
           ].map((item) => (
             <div
               key={item.title}
-              className="rounded-xl border bg-card p-3 flex flex-col gap-1"
+              className="rounded-xl border bg-card p-3 flex flex-col gap-1.5"
             >
-              <p className="text-xs font-semibold">{item.title}</p>
-              <p className="text-xs text-muted-foreground">{item.desc}</p>
+              <p className="text-sm font-semibold">{item.title}</p>
+              <p className="text-sm text-muted-foreground">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -580,9 +588,7 @@ export function InstructionsPage() {
 
       {/* Modules */}
       <div>
-        <h3 className="mb-4 text-base font-semibold">
-          Referencia de secciones
-        </h3>
+        <h3 className="mb-4 text-lg font-semibold">Referencia de secciones</h3>
         <div className="grid gap-4 md:grid-cols-2">
           {MODULES.map((mod) => {
             const Icon = mod.icon;
@@ -591,19 +597,19 @@ export function InstructionsPage() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <Icon size={16} className="text-muted-foreground" />
-                    <CardTitle className="text-sm">{mod.name}</CardTitle>
-                    <span className="ml-auto text-xs text-muted-foreground">
+                    <CardTitle className="text-base">{mod.name}</CardTitle>
+                    <span className="ml-auto text-sm text-muted-foreground">
                       {mod.nav}
                     </span>
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2">
-                  <p className="text-xs font-medium text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {mod.description}
                   </p>
-                  <p className="text-xs text-muted-foreground">{mod.details}</p>
+                  <p className="text-sm text-muted-foreground">{mod.details}</p>
                   {mod.tip && (
-                    <p className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                    <p className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
                       <span className="font-medium text-foreground">Tip: </span>
                       {mod.tip}
                     </p>
@@ -619,7 +625,7 @@ export function InstructionsPage() {
 
       {/* FAQ */}
       <div>
-        <h3 className="mb-2 text-base font-semibold">Preguntas frecuentes</h3>
+        <h3 className="mb-2 text-lg font-semibold">Preguntas frecuentes</h3>
         <Card>
           <CardContent className="pt-2 pb-0">
             {FAQS.map((faq, i) => (
@@ -634,24 +640,25 @@ export function InstructionsPage() {
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-emerald-500" />
-            <CardTitle className="text-sm">
+            <CardTitle className="text-base">
               Checklist de configuración completa
             </CardTitle>
           </div>
         </CardHeader>
         <CardContent>
-          <ol className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+          <ol className="flex flex-col gap-1.5 text-base text-muted-foreground">
             {[
               "Token con permisos whatsapp_business_messaging + whatsapp_business_management (idealmente System User Token)",
               "Número registrado en Números de WhatsApp con Phone Number ID, token y WABA ID",
               "Webhook configurado en Meta con Callback URL y Verify Token — suscripto a messages y messaging_postbacks",
-              "Flow creado y asignado al número",
+              "Flow creado con al menos un paso y trigger phrase definido",
+              "Flow asignado al número en Números de WhatsApp",
               "Verificar conexión: status connected",
               "Proveedor de IA configurado si querés respuestas a mensajes libres (opcional)",
               "ads_read en el token si querés enriquecimiento automático de datos de anuncios (opcional)",
             ].map((item, i) => (
               <li key={i} className="flex items-start gap-2">
-                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold">
                   {i + 1}
                 </span>
                 {item}
@@ -687,7 +694,7 @@ export function InstructionsPage() {
             href={link.href}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 rounded-lg border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="flex items-center gap-1 rounded-lg border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <ExternalLink size={11} />
             {link.label}
