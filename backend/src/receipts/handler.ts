@@ -127,15 +127,23 @@ export async function classifyAndHandleImage(
     return { handled: false, state };
   }
 
-  const ocrText = await runOcr(buffer);
-  log.debug(
-    {
-      phone,
-      ocrChars: ocrText.length,
-      ocrPreview: ocrText.slice(0, 120).replace(/\n/g, " "),
-    },
-    "classifyAndHandleImage: OCR done",
-  );
+  let ocrText: string;
+  try {
+    ocrText = await runOcr(buffer);
+    log.debug(
+      {
+        phone,
+        ocrChars: ocrText.length,
+        ocrPreview: ocrText.slice(0, 120).replace(/\n/g, " "),
+      },
+      "classifyAndHandleImage: OCR done",
+    );
+  } catch (err) {
+    log.warn({ err, phone }, "classifyAndHandleImage: OCR timeout/error → comprobante_ilegible");
+    const { retryMessage } = await getReceiptMessages(state.organizationId, state.flowId);
+    await sendMessage(phone, textMessage(retryMessage), msgCtx(state));
+    return { handled: true, state: { ...state, stage: "comprobante_ilegible" } };
+  }
 
   if (!isLikelyReceipt(ocrText)) {
     log.info(
@@ -214,6 +222,7 @@ export async function classifyAndHandleImage(
       receipt_date: null,
       conversation_id: state.id ?? null,
       state: "pending_manual_review",
+      meta_message_id: (msg as unknown as { id?: string }).id ?? null,
     });
     await sendMessage(phone, textMessage(pendingMessage), msgCtx(state));
     return {
@@ -242,6 +251,7 @@ export async function classifyAndHandleImage(
     receipt_date: receiptDate ? receiptDate.toISOString() : null,
     conversation_id: state.id ?? null,
     state: "validated",
+    meta_message_id: (msg as unknown as { id?: string }).id ?? null,
   });
 
   await sendMessage(phone, textMessage(confirmedMessage), msgCtx(state));

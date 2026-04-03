@@ -61,6 +61,37 @@ import type {
 } from "../types/api";
 import { supabase } from "./supabase";
 
+/** Error tipado para respuestas fallidas del API. Permite distinguir 4xx de 5xx en los componentes. */
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(status: number, message: string, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/** Parsea el body de una respuesta fallida y lanza ApiError con el mensaje del servidor. */
+async function throwApiError(res: Response): Promise<never> {
+  let message = `Error ${res.status}`;
+  let code: string | undefined;
+  try {
+    const body = (await res.json()) as {
+      error?: string;
+      message?: string;
+      code?: string;
+    };
+    message = body.error ?? body.message ?? message;
+    code = body.code;
+  } catch {
+    /* body no es JSON — usar mensaje genérico */
+  }
+  throw new ApiError(res.status, message, code);
+}
+
 const API_URL = import.meta.env.VITE_API_URL;
 const DASHBOARD_TOKEN = import.meta.env.VITE_DASHBOARD_TOKEN;
 
@@ -126,7 +157,7 @@ async function request<T>(path: string): Promise<T> {
     headers,
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
-  if (!res.ok) throw new Error(`API ${res.status}`);
+  if (!res.ok) await throwApiError(res);
   return (await res.json()) as T;
 }
 
@@ -217,7 +248,7 @@ export const api = {
         headers,
         body: JSON.stringify({ stage }),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
@@ -228,7 +259,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<SendMessageResponse>;
       })
     ),
@@ -292,7 +323,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<UpdateBotConfigResponse>;
       })
     ),
@@ -304,7 +335,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<FlowTemplate>;
       })
     ),
@@ -314,7 +345,7 @@ export const api = {
         method: "DELETE",
         headers,
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
@@ -328,7 +359,7 @@ export const api = {
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<Organization>;
       })
     ),
@@ -340,7 +371,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<OrganizationInvite>;
       })
     ),
@@ -350,7 +381,7 @@ export const api = {
         method: "POST",
         headers,
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
@@ -362,7 +393,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<Campaign>;
       })
     ),
@@ -373,7 +404,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<Campaign>;
       })
     ),
@@ -386,7 +417,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<FlowV2>;
       })
     ),
@@ -396,7 +427,7 @@ export const api = {
         method: "DELETE",
         headers,
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
@@ -407,7 +438,7 @@ export const api = {
         headers,
         body: JSON.stringify({ flowId }),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
@@ -424,7 +455,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<FlowVersion>;
       })
     ),
@@ -435,7 +466,7 @@ export const api = {
         headers,
         body: JSON.stringify({ text }),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<FlowSimulateResult>;
       })
     ),
@@ -445,7 +476,7 @@ export const api = {
         method: "POST",
         headers,
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<FlowVersion>;
       })
     ),
@@ -462,7 +493,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<MessageTemplate>;
       })
     ),
@@ -474,7 +505,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<Product>;
       })
     ),
@@ -485,7 +516,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<Product>;
       })
     ),
@@ -497,7 +528,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<WhatsAppInstance>;
       })
     ),
@@ -508,7 +539,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<WhatsAppInstance>;
       })
     ),
@@ -526,7 +557,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<ProductReferral>;
       })
     ),
@@ -537,7 +568,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<FlowReferral>;
       })
     ),
@@ -550,7 +581,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<AdminOrganization>;
       })
     ),
@@ -564,7 +595,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<AdminOrganization>;
       })
     ),
@@ -582,7 +613,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<AdminAllowlistEntry>;
       })
     ),
@@ -592,7 +623,7 @@ export const api = {
         method: "DELETE",
         headers,
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
@@ -637,7 +668,7 @@ export const api = {
     buildHeaders(true).then((headers) =>
       fetch(`${API_URL}/api/media/${id}`, { method: "DELETE", headers }).then(
         (r) => {
-          if (!r.ok) throw new Error(`API ${r.status}`);
+          if (!r.ok) return throwApiError(r);
           return r.json() as Promise<{ ok: boolean }>;
         }
       )
@@ -656,7 +687,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<FlowDefinition>;
       })
     ),
@@ -667,7 +698,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<FlowDefinition>;
       })
     ),
@@ -677,7 +708,7 @@ export const api = {
         method: "DELETE",
         headers,
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
@@ -690,7 +721,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json();
       })
     ),
@@ -701,7 +732,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json();
       })
     ),
@@ -711,7 +742,7 @@ export const api = {
         method: "DELETE",
         headers,
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
@@ -724,7 +755,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json();
       })
     ),
@@ -735,7 +766,7 @@ export const api = {
         headers,
         body: JSON.stringify(payload),
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json();
       })
     ),
@@ -745,7 +776,7 @@ export const api = {
         method: "DELETE",
         headers,
       }).then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
+        if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),

@@ -26,8 +26,13 @@ app.use(
   "/api/*",
   cors({
     origin: (origin) => {
-      // En dev (sin ALLOWED_ORIGINS configurado) se permite cualquier origen
+      // localhost siempre permitido (desarrollo local en cualquier puerto)
+      if (origin && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"))) {
+        return origin;
+      }
+      // Sin ALLOWED_ORIGINS configurado: permitir cualquier origen
       if (allowedOrigins.length === 0) return origin;
+      // En producción: solo los dominios explícitamente listados
       return allowedOrigins.includes(origin) ? origin : null;
     },
     allowHeaders: ["Authorization", "Content-Type", "X-Organization-Id"],

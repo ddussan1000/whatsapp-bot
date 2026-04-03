@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppLayout } from "./layout/AppLayout";
 import { HomePage } from "./pages/HomePage";
 import { ConversationsPage } from "./pages/ConversationsPage";
@@ -21,43 +22,48 @@ import { AdminPage } from "./pages/AdminPage";
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/admin"
-        element={
-          <AuthGuard>
-            <AdminGuard>
-              <AdminLayout />
-            </AdminGuard>
-          </AuthGuard>
-        }
-      >
-        <Route index element={<AdminPage />} />
-      </Route>
-      <Route
-        element={
-          <AuthGuard>
-            <AppLayout />
-          </AuthGuard>
-        }
-      >
-        <Route path="/" element={<HomePage />} />
-        <Route path="/conversations" element={<ConversationsPage />} />
-        <Route path="/conversations/:id" element={<ConversationDetailPage />} />
-        <Route path="/payments" element={<PaymentsPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/organization" element={<OrganizationPage />} />
-        <Route path="/flows" element={<FlowsPage />} />
-        <Route path="/templates" element={<TemplatesPage />} />
-        <Route path="/instances" element={<InstancesPage />} />
-        <Route path="/instances/create" element={<InstanceCreatePage />} />
-        <Route path="/media" element={<MediaPage />} />
-        <Route path="/config" element={<ConfigPage />} />
-        <Route path="/instructions" element={<InstructionsPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/admin"
+          element={
+            <AuthGuard>
+              <AdminGuard>
+                <AdminLayout />
+              </AdminGuard>
+            </AuthGuard>
+          }
+        >
+          <Route index element={<AdminPage />} />
+        </Route>
+        <Route
+          element={
+            <AuthGuard>
+              <AppLayout />
+            </AuthGuard>
+          }
+        >
+          <Route path="/" element={<HomePage />} />
+          <Route path="/conversations" element={<ConversationsPage />} />
+          <Route
+            path="/conversations/:id"
+            element={<ConversationDetailPage />}
+          />
+          <Route path="/payments" element={<PaymentsPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/organization" element={<OrganizationPage />} />
+          <Route path="/flows" element={<FlowsPage />} />
+          <Route path="/templates" element={<TemplatesPage />} />
+          <Route path="/instances" element={<InstancesPage />} />
+          <Route path="/instances/create" element={<InstanceCreatePage />} />
+          <Route path="/media" element={<MediaPage />} />
+          <Route path="/config" element={<ConfigPage />} />
+          <Route path="/instructions" element={<InstructionsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </ErrorBoundary>
   );
 }
 

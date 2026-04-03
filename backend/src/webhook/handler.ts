@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { classify } from "../bot/classifier";
 import { handleFlow } from "../bot/flows";
 import { startAssignedFlow, getFlowById as getFullFlow } from "../bot/flowEngine";
-import { getState, setState } from "../cache/redis";
+import { getState, setState, isDuplicate } from "../cache/redis";
 import type { ConversationState, WhatsAppMessage, WhatsAppReferral } from "../types";
 import { classifyAndHandleImage } from "../receipts/handler";
 import { upsertConversation } from "../db/conversations";
@@ -113,6 +113,16 @@ export async function handleWebhook(c: Context) {
 
     const msg = change?.messages?.[0] as WhatsAppMessage | undefined;
     if (!msg) return c.text("ok");
+
+    // Deduplicar: ignorar mensajes ya procesados (Meta puede reenviar)
+    const metaMsgId = (msg as unknown as { id?: string }).id;
+    if (metaMsgId) {
+      const alreadyProcessed = await isDuplicate(`dedup:msg:${metaMsgId}`, 300);
+      if (alreadyProcessed) {
+        log.info({ metaMsgId }, "webhook: mensaje duplicado ignorado");
+        return c.text("ok");
+      }
+    }
 
     const phone = msg.from;
     const contactName = (change?.contacts as Array<{ profile?: { name?: string } }> | undefined)?.[0]?.profile?.name ?? null;

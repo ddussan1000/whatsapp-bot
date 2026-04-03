@@ -100,9 +100,16 @@ function parseReceiptDate(text: string): Date | null {
   return null;
 }
 
+const OCR_TIMEOUT_MS = 30_000;
+
 export async function runOcr(imgBuffer: Buffer): Promise<string> {
   const processed = await sharp(imgBuffer).grayscale().normalize().sharpen().toBuffer();
-  const { data } = await Tesseract.recognize(processed, "spa");
+  const { data } = await Promise.race([
+    Tesseract.recognize(processed, "spa"),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("OCR timeout")), OCR_TIMEOUT_MS),
+    ),
+  ]);
   return data.text ?? "";
 }
 
