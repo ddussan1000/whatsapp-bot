@@ -1,16 +1,13 @@
 import type { ReactElement } from "react";
 import { Navigate } from "react-router-dom";
 import { useSessionQuery } from "@/lib/hooks";
+import { SessionLoader } from "./SessionLoader";
 
 export function AdminGuard({ children }: { children: ReactElement }) {
   const { data, isLoading, isError } = useSessionQuery();
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-svh items-center justify-center p-6">
-        <p className="text-sm text-muted-foreground">Verificando permisos…</p>
-      </div>
-    );
+    return <SessionLoader message="Verificando permisos…" />;
   }
 
   if (isError || !data?.isPlatformAdmin) {

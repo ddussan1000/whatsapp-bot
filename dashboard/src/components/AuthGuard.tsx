@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { api } from "../lib/api";
 import { queryClient } from "../lib/query-client";
+import { SessionLoader } from "./SessionLoader";
 
 export function AuthGuard({ children }: { children: ReactElement }) {
   const [loading, setLoading] = useState(true);
@@ -49,7 +50,7 @@ export function AuthGuard({ children }: { children: ReactElement }) {
   }, []);
 
   if (!supabase) return children;
-  if (loading) return <p className="muted">Validando sesión...</p>;
+  if (loading) return <SessionLoader message="Validando sesión…" />;
   if (!authenticated)
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return children;
