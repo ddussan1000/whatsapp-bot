@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Plus, Trash2, BookMarked, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,13 +86,82 @@ export function FlowsPage() {
   const [templateDescription, setTemplateDescription] = useState("");
   const [templateCategory, setTemplateCategory] = useState("Personalizado");
 
-  // Handle template pre-load from TemplatesPage (localStorage bridge)
+  // ── localStorage autosave ─────────────────────────────────────────────
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDraftChange = useCallback((draft: FlowEditorDraft) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      localStorage.setItem(
+        "flow_draft",
+        JSON.stringify({ draft, savedAt: Date.now() })
+      );
+    }, 800);
+  }, []);
+
   useEffect(() => {
-    const handler = () => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
+  // ── Template bridge + autosave restore on mount ───────────────────────
+  useEffect(() => {
+    // 1. Check for template bridge (takes priority)
+    const templateRaw = localStorage.getItem("flow_new_draft");
+    if (templateRaw) {
+      try {
+        localStorage.removeItem("flow_new_draft");
+        localStorage.removeItem("flow_draft");
+        const loaded = JSON.parse(templateRaw) as FlowEditorDraft;
+        setSelected("");
+        setCurrentDraft(loaded);
+        setDirty(true);
+        setEditorKey((k) => k + 1);
+      } catch {
+        /* ignore */
+      }
+    } else {
+      // 2. Check for autosaved draft
+      const draftRaw = localStorage.getItem("flow_draft");
+      if (draftRaw) {
+        try {
+          const saved = JSON.parse(draftRaw) as { draft: FlowEditorDraft };
+          const name = saved.draft?.name?.trim();
+          toast("Tenés un borrador guardado", {
+            id: "flow-draft-restore",
+            description: name
+              ? `"${name}" — continuá donde dejaste`
+              : "Continuá donde dejaste",
+            duration: Infinity,
+            action: {
+              label: "Restaurar",
+              onClick: () => {
+                setSelected("");
+                setCurrentDraft(saved.draft);
+                setDirty(true);
+                setEditorKey((k) => k + 1);
+                localStorage.removeItem("flow_draft");
+              },
+            },
+            cancel: {
+              label: "Descartar",
+              onClick: () => localStorage.removeItem("flow_draft"),
+            },
+          });
+        } catch {
+          localStorage.removeItem("flow_draft");
+        }
+      }
+    }
+
+    // 3. Future template loads (from TemplatesPage navigation)
+    const handleTemplateLoad = () => {
       try {
         const raw = localStorage.getItem("flow_new_draft");
         if (raw) {
           localStorage.removeItem("flow_new_draft");
+          localStorage.removeItem("flow_draft");
           const loaded = JSON.parse(raw) as FlowEditorDraft;
           setSelected("");
           setCurrentDraft(loaded);
@@ -104,14 +173,14 @@ export function FlowsPage() {
       }
     };
 
-    // Check on mount (navigated via localStorage before mount)
-    handler();
-    window.addEventListener("flow_template_loaded", handler);
-    return () => window.removeEventListener("flow_template_loaded", handler);
+    window.addEventListener("flow_template_loaded", handleTemplateLoad);
+    return () =>
+      window.removeEventListener("flow_template_loaded", handleTemplateLoad);
   }, []);
 
   const switchFlow = (id: string) => {
     if (dirty && !confirm("Hay cambios sin guardar. ¿Descartar?")) return;
+    localStorage.removeItem("flow_draft");
     const f = (flows.data ?? []).find((x) => x.id === id);
     const draft = toDraft(f);
     setSelected(id);
@@ -122,6 +191,7 @@ export function FlowsPage() {
 
   const newFlow = () => {
     if (dirty && !confirm("Hay cambios sin guardar. ¿Descartar?")) return;
+    localStorage.removeItem("flow_draft");
     setSelected("");
     setCurrentDraft(emptyDraft());
     setDirty(false);
@@ -179,6 +249,7 @@ export function FlowsPage() {
 
     upsert.mutate(payload, {
       onSuccess: (saved) => {
+        localStorage.removeItem("flow_draft");
         setSelected(saved.id);
         setCurrentDraft(toDraft(saved));
         setDirty(false);
@@ -291,11 +362,15 @@ export function FlowsPage() {
             savePending={upsert.isPending}
             saveLabel="Guardar flow"
             onDirtyChange={setDirty}
+            onDraftChange={handleDraftChange}
             renderActions={({ draft, dirty: isDirty, resetDraft }) => (
               <>
                 <Button
                   variant="outline"
-                  onClick={resetDraft}
+                  onClick={() => {
+                    resetDraft();
+                    localStorage.removeItem("flow_draft");
+                  }}
                   disabled={!isDirty}
                 >
                   Descartar cambios

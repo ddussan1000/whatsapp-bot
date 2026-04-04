@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   MessageSquare,
   Image as ImageIcon,
@@ -13,16 +13,26 @@ import {
   GripVertical,
   X,
   Zap,
+  Receipt,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { MediaPickerModal } from "@/components/ui/media-picker-modal";
 
 // ── Exported types ─────────────────────────────────────────────────────────
@@ -450,6 +460,165 @@ function StepCard({
   );
 }
 
+// ── Payment message defaults ──────────────────────────────────────────────
+
+export const RECEIPT_DEFAULTS = {
+  receiptPendingMessage:
+    "Gracias por tu comprobante. Lo estamos validando manualmente y te confirmaremos pronto.",
+  receiptRejectedMessage:
+    "No pudimos validar tu comprobante. Por favor verifica que la imagen sea legible y que la fecha sea de las ultimas 24 horas.",
+  receiptConfirmedMessage:
+    "¡Gracias! Recibimos tu pago correctamente. En breve nos ponemos en contacto contigo.",
+} as const;
+
+type ReceiptKey = keyof typeof RECEIPT_DEFAULTS;
+
+type PaymentFields = Record<ReceiptKey, { value: string; isDefault: boolean }>;
+
+function buildFields(draft: FlowEditorDraft): PaymentFields {
+  const init = (key: ReceiptKey): { value: string; isDefault: boolean } => {
+    const v = draft[key] ?? "";
+    return v
+      ? { value: v, isDefault: false }
+      : { value: RECEIPT_DEFAULTS[key], isDefault: true };
+  };
+  return {
+    receiptPendingMessage: init("receiptPendingMessage"),
+    receiptRejectedMessage: init("receiptRejectedMessage"),
+    receiptConfirmedMessage: init("receiptConfirmedMessage"),
+  };
+}
+
+const PAYMENT_FIELD_LABELS: Record<ReceiptKey, string> = {
+  receiptPendingMessage: "Comprobante recibido (en revisión)",
+  receiptRejectedMessage: "Comprobante rechazado",
+  receiptConfirmedMessage: "Pago confirmado",
+};
+
+function PaymentMessagesDialog({
+  open,
+  onClose,
+  draft,
+  onSave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  draft: FlowEditorDraft;
+  onSave: (updates: Pick<FlowEditorDraft, ReceiptKey>) => void;
+}) {
+  const [fields, setFields] = useState<PaymentFields>(() => buildFields(draft));
+
+  useEffect(() => {
+    if (open) setFields(buildFields(draft));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const updateField = (key: ReceiptKey, value: string) => {
+    setFields((prev) => ({
+      ...prev,
+      [key]: { value, isDefault: value === RECEIPT_DEFAULTS[key] },
+    }));
+  };
+
+  const resetField = (key: ReceiptKey) => {
+    setFields((prev) => ({
+      ...prev,
+      [key]: { value: RECEIPT_DEFAULTS[key], isDefault: true },
+    }));
+  };
+
+  const handleSave = () => {
+    onSave({
+      receiptPendingMessage: fields.receiptPendingMessage.isDefault
+        ? ""
+        : fields.receiptPendingMessage.value,
+      receiptRejectedMessage: fields.receiptRejectedMessage.isDefault
+        ? ""
+        : fields.receiptRejectedMessage.value,
+      receiptConfirmedMessage: fields.receiptConfirmedMessage.isDefault
+        ? ""
+        : fields.receiptConfirmedMessage.value,
+    });
+    onClose();
+  };
+
+  const keys: ReceiptKey[] = [
+    "receiptPendingMessage",
+    "receiptConfirmedMessage",
+    "receiptRejectedMessage",
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Receipt size={16} className="text-muted-foreground" />
+            Mensajes de pago
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Personalizá los mensajes que recibe el cliente al enviar un
+            comprobante. Los campos marcados como{" "}
+            <span className="font-medium text-foreground">predeterminado</span>{" "}
+            usarán el mensaje global de la organización.
+          </p>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-5 py-1">
+          {keys.map((key) => {
+            const field = fields[key];
+            return (
+              <div key={key} className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {PAYMENT_FIELD_LABELS[key]}
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    {field.isDefault && (
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] h-4 px-1.5 font-normal"
+                      >
+                        predeterminado
+                      </Badge>
+                    )}
+                    {!field.isDefault && (
+                      <button
+                        type="button"
+                        title="Restablecer al predeterminado"
+                        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        onClick={() => resetField(key)}
+                      >
+                        <RotateCcw size={10} />
+                        Restablecer
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <Textarea
+                  value={field.value}
+                  rows={3}
+                  className={`resize-none text-base transition-colors ${
+                    field.isDefault ? "border-dashed text-muted-foreground" : ""
+                  }`}
+                  onChange={(e) => updateField(key, e.target.value)}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave}>Guardar mensajes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── FlowEditor ────────────────────────────────────────────────────────────
 
 export type FlowEditorActionsContext = {
@@ -466,6 +635,8 @@ type FlowEditorProps = {
   showPaymentConfig?: boolean;
   showMediaPicker?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
+  /** Called on every draft change (when dirty). Debounce in the parent for localStorage. */
+  onDraftChange?: (draft: FlowEditorDraft) => void;
   /** Render extra buttons next to "Guardar". Receives current draft + dirty state. */
   renderActions?: (ctx: FlowEditorActionsContext) => React.ReactNode;
 };
@@ -478,6 +649,7 @@ export function FlowEditor({
   showPaymentConfig = true,
   showMediaPicker = true,
   onDirtyChange,
+  onDraftChange,
   renderActions,
 }: FlowEditorProps) {
   const [draft, setDraftRaw] = useState<FlowEditorDraft>(initialDraft);
@@ -485,10 +657,20 @@ export function FlowEditor({
   const [configOpen, setConfigOpen] = useState(true);
   const [keywordInput, setKeywordInput] = useState("");
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<{
     step: number;
     msg: number;
   } | null>(null);
+
+  // Stable ref so onDraftChange never needs to be in effect deps
+  const onDraftChangeRef = useRef(onDraftChange);
+  onDraftChangeRef.current = onDraftChange;
+
+  // Notify parent on every dirty draft change (for localStorage autosave)
+  useEffect(() => {
+    if (dirty) onDraftChangeRef.current?.(draft);
+  }, [draft, dirty]);
 
   const setDraft = (updater: (d: FlowEditorDraft) => FlowEditorDraft) => {
     setDraftRaw(updater);
@@ -782,46 +964,57 @@ export function FlowEditor({
             </div>
 
             {/* Payment overrides */}
-            {showPaymentConfig && (
-              <div className="flex flex-col gap-3 rounded-lg border border-dashed p-4">
-                <div>
-                  <p className="text-sm font-medium">
-                    Mensajes de pago (opcionales)
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    Sobreescriben los mensajes globales de comprobante solo para
-                    este flujo.
-                  </p>
-                </div>
-                {[
-                  {
-                    label: "Comprobante recibido (en revisión)",
-                    key: "receiptPendingMessage" as const,
-                  },
-                  {
-                    label: "Pago confirmado",
-                    key: "receiptConfirmedMessage" as const,
-                  },
-                  {
-                    label: "Comprobante rechazado",
-                    key: "receiptRejectedMessage" as const,
-                  },
-                ].map(({ label, key }) => (
-                  <div key={key} className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                      {label}
-                    </label>
-                    <Textarea
-                      placeholder="Dejar vacío para usar el mensaje predeterminado…"
-                      value={draft[key] ?? ""}
-                      rows={2}
-                      className="resize-none text-base"
-                      onChange={(e) => patch({ [key]: e.target.value })}
+            {showPaymentConfig &&
+              (() => {
+                const activeCount = (
+                  [
+                    "receiptPendingMessage",
+                    "receiptRejectedMessage",
+                    "receiptConfirmedMessage",
+                  ] as ReceiptKey[]
+                ).filter((k) => draft[k]?.trim()).length;
+                return (
+                  <>
+                    <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-none">
+                          Mensajes de pago
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {activeCount > 0
+                            ? `${activeCount} mensaje${activeCount > 1 ? "s" : ""} personalizado${activeCount > 1 ? "s" : ""} para este flujo`
+                            : "Usando los mensajes globales de la organización"}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 gap-1.5"
+                        onClick={() => setPaymentModalOpen(true)}
+                      >
+                        <Receipt size={13} />
+                        Configurar
+                        {activeCount > 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="h-4 px-1.5 text-[10px] font-medium"
+                          >
+                            {activeCount}
+                          </Badge>
+                        )}
+                      </Button>
+                    </div>
+
+                    <PaymentMessagesDialog
+                      open={paymentModalOpen}
+                      onClose={() => setPaymentModalOpen(false)}
+                      draft={draft}
+                      onSave={(updates) => patch(updates)}
                     />
-                  </div>
-                ))}
-              </div>
-            )}
+                  </>
+                );
+              })()}
 
             {/* Session timeout */}
             <div className="flex flex-col gap-1.5">

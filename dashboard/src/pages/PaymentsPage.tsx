@@ -143,7 +143,9 @@ function PaymentRow({ p }: { p: Payment }) {
 
         {/* Desktop only: amount, badge, date */}
         <div className="hidden sm:block shrink-0 text-right">
-          <span className="font-semibold tabular-nums">{formatMoney(p.amount)}</span>
+          <span className="font-semibold tabular-nums">
+            {formatMoney(p.amount)}
+          </span>
         </div>
         <div className="hidden sm:flex shrink-0 w-36 justify-end">
           <PaymentStateBadge state={p.state} />

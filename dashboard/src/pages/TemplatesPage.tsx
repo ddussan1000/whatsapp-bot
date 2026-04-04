@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MessageSquare,
@@ -399,6 +399,15 @@ function TemplateCard({
 
 // ── Create dialog ─────────────────────────────────────────────────────────
 
+const TEMPLATE_DRAFT_KEY = "template_draft";
+
+type TemplateDraftSave = {
+  description: string;
+  category: string;
+  flowDraft: FlowEditorDraft;
+  savedAt: number;
+};
+
 function CreateTemplateDialog({
   open,
   onClose,
@@ -410,11 +419,103 @@ function CreateTemplateDialog({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Personalizado");
   const [editorKey, setEditorKey] = useState(0);
+  const [restoredFlowDraft, setRestoredFlowDraft] =
+    useState<FlowEditorDraft | null>(null);
+
+  // Refs for stable values inside callbacks
+  const descriptionRef = useRef(description);
+  const categoryRef = useRef(category);
+  const latestFlowDraftRef = useRef<FlowEditorDraft>(emptyDraft());
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    descriptionRef.current = description;
+  }, [description]);
+  useEffect(() => {
+    categoryRef.current = category;
+  }, [category]);
+
+  // Save draft debounced
+  const saveDraft = useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      localStorage.setItem(
+        TEMPLATE_DRAFT_KEY,
+        JSON.stringify({
+          description: descriptionRef.current,
+          category: categoryRef.current,
+          flowDraft: latestFlowDraftRef.current,
+          savedAt: Date.now(),
+        } satisfies TemplateDraftSave)
+      );
+    }, 800);
+  }, []);
+
+  // Show restore toast when dialog opens and a draft exists
+  useEffect(() => {
+    if (!open) return;
+    const raw = localStorage.getItem(TEMPLATE_DRAFT_KEY);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as TemplateDraftSave;
+      const name = saved.flowDraft?.name?.trim();
+      toast("Tenés un borrador de plantilla guardado", {
+        id: "template-draft-restore",
+        description: name
+          ? `"${name}" — continuá donde dejaste`
+          : "Continuá donde dejaste",
+        duration: Infinity,
+        action: {
+          label: "Restaurar",
+          onClick: () => {
+            setDescription(saved.description);
+            setCategory(saved.category);
+            setRestoredFlowDraft(saved.flowDraft);
+            setEditorKey((k) => k + 1);
+            localStorage.removeItem(TEMPLATE_DRAFT_KEY);
+          },
+        },
+        cancel: {
+          label: "Descartar",
+          onClick: () => localStorage.removeItem(TEMPLATE_DRAFT_KEY),
+        },
+      });
+    } catch {
+      localStorage.removeItem(TEMPLATE_DRAFT_KEY);
+    }
+  }, [open]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
+  const handleFlowDraftChange = useCallback(
+    (draft: FlowEditorDraft) => {
+      latestFlowDraftRef.current = draft;
+      saveDraft();
+    },
+    [saveDraft]
+  );
+
+  const handleDescriptionChange = (value: string) => {
+    setDescription(value);
+    saveDraft();
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setCategory(value);
+    saveDraft();
+  };
 
   const handleClose = () => {
     setDescription("");
     setCategory("Personalizado");
+    setRestoredFlowDraft(null);
     setEditorKey((k) => k + 1);
+    latestFlowDraftRef.current = emptyDraft();
     onClose();
   };
 
@@ -428,6 +529,7 @@ function CreateTemplateDialog({
       },
       {
         onSuccess: () => {
+          localStorage.removeItem(TEMPLATE_DRAFT_KEY);
           toast.success("Plantilla creada");
           handleClose();
         },
@@ -455,7 +557,7 @@ function CreateTemplateDialog({
                 value={description}
                 rows={2}
                 className="resize-none"
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -464,7 +566,7 @@ function CreateTemplateDialog({
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="h-9 rounded-md border bg-background px-3 text-sm"
               >
                 {USER_CATEGORIES.map((c) => (
@@ -479,11 +581,12 @@ function CreateTemplateDialog({
           {/* Full flow editor */}
           <FlowEditor
             key={editorKey}
-            initialDraft={emptyDraft()}
+            initialDraft={restoredFlowDraft ?? emptyDraft()}
             onSave={handleSave}
             savePending={createMutation.isPending}
             saveLabel="Crear plantilla"
             showPaymentConfig={false}
+            onDraftChange={handleFlowDraftChange}
             renderActions={() => (
               <Button variant="outline" onClick={handleClose}>
                 Cancelar
