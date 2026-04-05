@@ -475,12 +475,14 @@ export function ConversationDetailPage() {
       .finally(() => setInitialLoading(false));
   }, [id]);
 
-  // Scroll to bottom on initial load
+  // Scroll to bottom on initial load — dep on initialLoading only is intentional:
+  // we want this to fire once when loading finishes, not on every new message.
   useEffect(() => {
     if (!initialLoading && messages.length > 0) {
       const el = chatWindowRef.current;
       if (el) el.scrollTop = el.scrollHeight;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLoading]);
 
   // Auto-scroll when new messages arrive
@@ -654,6 +656,15 @@ export function ConversationDetailPage() {
             <p className="py-2 text-center text-xs text-muted-foreground">
               Sube para cargar mensajes anteriores
             </p>
+          )}
+          {!loadingOlder && !hasMore && messages.length > 0 && (
+            <div className="flex items-center gap-2 rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              <Info size={13} className="shrink-0 text-muted-foreground/70" />
+              <span>
+                El historial se conserva por <strong>90 días</strong>. Los
+                mensajes anteriores a esa fecha son eliminados automáticamente.
+              </span>
+            </div>
           )}
 
           {initialLoading ? (

@@ -10,8 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FlowEditor, emptyDraft } from "@/components/FlowEditor";
+import { FlowEditor } from "@/components/FlowEditor";
 import type { FlowEditorDraft } from "@/components/FlowEditor";
+import { emptyDraft } from "@/lib/flowUtils";
 import type { FlowV2 } from "@/types/api";
 import {
   useDeleteFlowV2Mutation,
@@ -114,6 +115,7 @@ export function FlowsPage() {
         localStorage.removeItem("flow_new_draft");
         localStorage.removeItem("flow_draft");
         const loaded = JSON.parse(templateRaw) as FlowEditorDraft;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelected("");
         setCurrentDraft(loaded);
         setDirty(true);

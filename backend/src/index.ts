@@ -9,6 +9,7 @@ import { handleWebhook } from "./webhook/handler";
 import { registerDailyReportCron } from "./cron/dailyReport";
 import { registerScheduledMessagesCron } from "./cron/processScheduledMessages";
 import { registerPurgeReceiptsCron } from "./cron/purgeReceipts";
+import { registerPurgeMessagesCron } from "./cron/purgeOldMessages";
 import { dashboardApi } from "./api/dashboard";
 import { globalRateLimiter, mutationRateLimiter, webhookRateLimiter } from "./middleware/rateLimiter";
 
@@ -88,6 +89,7 @@ app.route("/api", dashboardApi);
 registerDailyReportCron();
 registerScheduledMessagesCron();
 registerPurgeReceiptsCron();
+registerPurgeMessagesCron();
 
 serve(
   {

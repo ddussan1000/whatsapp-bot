@@ -143,6 +143,8 @@ const ChatMessageSchema = z.object({
   media_url: z.string().nullable().optional(),
   payload: z.record(z.string(), z.unknown()).nullable().optional(),
   meta_message_id: z.string().nullable().optional(),
+  delivery_status: z.string().nullable().optional(),
+  delivered_at: z.string().nullable().optional(),
   created_at: z.string().nullable().optional(),
 });
 
@@ -254,6 +256,7 @@ dashboardApi.openapi(
     responses: {
       200: { description: "Flow media uploaded", content: { "application/json": { schema: FlowMediaUploadResponseSchema } } },
       400: { description: "Bad request", content: { "application/json": { schema: ErrorSchema } } },
+      413: { description: "Archivo demasiado grande", content: { "application/json": { schema: ErrorSchema } } },
       500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
     },
   }),
@@ -2088,7 +2091,7 @@ dashboardApi.openapi(
     },
   }),
   async (c) => {
-    if (!supabase) return c.json({ items: [], page: 1, pageSize: 20, total: 0 }, 200);
+    if (!supabase) return c.json({ items: [] as z.infer<typeof ConversationSchema>[], page: 1, pageSize: 20, total: 0 }, 200);
     const { state, search, fromAd, adSourceId, flowId, page, pageSize, sortBy, sortDir } = c.req.valid("query");
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -2103,14 +2106,14 @@ dashboardApi.openapi(
         .eq("organization_id", organization)
         .eq("source_id", adSourceId);
       adPhones = [...new Set((adRows ?? []).map((r) => r.phone as string))];
-      if (adPhones.length === 0) return c.json({ items: [], page, pageSize, total: 0 }, 200);
+      if (adPhones.length === 0) return c.json({ items: [] as z.infer<typeof ConversationSchema>[], page, pageSize, total: 0 }, 200);
     } else if (fromAd) {
       const { data: adRows } = await supabase
         .from("ad_click_logs")
         .select("phone")
         .eq("organization_id", organization);
       adPhones = [...new Set((adRows ?? []).map((r) => r.phone as string))];
-      if (adPhones.length === 0) return c.json({ items: [], page, pageSize, total: 0 }, 200);
+      if (adPhones.length === 0) return c.json({ items: [] as z.infer<typeof ConversationSchema>[], page, pageSize, total: 0 }, 200);
     }
 
     let query = supabase
@@ -2144,10 +2147,20 @@ dashboardApi.openapi(
       }
     }
 
-    const items = (data ?? []).map((conv) => ({
-      ...(conv as Record<string, unknown>),
-      ad_name: adNameByPhone.get((conv as Record<string, unknown>).phone as string) ?? null,
-    }));
+    const items: z.infer<typeof ConversationSchema>[] = (data ?? []).map((conv) => {
+      const c = conv as Record<string, unknown>;
+      return {
+        id: c.id as string,
+        phone: c.phone as string,
+        stage: c.stage as string,
+        contact_name: (c.contact_name as string | null) ?? null,
+        flow_id: (c.flow_id as string | null) ?? null,
+        flow_name: (c.flow_name as string | null) ?? null,
+        started_at: (c.started_at as string | null) ?? null,
+        updated_at: (c.updated_at as string | null) ?? null,
+        ad_name: adNameByPhone.get(c.phone as string) ?? null,
+      };
+    });
 
     let countQuery = supabase
       .from("conversations")
@@ -2349,6 +2362,7 @@ dashboardApi.openapi(
       200: { description: "Uploaded and sent", content: { "application/json": { schema: UploadResponseSchema } } },
       404: { description: "Not found", content: { "application/json": { schema: ErrorSchema } } },
       400: { description: "Bad request", content: { "application/json": { schema: ErrorSchema } } },
+      413: { description: "Archivo demasiado grande", content: { "application/json": { schema: ErrorSchema } } },
       500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
     },
   }),
@@ -2444,7 +2458,7 @@ dashboardApi.openapi(
     },
   }),
   async (c) => {
-    if (!supabase) return c.json({ items: [], page: 1, pageSize: 20, total: 0 }, 200);
+    if (!supabase) return c.json({ items: [] as z.infer<typeof PaymentSchema>[], page: 1, pageSize: 20, total: 0 }, 200);
     const { page, pageSize, sortBy, sortDir, state, flowId, instanceId, from: fromDate, to: toDate } = c.req.valid("query");
     const rangeFrom = (page - 1) * pageSize;
     const rangeTo = rangeFrom + pageSize - 1;
@@ -2482,18 +2496,18 @@ dashboardApi.openapi(
     if (toDate) countQuery = countQuery.lte("validated_at", toDate);
     const { count } = await countQuery;
 
-    const items = (data ?? []).map((p: Record<string, unknown>) => ({
-      id: p.id,
-      phone: p.phone,
-      flow_id: p.flow_id ?? null,
+    const items: z.infer<typeof PaymentSchema>[] = ((data ?? []) as unknown as Record<string, unknown>[]).map((p) => ({
+      id: p.id as string,
+      phone: p.phone as string,
+      flow_id: (p.flow_id as string | null) ?? null,
       flow_name: (p.flows as { name?: string } | null)?.name ?? null,
-      whatsapp_instance_id: p.whatsapp_instance_id ?? null,
+      whatsapp_instance_id: (p.whatsapp_instance_id as string | null) ?? null,
       instance_label: (p.whatsapp_instances as { label?: string } | null)?.label ?? null,
-      amount: p.amount ?? null,
-      currency: p.currency ?? null,
-      receipt_date: p.receipt_date ?? null,
+      amount: (p.amount as number | null) ?? null,
+      currency: (p.currency as string | null) ?? null,
+      receipt_date: (p.receipt_date as string | null) ?? null,
       state: (p.state as typeof PAYMENT_STATES[number] | null) ?? null,
-      validated_at: p.validated_at ?? null,
+      validated_at: (p.validated_at as string | null) ?? null,
     }));
 
     return c.json({ items, page, pageSize, total: count ?? items.length }, 200);

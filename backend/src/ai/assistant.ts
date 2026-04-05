@@ -18,7 +18,7 @@ function extractJson(text: string): AssistantResult {
   const mdMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (mdMatch) {
     try {
-      return JSON.parse(mdMatch[1].trim());
+      return JSON.parse(mdMatch[1]!.trim());
     } catch {}
   }
 

@@ -35,62 +35,23 @@ import {
 } from "@/components/ui/dialog";
 import { MediaPickerModal } from "@/components/ui/media-picker-modal";
 
-// ── Exported types ─────────────────────────────────────────────────────────
-
-export type FlowMessageType = "text" | "image" | "document" | "video";
-
-export type FlowEditorMessage = {
-  id?: string;
-  position: number;
-  messageType: FlowMessageType;
-  textContent?: string | null;
-  mediaUrl?: string | null;
-  filename?: string | null;
-  caption?: string | null;
-};
-
-export type FlowEditorStep = {
-  id?: string;
-  position: number;
-  delaySeconds: number;
-  label?: string;
-  messages: FlowEditorMessage[];
-};
-
-export type FlowEditorDraft = {
-  id?: string;
-  name: string;
-  triggerPhrase: string;
-  keywords: string[];
-  noMatchBehavior: "trigger" | "ignore";
-  systemPrompt?: string | null;
-  isActive: boolean;
-  sessionTimeoutHours: number;
-  steps: FlowEditorStep[];
-  receiptPendingMessage?: string;
-  receiptRejectedMessage?: string;
-  receiptConfirmedMessage?: string;
-};
-
-export function emptyDraft(): FlowEditorDraft {
-  return {
-    name: "",
-    triggerPhrase: "",
-    keywords: [],
-    noMatchBehavior: "trigger",
-    systemPrompt: "",
-    isActive: true,
-    sessionTimeoutHours: 24,
-    steps: [],
-    receiptPendingMessage: "",
-    receiptRejectedMessage: "",
-    receiptConfirmedMessage: "",
-  };
-}
+// ── Types (re-exported from flowUtils para backward compat) ────────────────
+export type {
+  FlowMessageType,
+  FlowEditorMessage,
+  FlowEditorStep,
+  FlowEditorDraft,
+} from "@/lib/flowUtils";
+import type {
+  FlowMessageType,
+  FlowEditorMessage,
+  FlowEditorStep,
+  FlowEditorDraft,
+} from "@/lib/flowUtils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-export function extractTriggerWord(phrase: string): string {
+function extractTriggerWord(phrase: string): string {
   return (
     phrase
       .toLowerCase()
@@ -462,7 +423,7 @@ function StepCard({
 
 // ── Payment message defaults ──────────────────────────────────────────────
 
-export const RECEIPT_DEFAULTS = {
+const RECEIPT_DEFAULTS = {
   receiptPendingMessage:
     "Gracias por tu comprobante. Lo estamos validando manualmente y te confirmaremos pronto.",
   receiptRejectedMessage:
@@ -663,8 +624,11 @@ export function FlowEditor({
     msg: number;
   } | null>(null);
 
-  // Stable ref so onDraftChange never needs to be in effect deps
+  // Stable ref so onDraftChange never needs to be in effect deps.
+  // Updating the ref inline (not in an effect) is intentional — keeps it
+  // synchronously current before the effect runs.
   const onDraftChangeRef = useRef(onDraftChange);
+  // eslint-disable-next-line react-hooks/refs
   onDraftChangeRef.current = onDraftChange;
 
   // Notify parent on every dirty draft change (for localStorage autosave)

@@ -32,8 +32,9 @@ import {
   useDeleteFlowTemplateMutation,
 } from "@/lib/hooks";
 import type { FlowTemplate } from "@/types/api";
-import { FlowEditor, emptyDraft } from "@/components/FlowEditor";
+import { FlowEditor } from "@/components/FlowEditor";
 import type { FlowEditorDraft } from "@/components/FlowEditor";
+import { emptyDraft } from "@/lib/flowUtils";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 

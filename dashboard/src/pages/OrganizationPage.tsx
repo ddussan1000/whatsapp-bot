@@ -134,9 +134,11 @@ export function OrganizationPage() {
   const resendInvite = useResendInviteMutation();
   const updateOrg = useUpdateOrgMutation();
 
-  // Sync name input when data loads
+  // Sync name input when data loads — setState in effect is intentional here:
+  // initializes local edit state from async server data when not actively editing.
   useEffect(() => {
     if (org.data?.organization.name && !editingName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNameInput(org.data.organization.name);
     }
   }, [org.data?.organization.name, editingName]);

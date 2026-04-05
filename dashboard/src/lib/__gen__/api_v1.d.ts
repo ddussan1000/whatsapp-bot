@@ -999,6 +999,17 @@ export interface paths {
             };
           };
         };
+        /** @description Archivo demasiado grande */
+        413: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
         /** @description Error */
         500: {
           headers: {
@@ -3485,6 +3496,8 @@ export interface paths {
                   [key: string]: unknown;
                 } | null;
                 meta_message_id?: string | null;
+                delivery_status?: string | null;
+                delivered_at?: string | null;
                 created_at?: string | null;
               }[];
               page: number;
@@ -3637,6 +3650,17 @@ export interface paths {
         };
         /** @description Not found */
         404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Archivo demasiado grande */
+        413: {
           headers: {
             [name: string]: unknown;
           };

@@ -91,6 +91,7 @@ export async function sendStepMessages(
     conversationId: state.id ?? null,
     whatsappInstanceId: state.whatsappInstanceId,
     flowId: state.flowId,
+    skipPayload: true, // no persistir payload JSONB para mensajes de flujos programados
   };
 
   for (const msg of sorted) {

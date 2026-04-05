@@ -11,6 +11,8 @@ export async function sendMessage(
     conversationId?: string | null;
     whatsappInstanceId?: string | null;
     flowId?: string | null;
+    /** Si es true, no se persiste el payload JSONB (para mensajes outbound de flujos programados) */
+    skipPayload?: boolean;
   },
 ) {
   const organizationId = ctx?.organizationId ?? null;
@@ -45,6 +47,7 @@ export async function sendMessage(
           | "unknown",
         textBody: typeof payload.text === "object" ? String((payload.text as { body?: string }).body ?? "") : null,
         payload,
+        skipPayload: ctx?.skipPayload,
       });
     }
     return;
@@ -85,6 +88,7 @@ export async function sendMessage(
       textBody: typeof payload.text === "object" ? String((payload.text as { body?: string }).body ?? "") : null,
       payload,
       metaMessageId: data.messages?.[0]?.id ?? null,
+      skipPayload: ctx?.skipPayload,
     });
   }
 }

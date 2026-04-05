@@ -16,6 +16,8 @@ export type MessageInput = {
   mediaUrl?: string | null;
   payload?: Record<string, unknown> | null;
   metaMessageId?: string | null;
+  /** Si es true, no se guarda el payload JSONB (para mensajes outbound de flujos programados) */
+  skipPayload?: boolean;
 };
 
 async function getLatestConversationIdByPhone(phone: string, organizationId: string) {
@@ -44,7 +46,7 @@ export async function insertMessageLog(input: MessageInput) {
     message_type: input.messageType,
     text_body: input.textBody ?? null,
     media_url: input.mediaUrl ?? null,
-    payload: input.payload ?? null,
+    payload: input.skipPayload ? null : (input.payload ?? null),
     meta_message_id: input.metaMessageId ?? null,
   });
   if (error) {
@@ -65,7 +67,7 @@ export async function listMessagesByConversation(
   const { data, count, error } = await supabase
     .from("messages")
     .select(
-      "id, conversation_id, phone, direction, message_type, text_body, media_url, payload, meta_message_id, created_at",
+      "id, conversation_id, phone, direction, message_type, text_body, media_url, payload, meta_message_id, delivery_status, delivered_at, created_at",
       { count: "exact" },
     )
     .eq("organization_id", organizationId)
@@ -83,20 +85,29 @@ export async function updateMessageDeliveryStatus(input: {
   timestamp?: string | null;
 }) {
   if (!supabase) return;
+
+  const deliveredAt = input.timestamp
+    ? new Date(Number(input.timestamp) * 1000).toISOString()
+    : null;
+
+  const matchFilter = input.organizationId
+    ? { organization_id: input.organizationId, meta_message_id: input.metaMessageId }
+    : { meta_message_id: input.metaMessageId };
+
+  // Intento 1: coincidencia exacta
   let { data, error } = await supabase
     .from("messages")
-    .select("id, payload")
-    .match(input.organizationId ? { organization_id: input.organizationId } : {})
-    .eq("meta_message_id", input.metaMessageId)
+    .select("id")
+    .match(matchFilter)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  // Fallback flexible para diferencias de formato del ID de Meta (algunas cuentas envian variaciones)
+  // Intento 2: fallback flexible (Meta a veces envía variaciones del ID)
   if (!data?.id) {
     const fallback = await supabase
       .from("messages")
-      .select("id, payload")
+      .select("id")
       .match(input.organizationId ? { organization_id: input.organizationId } : {})
       .ilike("meta_message_id", `%${input.metaMessageId}%`)
       .order("created_at", { ascending: false })
@@ -105,13 +116,11 @@ export async function updateMessageDeliveryStatus(input: {
     data = fallback.data;
     error = fallback.error;
   }
+
   if (error || !data?.id) return;
 
-  const nextPayload = {
-    ...(typeof data.payload === "object" && data.payload ? (data.payload as Record<string, unknown>) : {}),
-    meta_status: input.status,
-    meta_status_at: input.timestamp ?? null,
-  };
-
-  await supabase.from("messages").update({ payload: nextPayload }).eq("id", data.id);
+  await supabase
+    .from("messages")
+    .update({ delivery_status: input.status, delivered_at: deliveredAt })
+    .eq("id", data.id);
 }
