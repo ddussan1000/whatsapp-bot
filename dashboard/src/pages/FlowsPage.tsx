@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -86,6 +88,14 @@ export function FlowsPage() {
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
   const [templateCategory, setTemplateCategory] = useState("Personalizado");
+
+  // Discard-changes confirmation dialog
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
+  // Delete flow confirmation dialog
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   // ── localStorage autosave ─────────────────────────────────────────────
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -180,8 +190,7 @@ export function FlowsPage() {
       window.removeEventListener("flow_template_loaded", handleTemplateLoad);
   }, []);
 
-  const switchFlow = (id: string) => {
-    if (dirty && !confirm("Hay cambios sin guardar. ¿Descartar?")) return;
+  const doSwitchFlow = (id: string) => {
     localStorage.removeItem("flow_draft");
     const f = (flows.data ?? []).find((x) => x.id === id);
     const draft = toDraft(f);
@@ -191,13 +200,30 @@ export function FlowsPage() {
     setEditorKey((k) => k + 1);
   };
 
-  const newFlow = () => {
-    if (dirty && !confirm("Hay cambios sin guardar. ¿Descartar?")) return;
+  const switchFlow = (id: string) => {
+    if (dirty) {
+      pendingActionRef.current = () => doSwitchFlow(id);
+      setDiscardOpen(true);
+      return;
+    }
+    doSwitchFlow(id);
+  };
+
+  const doNewFlow = () => {
     localStorage.removeItem("flow_draft");
     setSelected("");
     setCurrentDraft(emptyDraft());
     setDirty(false);
     setEditorKey((k) => k + 1);
+  };
+
+  const newFlow = () => {
+    if (dirty) {
+      pendingActionRef.current = doNewFlow;
+      setDiscardOpen(true);
+      return;
+    }
+    doNewFlow();
   };
 
   const handleSave = (draft: FlowEditorDraft) => {
@@ -261,9 +287,17 @@ export function FlowsPage() {
     });
   };
 
-  const handleDelete = (draftId: string) => {
-    remove.mutate(draftId, {
+  const confirmDelete = (draftId: string) => {
+    setDeleteTargetId(draftId);
+    setDeleteOpen(true);
+  };
+
+  const handleDelete = () => {
+    if (!deleteTargetId) return;
+    remove.mutate(deleteTargetId, {
       onSuccess: () => {
+        setDeleteOpen(false);
+        setDeleteTargetId(null);
         setSelected("");
         setCurrentDraft(emptyDraft());
         setDirty(false);
@@ -395,9 +429,7 @@ export function FlowsPage() {
                   <Button
                     variant="ghost"
                     className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    loading={remove.isPending}
-                    loadingText="Eliminando…"
-                    onClick={() => handleDelete(draft.id!)}
+                    onClick={() => confirmDelete(draft.id!)}
                   >
                     <Trash2 size={14} className="mr-1.5" />
                     Eliminar flow
@@ -408,6 +440,69 @@ export function FlowsPage() {
           />
         </div>
       </div>
+
+      {/* Discard unsaved changes dialog */}
+      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <DialogContent showCloseButton={false} className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cambios sin guardar</DialogTitle>
+            <DialogDescription>
+              Tenés cambios sin guardar en este flow. ¿Querés descartarlos y
+              continuar?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDiscardOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setDiscardOpen(false);
+                pendingActionRef.current?.();
+                pendingActionRef.current = null;
+              }}
+            >
+              Descartar cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete flow confirmation dialog */}
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(v) => {
+          if (!remove.isPending) setDeleteOpen(v);
+        }}
+      >
+        <DialogContent showCloseButton={false} className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Eliminar flow</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer. El flow y todos sus pasos serán
+              eliminados permanentemente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={remove.isPending}
+              onClick={() => setDeleteOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              loading={remove.isPending}
+              loadingText="Eliminando…"
+              onClick={handleDelete}
+            >
+              Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Save-as-template dialog */}
       <Dialog

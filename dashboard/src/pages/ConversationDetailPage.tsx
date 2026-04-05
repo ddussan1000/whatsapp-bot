@@ -742,6 +742,7 @@ export function ConversationDetailPage() {
             />
             <textarea
               rows={1}
+              aria-label="Mensaje"
               placeholder={
                 file ? "Agrega un caption (opcional)…" : "Escribe un mensaje…"
               }

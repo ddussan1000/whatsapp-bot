@@ -10,16 +10,21 @@ export function HomePage() {
   return (
     <section>
       <h2>Resumen de hoy</h2>
-      {isLoading ? <p className="muted">Cargando métricas...</p> : null}
       <div className="grid stats-grid">
         <StatCard
           title="Total ventas"
           value={`$${total.toLocaleString("es-CO")}`}
+          loading={isLoading}
         />
-        <StatCard title="Cantidad pagos" value={String(count)} />
+        <StatCard
+          title="Cantidad pagos"
+          value={String(count)}
+          loading={isLoading}
+        />
         <StatCard
           title="Ticket promedio"
           value={`$${average.toLocaleString("es-CO")}`}
+          loading={isLoading}
         />
       </div>
     </section>

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
   Building2,
   Check,
+  Copy,
   Hash,
   Pencil,
   RefreshCw,
@@ -261,6 +262,20 @@ export function OrganizationPage() {
                   <code className="rounded border bg-muted px-2 py-0.5 text-xs font-mono">
                     {org.data?.organization.slug}
                   </code>
+                  <button
+                    type="button"
+                    aria-label="Copiar slug"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => {
+                      const slug = org.data?.organization.slug;
+                      if (slug) {
+                        void navigator.clipboard.writeText(slug);
+                        toast.success("Slug copiado");
+                      }
+                    }}
+                  >
+                    <Copy size={13} />
+                  </button>
                 </div>
                 <p className="text-[11px] text-muted-foreground max-w-xs">
                   Identificador interno de solo lectura. Se usa en integraciones

@@ -221,7 +221,7 @@ export function ConversationsPage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Search */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <label htmlFor="conv-search" className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Buscar
             </label>
             <div className="relative">
@@ -230,6 +230,7 @@ export function ConversationsPage() {
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
               <Input
+                id="conv-search"
                 placeholder="Teléfono o nombre…"
                 value={search}
                 onChange={(e) => {
@@ -255,7 +256,7 @@ export function ConversationsPage() {
 
           {/* Stage filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <label htmlFor="conv-state" className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Estado
             </label>
             <Select
@@ -265,7 +266,7 @@ export function ConversationsPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger id="conv-state" className="h-9 text-sm" aria-label="Filtrar por estado">
                 <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
@@ -281,7 +282,7 @@ export function ConversationsPage() {
 
           {/* Flow filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <label htmlFor="conv-flow" className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Flujo
             </label>
             <Select
@@ -292,7 +293,7 @@ export function ConversationsPage() {
               }}
               disabled={!hasFlowOptions}
             >
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger id="conv-flow" className="h-9 text-sm" aria-label="Filtrar por flujo">
                 <SelectValue placeholder="Todos los flujos" />
               </SelectTrigger>
               <SelectContent>
@@ -308,7 +309,7 @@ export function ConversationsPage() {
 
           {/* Ad filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <label htmlFor="conv-ad" className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Anuncio Meta
             </label>
             <Select
@@ -319,7 +320,7 @@ export function ConversationsPage() {
               }}
               disabled={!hasAdOptions}
             >
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger id="conv-ad" className="h-9 text-sm" aria-label="Filtrar por anuncio">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
