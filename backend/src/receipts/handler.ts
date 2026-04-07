@@ -230,6 +230,12 @@ export async function classifyAndHandleImage(
       state: "pending_manual_review",
       meta_message_id: (msg as unknown as { id?: string }).id ?? null,
     });
+    await supabase
+      ?.from("scheduled_flow_messages")
+      .update({ status: "cancelled" })
+      .eq("organization_id", state.organizationId)
+      .eq("phone", phone)
+      .eq("status", "pending");
     await sendMessage(phone, textMessage(pendingMessage), msgCtx(state));
     return {
       handled: true,
@@ -260,6 +266,12 @@ export async function classifyAndHandleImage(
     state: "validated",
     meta_message_id: (msg as unknown as { id?: string }).id ?? null,
   });
+  await supabase
+    ?.from("scheduled_flow_messages")
+    .update({ status: "cancelled" })
+    .eq("organization_id", state.organizationId)
+    .eq("phone", phone)
+    .eq("status", "pending");
 
   await sendMessage(phone, textMessage(confirmedMessage), msgCtx(state));
   return { handled: true, state: { ...state, stage: "pago_confirmado" } };
