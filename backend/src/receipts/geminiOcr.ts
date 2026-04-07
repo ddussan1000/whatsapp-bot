@@ -29,6 +29,8 @@ export async function runGeminiOcr(
 ): Promise<GeminiOcrResult> {
   if (!env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
+  log.info({ model: "gemini-2.0-flash-lite", currency }, "geminiOcr: iniciando llamada a Gemini API");
+
   const compressed = await compressForGemini(imgBuffer);
   const base64 = compressed.toString("base64");
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
@@ -65,9 +67,14 @@ Rules:
     .replace(/```(?:json)?\s*/g, "")
     .replace(/```/g, "")
     .trim();
-  log.info({ raw }, "geminiOcr: respuesta raw de Gemini");
+  const rawPreview = raw.slice(0, 500);
+  log.info({ raw: rawPreview }, "geminiOcr: respuesta raw de Gemini");
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
+    log.info(
+      { isReceipt: parsed.isReceipt, amount: parsed.amount, date: parsed.date },
+      "geminiOcr: JSON parseado correctamente",
+    );
     return {
       isReceipt: parsed.isReceipt === true,
       amount: typeof parsed.amount === "number" ? parsed.amount : null,
@@ -85,7 +92,9 @@ Rules:
           : null,
     };
   } catch (err) {
-    log.error({ err, raw }, "geminiOcr: error parseando JSON de respuesta");
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("[geminiOcr] JSON parse error:", errMsg, "raw:", raw);
+    log.error({ errMsg, raw: rawPreview }, "geminiOcr: error parseando JSON de respuesta");
     return {
       isReceipt: false,
       amount: null,

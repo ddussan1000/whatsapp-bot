@@ -342,15 +342,18 @@ export async function runOcrWithFallback(
         "OCR: Gemini detectó comprobante pero no extrajo datos → fallback a Tesseract",
       );
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const errStack = err instanceof Error ? err.stack : undefined;
+      console.error("[OCR] Gemini error:", errMsg, errStack);
       log.error(
-        { err },
+        { errMsg, errStack },
         "OCR: Gemini lanzó error → fallback a Tesseract",
       );
     }
   }
 
   // Tesseract path
-  log.info("OCR: ejecutando Tesseract");
+  log.info({ useGemini }, "OCR: ejecutando Tesseract");
   const ocrText = await runOcr(imgBuffer);
   const likelyReceipt = isLikelyReceipt(ocrText);
   log.info(
