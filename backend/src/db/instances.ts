@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { safeDecrypt } from "../crypto/encrypt";
 
 export type WhatsAppInstance = {
   id: string;
@@ -8,9 +9,19 @@ export type WhatsAppInstance = {
   app_secret: string | null;
   is_active: boolean;
   flow_id?: string | null;
+  currency?: string | null;
 };
 
-const INSTANCE_SELECT = "id, organization_id, phone_number_id, meta_token, app_secret, is_active, flow_id";
+const INSTANCE_SELECT = "id, organization_id, phone_number_id, meta_token, app_secret, is_active, flow_id, currency";
+
+async function decryptInstance(data: WhatsAppInstance | null): Promise<WhatsAppInstance | null> {
+  if (!data) return null;
+  return {
+    ...data,
+    meta_token: await safeDecrypt(data.meta_token),
+    app_secret: await safeDecrypt(data.app_secret),
+  };
+}
 
 export async function getInstanceByPhoneNumberId(organizationId: string, phoneNumberId: string) {
   if (!supabase) return null;
@@ -20,7 +31,7 @@ export async function getInstanceByPhoneNumberId(organizationId: string, phoneNu
     .eq("organization_id", organizationId)
     .eq("phone_number_id", phoneNumberId)
     .maybeSingle<WhatsAppInstance>();
-  return data ?? null;
+  return decryptInstance(data ?? null);
 }
 
 export async function getActiveInstanceByPhoneNumberId(phoneNumberId: string) {
@@ -33,6 +44,5 @@ export async function getActiveInstanceByPhoneNumberId(phoneNumberId: string) {
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle<WhatsAppInstance>();
-  return data ?? null;
+  return decryptInstance(data ?? null);
 }
-

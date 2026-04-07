@@ -73,26 +73,27 @@ const SETUP_STEPS = [
     required: true,
     description:
       "Un flow define qué mensajes envía el bot, en qué orden y con qué tiempos de espera entre pasos. Podés crear uno desde cero o guardar uno existente como plantilla para reutilizarlo.",
-    tip: "Los delays mínimos recomendados son 15-30 segundos. El cron de mensajes programados corre cada 5 segundos, así que delays menores a eso pueden no respetarse con exactitud.",
+    tip: "Los tiempos mínimos recomendados entre mensajes son 15-30 segundos para que el cliente no reciba todo de golpe.",
   },
   {
     step: 5,
-    title: "Asigná el flow al número",
+    title: "Asigná el flow al número y configurá la divisa",
     nav: "Números de WhatsApp",
     icon: Zap,
     required: true,
     description:
-      "En Números de WhatsApp editá tu instancia y seleccioná el flow activo. A partir de ese momento el bot empieza a procesar mensajes entrantes.",
+      "En Números de WhatsApp editá tu instancia, seleccioná el flow activo y elegí la divisa (COP, USD, EUR, etc.). La divisa se usa para interpretar los montos en los comprobantes de pago y se muestra en el módulo de Pagos.",
+    tip: "Cada número puede tener su propia divisa. Si tu negocio opera en varios países con distintas monedas, creá un número por divisa.",
   },
   {
     step: 6,
-    title: "Configurá el proveedor de IA",
+    title: "Configurá tu API key de IA (opcional)",
     nav: "Configuración",
     icon: MessageSquare,
     required: false,
     description:
-      "La plataforma soporta Groq, Gemini y Anthropic para responder mensajes libres fuera del flow. También podés definir un system prompt global en Configuración o sobreescribirlo individualmente por flow.",
-    tip: "Groq (llama-3.3-70b-versatile) es la opción más rápida y económica. Gemini y Anthropic son alternativas si ya tenés API keys de esos proveedores.",
+      "Si querés que el bot responda con IA cuando un cliente escribe después de terminar un flujo, configurá tu propio proveedor en Configuración → API Key de IA. Podés elegir entre OpenAI, Gemini, Anthropic o Groq, e ingresar tu API key personal. Sin esto el bot simplemente no responde mensajes fuera de los pasos del flujo.",
+    tip: "Usá el botón «Verificar conexión» para confirmar que la API key y el modelo elegido funcionan antes de guardar. El reconocimiento de comprobantes de pago es independiente y no requiere esta configuración.",
   },
   {
     step: 7,
@@ -101,8 +102,8 @@ const SETUP_STEPS = [
     icon: Megaphone,
     required: false,
     description:
-      "Si tenés anuncios Click-to-WhatsApp, podés mapear cada ctwa_clid a un flow específico. El ctwa_clid llega en el objeto referral del webhook y se registra automáticamente en Reportes → Anuncios.",
-    tip: "Si el token tiene el permiso ads_read, la plataforma enriquece automáticamente los registros con el nombre del anuncio, la campaña y el adset consultando la Graph API.",
+      "Si tenés anuncios Click-to-WhatsApp en Meta, podés asignarle un flow específico a cada anuncio. Cuando alguien hace click y te escribe, la plataforma detecta de qué anuncio proviene y lo registra en Reportes → Anuncios.",
+    tip: "Si el token tiene el permiso ads_read, la plataforma muestra automáticamente el nombre del anuncio, la campaña y el conjunto de anuncios junto con cada registro.",
   },
 ];
 
@@ -154,18 +155,18 @@ const MODULES = [
     description:
       "Lista completa de conversaciones con historial de mensajes, filtros avanzados y composer para responder manualmente.",
     details:
-      "Filtrá por estado, flujo activo o anuncio de origen. El chat carga los últimos 50 mensajes; al hacer scroll arriba carga los anteriores. Desde el detalle podés ver el nombre del contacto, actualizar el estado manualmente y ver de qué anuncio provino el cliente.",
-    tip: "El nombre del contacto se obtiene automáticamente desde Meta cuando el cliente envía su primer mensaje.",
+      "Filtrá por estado, flujo activo o anuncio de origen. El historial de chat carga los mensajes más recientes; al subir carga los anteriores. Desde el detalle podés ver la información del cliente, cambiar el estado de la conversación manualmente y ver de qué anuncio llegó.",
+    tip: "El número de teléfono del cliente es el identificador principal. No se guardan nombres de contacto de Meta.",
   },
   {
     name: "Pagos",
     nav: "Pagos",
     icon: Receipt,
     description:
-      "Comprobantes de pago procesados por OCR con monto, fecha y estado.",
+      "Comprobantes de pago procesados por IA con monto, divisa, fecha y estado.",
     details:
-      "El pipeline: descarga la imagen con el META_TOKEN → OCR con Tesseract en español → extrae monto y fecha → valida que sea de las últimas 24h → inserta en payments con estado validated, pending_manual_review o rechazado.",
-    tip: "Si los comprobantes quedan en pending_manual_review, generalmente es porque el OCR no pudo extraer la fecha. El monto sí se registra.",
+      "Cuando un cliente manda una imagen de comprobante, la plataforma la analiza automáticamente con IA, extrae el monto, la divisa y la fecha, y valida que sea de las últimas 24 horas. La divisa mostrada corresponde a la configurada en el número de WhatsApp que recibió el comprobante.",
+    tip: "Si los comprobantes quedan en pending_manual_review, generalmente es porque no se pudo extraer la fecha. El monto sí se registra.",
   },
   {
     name: "Reportes",
@@ -181,10 +182,10 @@ const MODULES = [
     nav: "Flows",
     icon: Workflow,
     description:
-      "Editor de flows: steps con delay_seconds, mensajes (texto/imagen/documento/video) y configuración de trigger.",
+      "Editor de flujos: pasos con tiempo de espera entre mensajes, soporte para texto, imágenes, documentos y videos.",
     details:
-      "Cada flow tiene: trigger_phrase, keywords[], no_match_behavior (trigger|ignore), session_timeout_hours y un system_prompt propio para el proveedor de IA (sobreescribe el global). También podés configurar mensajes de pago personalizados por flow: pendiente, rechazado y confirmado.",
-    tip: "session_timeout_hours=0 significa que cada mensaje del usuario es tratado como una sesión nueva, pero siempre requiere trigger explícito para iniciar el flow.",
+      "Cada flujo tiene una frase de activación (lo que el cliente debe escribir para iniciarlo), palabras clave alternativas, tiempo de sesión y un prompt de IA propio que sobreescribe el global. También podés personalizar los mensajes de respuesta de pago (pendiente, rechazado y confirmado) por flujo.",
+    tip: "Con tiempo de sesión en 0, el bot trata cada mensaje como una conversación nueva y siempre requiere que el cliente escriba la frase de activación.",
   },
   {
     name: "Plantillas",
@@ -202,7 +203,7 @@ const MODULES = [
     description:
       "Gestión de instancias: credenciales Meta, webhook config y asignación de flow.",
     details:
-      "Cada instancia almacena: phone_number_id, meta_token (cifrado), waba_id, meta_app_id y el flow_id asignado. El health check llama a la Graph API para verificar token y permisos en tiempo real.",
+      "Cada número tiene su propio token de acceso (guardado de forma segura), el flujo que tiene asignado y la divisa configurada para sus pagos. El botón «Verificar conexión» confirma en tiempo real que el token es válido y tiene los permisos necesarios.",
     tip: "Si el health check retorna insufficient_permissions, el token existe pero le faltan permisos. Regenerálo con los permisos correctos.",
   },
   {
@@ -244,16 +245,16 @@ const FAQS = [
     a: "Abrí la conversación y presioná el ícono de información (ⓘ) en la parte superior derecha. En el modal de detalles encontrarás el selector de Estado donde podés cambiarlo al valor que necesites.",
   },
   {
-    q: "¿Qué diferencia hay entre session_timeout_hours=0 y un valor mayor?",
-    a: "Con 0 el flow siempre requiere trigger explícito para iniciarse (cada mensaje es sesión nueva). Con un valor mayor, una vez que el flow arrancó, los mensajes del usuario dentro de ese tiempo van al handler de IA sin reiniciar el flow desde el paso 0.",
+    q: "¿Qué diferencia hay entre tiempo de sesión en 0 y un valor mayor?",
+    a: "Con tiempo de sesión en 0, el bot trata cada mensaje como el inicio de una conversación nueva y siempre necesita que el cliente escriba la frase de activación. Con un valor mayor (por ejemplo, 24 horas), una vez que el flujo arrancó el bot responde con IA sin reiniciar el flujo durante ese período.",
   },
   {
-    q: "¿Cómo funciona no_match_behavior?",
-    a: '"trigger" hace que cualquier mensaje (aunque no coincida con el trigger_phrase) pase al handler de IA si hay sesión activa. "ignore" hace que mensajes sin match sean ignorados cuando la sesión necesita trigger.',
+    q: "¿Qué pasa si el cliente escribe algo que no coincide con ningún flujo?",
+    a: "Depende de la configuración del flujo: si está en modo «responder», el bot le responde con IA si hay sesión activa. Si está en modo «ignorar», el bot no responde mensajes que no coincidan con ninguna palabra clave o frase de activación.",
   },
   {
-    q: "¿Por qué se envían dos pasos del flow al mismo tiempo?",
-    a: "El cron de mensajes programados corre cada 5 segundos. Si dos steps tienen scheduled_at con menos de 5 segundos de diferencia, pueden quedar en el mismo batch. Usá delays de al menos 10-15 segundos entre pasos para garantizar entrega separada.",
+    q: "¿Por qué se envían dos pasos del flujo al mismo tiempo?",
+    a: "Los tiempos de espera entre pasos se respetan con una precisión de pocos segundos. Si configurás tiempos muy cortos (menos de 10 segundos) entre pasos consecutivos, podrían llegar juntos. Usá tiempos de al menos 15 segundos para garantizar entrega separada.",
   },
   {
     q: "¿Qué token debo usar para producción?",
@@ -264,8 +265,8 @@ const FAQS = [
     a: "Una vez que alguien hace click en el anuncio, el ctwa_clid aparece en Reportes → Anuncios. Copiás ese ctwa_clid y lo mapeás al flow deseado en la sección CTWA Ads.",
   },
   {
-    q: "¿Qué proveedor de IA es mejor?",
-    a: "Para respuestas rápidas y bajo costo: Groq (llama-3.3-70b-versatile). Para mayor capacidad de razonamiento: Anthropic (claude-3-5-haiku) o Gemini (gemini-2.0-flash-lite). Todos se configuran con AI_PROVIDER y la API key correspondiente.",
+    q: "¿Qué proveedor de IA elijo para las respuestas automáticas?",
+    a: "Todos funcionan bien. Groq es el más rápido y económico. OpenAI (GPT) es el más conocido. Anthropic (Claude) y Gemini son excelentes alternativas si ya tenés cuenta en esos servicios. Todos se configuran desde Configuración → API Key de IA con tu propia clave.",
   },
   {
     q: "¿Cómo verifico que el token tiene los permisos correctos?",
@@ -509,20 +510,20 @@ export function InstructionsPage() {
           {[
             {
               icon: Zap,
-              title: "1. Trigger evaluation",
-              desc: "Compara el mensaje con trigger_phrase, trigger_first_word y keywords[]. Si session_timeout_hours > 0 y hay sesión activa, el mensaje va directo al handler de IA.",
+              title: "1. Activación del flujo",
+              desc: "Cuando el cliente escribe, el bot verifica si el mensaje coincide con la frase de activación o las palabras clave del flujo. Si hay una sesión activa y vigente, el mensaje se envía directamente al asistente de IA.",
               color: "text-amber-500",
             },
             {
               icon: Clock,
-              title: "2. Steps programados",
-              desc: "El paso 0 se envía inmediatamente. Los siguientes se insertan en scheduled_flow_messages con scheduled_at = now() + delay_seconds acumulado. El cron los procesa cada 5 segundos.",
+              title: "2. Envío con tiempos de espera",
+              desc: "El primer mensaje se envía de inmediato. Los siguientes se programan con el tiempo de espera configurado en cada paso, para que el cliente los reciba de forma natural y escalonada.",
               color: "text-blue-500",
             },
             {
               icon: MessageSquare,
-              title: "3. IA para mensajes libres",
-              desc: "Mensajes fuera del flow van al proveedor de IA configurado (Groq/Gemini/Anthropic) con el system_prompt del flow. La respuesta se espera en formato JSON {reply, next_state, send_catalog}.",
+              title: "3. Respuestas con IA",
+              desc: "Si el cliente escribe después de que el flujo terminó, el bot lo responde usando la IA configurada en tu cuenta. Si no configuraste una API key de IA, el bot no responde esos mensajes.",
               color: "text-emerald-500",
             },
           ].map((item) => {
@@ -561,16 +562,16 @@ export function InstructionsPage() {
               desc: "Usa el token de la instancia para llamar a graph.facebook.com/v19.0/{mediaId} y descargar la imagen. Requiere whatsapp_business_messaging.",
             },
             {
-              title: "2. Pre-procesamiento + OCR",
-              desc: "Convierte la imagen a escala de grises, normaliza y aplica Tesseract OCR en español para extraer el texto.",
+              title: "2. Reconocimiento con IA",
+              desc: "La imagen se analiza con IA (Gemini Vision) indicándole la divisa configurada en tu número. Extrae si es un comprobante válido, el monto, la divisa y la fecha.",
             },
             {
-              title: "3. Clasificación",
-              desc: "Busca al menos 2 keywords de una lista de 40+ términos (nequi, daviplata, comprobante, pago, etc.). Si no se detectan, la imagen no es un comprobante.",
+              title: "3. Verificación de fecha",
+              desc: "Se valida que el comprobante tenga una fecha de las últimas 24 horas. Si la fecha no se puede leer, el pago queda en revisión manual para que vos lo verifiques.",
             },
             {
-              title: "4. Extracción de campos",
-              desc: "Extrae monto (regex de formatos $1.200, $1,200.00, etc.) y fecha (formatos numéricos y literales en español). Valida que sea de las últimas 24h.",
+              title: "4. Registro del pago",
+              desc: "Se guarda el pago con monto, divisa del número y estado: confirmado, en revisión manual o rechazado. También se le envía al cliente el mensaje de respuesta configurado.",
             },
           ].map((item) => (
             <div
@@ -654,7 +655,7 @@ export function InstructionsPage() {
               "Flow creado con al menos un paso y trigger phrase definido",
               "Flow asignado al número en Números de WhatsApp",
               "Verificar conexión: status connected",
-              "Proveedor de IA configurado si querés respuestas a mensajes libres (opcional)",
+              "API key de IA configurada en Configuración si querés que el bot responda cuando el cliente escribe después de un flujo (opcional)",
               "ads_read en el token si querés enriquecimiento automático de datos de anuncios (opcional)",
             ].map((item, i) => (
               <li key={i} className="flex items-start gap-2">

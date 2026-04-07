@@ -1,8 +1,9 @@
-import { askAssistant } from "../ai/assistant";
+import { askAssistantForOrg } from "../ai/assistant";
 import { textMessage } from "./messages";
 import { sendMessage } from "./sender";
 import type { ConversationState } from "../types";
 import { getFlowById } from "../db/flows";
+import { getOrgAiConfig } from "../db/organizations";
 import { log } from "../logger";
 
 async function resolvePrompt(flowId: string | null, fallbackName: string | null): Promise<string> {
@@ -30,8 +31,18 @@ export async function handleFlow(_type: string, phone: string, text: string, sta
     flowId: state.flowId,
   };
 
-  const systemPrompt = await resolvePrompt(state.flowId ?? null, state.flowName ?? null);
-  const ai = await askAssistant(text, systemPrompt);
+  const [systemPrompt, orgConfig] = await Promise.all([
+    resolvePrompt(state.flowId ?? null, state.flowName ?? null),
+    getOrgAiConfig(state.organizationId),
+  ]);
+
+  const ai = await askAssistantForOrg(text, orgConfig, systemPrompt);
+
+  // AI is disabled for this org - don't respond
+  if (ai === null) {
+    log.info({ phone, organizationId: state.organizationId }, "handleFlow: AI disabled for org, skipping response");
+    return { ...state, flowName: state.flowName ?? null };
+  }
 
   if (!ai.reply) {
     log.warn({ phone, type: _type, event: "bot.ai_empty_reply" }, "AI returned empty reply, using fallback");

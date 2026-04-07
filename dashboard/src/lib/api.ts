@@ -327,6 +327,21 @@ export const api = {
         return r.json() as Promise<UpdateBotConfigResponse>;
       })
     ),
+  validateAiProvider: (payload: {
+    provider: "openai" | "gemini" | "anthropic" | "groq";
+    apiKey: string;
+    model: string;
+  }) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/config/bot/validate-ai`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean; error?: string }>;
+      })
+    ),
   getFlowTemplates: () => request<FlowTemplate[]>("/api/flow-templates"),
   createFlowTemplate: (payload: CreateFlowTemplateBody) =>
     buildHeaders(true).then((headers) =>

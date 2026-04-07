@@ -2,33 +2,102 @@ import sharp from "sharp";
 import Tesseract from "tesseract.js";
 
 const RECEIPT_KEYWORDS = [
-  "comprobante", "pago", "transaccion", "transferencia", "recibo",
-  "deposito", "consignacion", "nequi", "daviplata", "bancolombia",
-  "davivienda", "banco", "bbva", "scotiabank", "colpatria", "popular",
-  "exitoso", "exitosa", "aprobado", "aprobada", "confirmado", "confirmada",
-  "valor", "monto", "total", "referencia", "ref", "numero de operacion",
-  "clave", "cta", "cuenta", "debito", "credito", "ahorro", "corriente",
-  "pse", "efecty", "giro", "remesa", "corresponsal", "transf", "movimiento",
-  "compra", "abono", "retiro", "ingreso", "egreso", "saldo", "destinatario",
-  "beneficiario", "ordenante", "cus", "aprobacion", "voucher", "recaudo",
-  "billetera", "billetera digital", "codigo de barras", "codigo qr",
-  "autorizacion", "entidad", "sucursal", "cajero", "receipt", "payment",
-  "transaction", "transfer", "approved", "amount",
+  "comprobante",
+  "pago",
+  "transaccion",
+  "transferencia",
+  "recibo",
+  "deposito",
+  "consignacion",
+  "nequi",
+  "daviplata",
+  "bancolombia",
+  "davivienda",
+  "banco",
+  "bbva",
+  "scotiabank",
+  "colpatria",
+  "popular",
+  "exitoso",
+  "exitosa",
+  "aprobado",
+  "aprobada",
+  "confirmado",
+  "confirmada",
+  "valor",
+  "monto",
+  "total",
+  "referencia",
+  "ref",
+  "numero de operacion",
+  "clave",
+  "cta",
+  "cuenta",
+  "debito",
+  "credito",
+  "ahorro",
+  "corriente",
+  "pse",
+  "efecty",
+  "giro",
+  "remesa",
+  "corresponsal",
+  "transf",
+  "movimiento",
+  "compra",
+  "abono",
+  "retiro",
+  "ingreso",
+  "egreso",
+  "saldo",
+  "destinatario",
+  "beneficiario",
+  "ordenante",
+  "cus",
+  "aprobacion",
+  "voucher",
+  "recaudo",
+  "billetera",
+  "billetera digital",
+  "codigo de barras",
+  "codigo qr",
+  "autorizacion",
+  "entidad",
+  "sucursal",
+  "cajero",
+  "receipt",
+  "payment",
+  "transaction",
+  "transfer",
+  "approved",
+  "amount",
 ];
 
 const monthMap: Record<string, number> = {
-  enero: 1, ene: 1,
-  febrero: 2, feb: 2,
-  marzo: 3, mar: 3,
-  abril: 4, abr: 4,
+  enero: 1,
+  ene: 1,
+  febrero: 2,
+  feb: 2,
+  marzo: 3,
+  mar: 3,
+  abril: 4,
+  abr: 4,
   mayo: 5,
-  junio: 6, jun: 6,
-  julio: 7, jul: 7,
-  agosto: 8, ago: 8,
-  septiembre: 9, setiembre: 9, sep: 9,
-  octubre: 10, oct: 10,
-  noviembre: 11, nov: 11,
-  diciembre: 12, dic: 12,
+  junio: 6,
+  jun: 6,
+  julio: 7,
+  jul: 7,
+  agosto: 8,
+  ago: 8,
+  septiembre: 9,
+  setiembre: 9,
+  sep: 9,
+  octubre: 10,
+  oct: 10,
+  noviembre: 11,
+  nov: 11,
+  diciembre: 12,
+  dic: 12,
 };
 
 function normalizeText(raw: string) {
@@ -65,7 +134,9 @@ function parseReceiptDate(text: string): Date | null {
   if (numeric?.[1] && numeric?.[2] && numeric?.[3]) {
     const day = Number(numeric[1]);
     const month = Number(numeric[2]);
-    const year = Number(numeric[3].length === 2 ? `20${numeric[3]}` : numeric[3]);
+    const year = Number(
+      numeric[3].length === 2 ? `20${numeric[3]}` : numeric[3],
+    );
     const { hours, minutes } = parseTime(numeric[4], numeric[5]);
     return new Date(year, month - 1, day, hours, minutes, 0, 0);
   }
@@ -103,7 +174,11 @@ function parseReceiptDate(text: string): Date | null {
 const OCR_TIMEOUT_MS = 30_000;
 
 export async function runOcr(imgBuffer: Buffer): Promise<string> {
-  const processed = await sharp(imgBuffer).grayscale().normalize().sharpen().toBuffer();
+  const processed = await sharp(imgBuffer)
+    .grayscale()
+    .normalize()
+    .sharpen()
+    .toBuffer();
   const { data } = await Promise.race([
     Tesseract.recognize(processed, "spa"),
     new Promise<never>((_, reject) =>
@@ -142,8 +217,12 @@ export function extractPaymentFields(ocrText: string) {
   }
 
   const receiptDate = parseReceiptDate(ocrText);
-  const hoursDiff = receiptDate ? (Date.now() - receiptDate.getTime()) / 3600000 : null;
-  const isWithin24Hours = receiptDate ? hoursDiff !== null && hoursDiff <= 24 && hoursDiff >= 0 : false;
+  const hoursDiff = receiptDate
+    ? (Date.now() - receiptDate.getTime()) / 3600000
+    : null;
+  const isWithin24Hours = receiptDate
+    ? hoursDiff !== null && hoursDiff <= 24 && hoursDiff >= 0
+    : false;
   return { text: ocrText, amount, receiptDate, isWithin24Hours };
 }
 
@@ -151,4 +230,109 @@ export function extractPaymentFields(ocrText: string) {
 export async function extractPaymentData(imgBuffer: Buffer) {
   const text = await runOcr(imgBuffer);
   return extractPaymentFields(text);
+}
+
+// ── Unified OCR with Gemini fallback ──────────────────────────────────────
+
+import { env } from "../config/env";
+
+export type OcrResult = {
+  amount: number | null;
+  receiptDate: Date | null;
+  isWithin24Hours: boolean;
+  isLikelyReceipt: boolean;
+  rawText: string;
+  ocrProvider: "gemini" | "tesseract" | "gemini_then_tesseract";
+  currency: string | null;
+};
+
+export async function runOcrWithFallback(
+  imgBuffer: Buffer,
+  currency = "COP",
+): Promise<OcrResult> {
+  const useGemini =
+    env.OCR_PROVIDER === "gemini" ||
+    (env.OCR_PROVIDER === "auto" && !!env.GEMINI_API_KEY);
+
+  if (useGemini) {
+    try {
+      const { runGeminiOcr } = await import("./geminiOcr");
+      const geminiResult = await runGeminiOcr(imgBuffer, currency);
+
+      if (!geminiResult.isReceipt) {
+        return {
+          amount: null,
+          receiptDate: null,
+          isWithin24Hours: false,
+          isLikelyReceipt: false,
+          rawText: "",
+          ocrProvider: "gemini",
+          currency: null,
+        };
+      }
+
+      if (geminiResult.amount !== null || geminiResult.date !== null) {
+        let receiptDate: Date | null = null;
+        if (geminiResult.date) {
+          const m = geminiResult.date.match(
+            /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/,
+          );
+          if (m?.[1] && m[2] && m[3]) {
+            const year = m[3].length === 2 ? `20${m[3]}` : m[3];
+            receiptDate = new Date(
+              Number(year),
+              Number(m[2]) - 1,
+              Number(m[1]),
+            );
+          } else {
+            const d = new Date(geminiResult.date);
+            if (!isNaN(d.getTime())) receiptDate = d;
+          }
+        }
+        const hoursDiff = receiptDate
+          ? (Date.now() - receiptDate.getTime()) / 3600000
+          : null;
+        return {
+          amount: geminiResult.amount,
+          receiptDate,
+          isWithin24Hours:
+            receiptDate && hoursDiff !== null
+              ? hoursDiff <= 24 && hoursDiff >= 0
+              : false,
+          isLikelyReceipt: true,
+          rawText: `[Gemini] amount=${geminiResult.amount} date=${geminiResult.date} ref=${geminiResult.reference}`,
+          ocrProvider: "gemini",
+          currency: geminiResult.currency,
+        };
+      }
+      // Gemini detected receipt but no data extracted → fall through to Tesseract
+    } catch {
+      // Gemini failed → fall through to Tesseract
+    }
+  }
+
+  // Tesseract path
+  const ocrText = await runOcr(imgBuffer);
+  const likelyReceipt = isLikelyReceipt(ocrText);
+  if (!likelyReceipt) {
+    return {
+      amount: null,
+      receiptDate: null,
+      isWithin24Hours: false,
+      isLikelyReceipt: false,
+      rawText: ocrText,
+      ocrProvider: useGemini ? "gemini_then_tesseract" : "tesseract",
+      currency: null,
+    };
+  }
+  const fields = extractPaymentFields(ocrText);
+  return {
+    amount: fields.amount,
+    receiptDate: fields.receiptDate,
+    isWithin24Hours: fields.isWithin24Hours,
+    isLikelyReceipt: true,
+    rawText: ocrText,
+    ocrProvider: useGemini ? "gemini_then_tesseract" : "tesseract",
+    currency,
+  };
 }

@@ -250,6 +250,7 @@ function EditDialog({
   const [selectedFlow, setSelectedFlow] = useState(
     instance.flow_id ?? NO_FLOW_VALUE
   );
+  const [currency, setCurrency] = useState(instance.currency ?? "COP");
   const [showToken, setShowToken] = useState(false);
 
   const activeFlows = flows.filter((f) => f.is_active);
@@ -264,6 +265,7 @@ function EditDialog({
           wabaId: wabaId.trim() || undefined,
           metaAppId: metaAppId.trim() || undefined,
           displayPhoneNumber: displayPhone.trim() || undefined,
+          currency: currency || undefined,
         },
       },
       {
@@ -480,6 +482,41 @@ function EditDialog({
 
           <Separator />
 
+          {/* Sección: Moneda y Flow */}
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Configuración de pagos
+            </p>
+            <Field
+              label="Moneda"
+              hint="Divisa que usan los pagos recibidos en este número. Se usa para interpretar los comprobantes correctamente."
+            >
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar moneda" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="COP">COP — Peso colombiano</SelectItem>
+                  <SelectItem value="USD">
+                    USD — Dólar estadounidense
+                  </SelectItem>
+                  <SelectItem value="EUR">EUR — Euro</SelectItem>
+                  <SelectItem value="MXN">MXN — Peso mexicano</SelectItem>
+                  <SelectItem value="BRL">BRL — Real brasileño</SelectItem>
+                  <SelectItem value="ARS">ARS — Peso argentino</SelectItem>
+                  <SelectItem value="CLP">CLP — Peso chileno</SelectItem>
+                  <SelectItem value="PEN">PEN — Sol peruano</SelectItem>
+                  <SelectItem value="VES">VES — Bolívar venezolano</SelectItem>
+                  <SelectItem value="GTQ">
+                    GTQ — Quetzal guatemalteco
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+
+          <Separator />
+
           {/* Sección: Flow activo */}
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -595,6 +632,7 @@ export function InstancesPage() {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Número</TableHead>
+                <TableHead>Moneda</TableHead>
                 <TableHead>Flow activo</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -604,7 +642,7 @@ export function InstancesPage() {
               {instances.isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 5 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -613,7 +651,7 @@ export function InstancesPage() {
                 ))
               ) : (instances.data ?? []).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center">
+                  <TableCell colSpan={6} className="py-12 text-center">
                     <Smartphone
                       size={32}
                       className="mx-auto mb-2 text-muted-foreground/40"
@@ -643,6 +681,11 @@ export function InstancesPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {instance.display_phone_number ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {instance.currency ?? "COP"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {flowName ? (

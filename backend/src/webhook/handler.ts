@@ -1,15 +1,26 @@
 import type { Context } from "hono";
 import { classify } from "../bot/classifier";
 import { handleFlow } from "../bot/flows";
-import { startAssignedFlow, getFlowById as getFullFlow } from "../bot/flowEngine";
+import {
+  startAssignedFlow,
+  getFlowById as getFullFlow,
+} from "../bot/flowEngine";
 import { getState, setState, isDuplicate } from "../cache/redis";
-import type { ConversationState, WhatsAppMessage, WhatsAppReferral } from "../types";
+import type {
+  ConversationState,
+  WhatsAppMessage,
+  WhatsAppReferral,
+} from "../types";
 import { classifyAndHandleImage } from "../receipts/handler";
 import { upsertConversation } from "../db/conversations";
 import { log } from "../logger";
 import { alertAdmin } from "../alerts/telegram";
 import { insertMessageLog, updateMessageDeliveryStatus } from "../db/messages";
-import { findFlowByCtwaClid, getFlowById, matchesFlowTrigger } from "../db/flows";
+import {
+  findFlowByCtwaClid,
+  getFlowById,
+  matchesFlowTrigger,
+} from "../db/flows";
 import { getActiveInstanceByPhoneNumberId } from "../db/instances";
 import { supabase } from "../db/supabase";
 import { fetchAdDetails } from "../meta/adDetails";
@@ -42,14 +53,23 @@ async function logAdClick(
         source_url: referral.source_url ?? null,
         headline: referral.headline ?? null,
         body: referral.body ?? null,
-        media_type: referral.image?.id ? "image" : referral.video?.id ? "video" : null,
+        media_type: referral.image?.id
+          ? "image"
+          : referral.video?.id
+            ? "video"
+            : null,
         media_id: referral.image?.id || referral.video?.id || null,
       })
       .select("id")
       .single();
 
     // Enrich with ad/campaign/adset names from Meta Ads API (fire-and-forget)
-    if (row?.id && referral.source_id && referral.source_type === "ad" && metaToken) {
+    if (
+      row?.id &&
+      referral.source_id &&
+      referral.source_type === "ad" &&
+      metaToken
+    ) {
       fetchAdDetails(referral.source_id, metaToken)
         .then((details) => {
           if (!details.adName && !details.campaignName) return; // nothing enriched
@@ -78,8 +98,11 @@ export async function handleWebhook(c: Context) {
     const body = JSON.parse(rawBody);
     const entry = body.entry?.[0];
     const change = entry?.changes?.[0]?.value;
-    const metaPhoneNumberId = (change?.metadata?.phone_number_id ?? "") as string;
-    const instance = metaPhoneNumberId ? await getActiveInstanceByPhoneNumberId(metaPhoneNumberId) : null;
+    const metaPhoneNumberId = (change?.metadata?.phone_number_id ??
+      "") as string;
+    const instance = metaPhoneNumberId
+      ? await getActiveInstanceByPhoneNumberId(metaPhoneNumberId)
+      : null;
 
     // Verificar firma del webhook si la instancia tiene app_secret configurado
     if (instance?.app_secret) {
@@ -91,10 +114,17 @@ export async function handleWebhook(c: Context) {
     }
     const organizationId = instance?.organization_id ?? null;
     if (!organizationId) {
-      log.warn({ metaPhoneNumberId }, "Webhook ignorado: no se encontro instancia activa para phone_number_id");
+      log.warn(
+        { metaPhoneNumberId },
+        "Webhook ignorado: no se encontro instancia activa para phone_number_id",
+      );
       return c.text("ok");
     }
-    const statusUpdates = (change?.statuses ?? []) as Array<{ id?: string; status?: string; timestamp?: string }>;
+    const statusUpdates = (change?.statuses ?? []) as Array<{
+      id?: string;
+      status?: string;
+      timestamp?: string;
+    }>;
     if (statusUpdates.length > 0) {
       await Promise.all(
         statusUpdates
@@ -125,7 +155,10 @@ export async function handleWebhook(c: Context) {
     }
 
     const phone = msg.from;
-    const contactName = (change?.contacts as Array<{ profile?: { name?: string } }> | undefined)?.[0]?.profile?.name ?? null;
+    const contactName =
+      (
+        change?.contacts as Array<{ profile?: { name?: string } }> | undefined
+      )?.[0]?.profile?.name ?? null;
     const previousConversation = await supabase
       ?.from("conversations")
       .select("id, updated_at, flow_id, product")
@@ -140,28 +173,48 @@ export async function handleWebhook(c: Context) {
 
     const referral = extractReferral(msg);
     const ctwaClid = referral?.ctwa_clid ?? null;
-    const referredFlow = organizationId && ctwaClid ? await findFlowByCtwaClid(organizationId, ctwaClid) : null;
-    const assignedFlow = instance?.flow_id ? await getFlowById(instance.flow_id) : null;
+    const referredFlow =
+      organizationId && ctwaClid
+        ? await findFlowByCtwaClid(organizationId, ctwaClid)
+        : null;
+    const assignedFlow = instance?.flow_id
+      ? await getFlowById(instance.flow_id)
+      : null;
     const runtimeFlow = referredFlow ?? assignedFlow;
     if (!runtimeFlow) {
-      log.warn({ phone, organizationId, instanceId: instance?.id }, "Webhook ignorado: instancia sin flow asignado");
+      log.warn(
+        { phone, organizationId, instanceId: instance?.id },
+        "Webhook ignorado: instancia sin flow asignado",
+      );
       return c.text("ok");
     }
 
     if (referral) {
-      await logAdClick(organizationId, runtimeFlow.id, phone, referral, instance?.meta_token ?? null);
+      await logAdClick(
+        organizationId,
+        runtimeFlow.id,
+        phone,
+        referral,
+        instance?.meta_token ?? null,
+      );
     }
 
-    const lastUpdated = previous?.updated_at ? new Date(previous.updated_at).getTime() : 0;
+    const lastUpdated = previous?.updated_at
+      ? new Date(previous.updated_at).getTime()
+      : 0;
     const sessionTimeoutHours = runtimeFlow.session_timeout_hours ?? 24;
     // session_timeout_hours = 0 means "no persistent session" — treat every message as a fresh start
     const timeoutMs = sessionTimeoutHours * 60 * 60 * 1000;
-    const expired = sessionTimeoutHours === 0
-      ? true
-      : (lastUpdated > 0 ? Date.now() - lastUpdated > timeoutMs : true);
+    const expired =
+      sessionTimeoutHours === 0
+        ? true
+        : lastUpdated > 0
+          ? Date.now() - lastUpdated > timeoutMs
+          : true;
     const needsTrigger = !previous?.id || expired;
-    const inboundText = msg.type === "text" ? msg.text?.body ?? "" : "";
-    const triggerMatched = msg.type === "text" ? matchesFlowTrigger(inboundText, runtimeFlow) : true;
+    const inboundText = msg.type === "text" ? (msg.text?.body ?? "") : "";
+    const triggerMatched =
+      msg.type === "text" ? matchesFlowTrigger(inboundText, runtimeFlow) : true;
 
     // Guard: don't restart a flow that still has pending scheduled steps being delivered
     const pendingResult = supabase
@@ -180,7 +233,12 @@ export async function handleWebhook(c: Context) {
     const shouldStartFlow = !flowIsInProgress && needsTrigger && triggerMatched;
 
     // If session needs a trigger, the phrase didn't match, and no_match_behavior = "ignore" → drop the message
-    if (!flowIsInProgress && needsTrigger && !triggerMatched && runtimeFlow.no_match_behavior !== "trigger") {
+    if (
+      !flowIsInProgress &&
+      needsTrigger &&
+      !triggerMatched &&
+      runtimeFlow.no_match_behavior !== "trigger"
+    ) {
       return c.text("ok");
     }
 
@@ -196,7 +254,9 @@ export async function handleWebhook(c: Context) {
     const conversationId = conv?.id ?? state.id ?? null;
     const nextBaseState: ConversationState = {
       ...state,
-      ...(conversationId && conversationId.length > 0 ? { id: conversationId } : {}),
+      ...(conversationId && conversationId.length > 0
+        ? { id: conversationId }
+        : {}),
       organizationId,
       flowId: runtimeFlow.id,
       flowName: runtimeFlow.name,
@@ -209,7 +269,8 @@ export async function handleWebhook(c: Context) {
     await insertMessageLog({
       organizationId,
       conversationId,
-      whatsappInstanceId: instance?.id ?? nextBaseState.whatsappInstanceId ?? null,
+      whatsappInstanceId:
+        instance?.id ?? nextBaseState.whatsappInstanceId ?? null,
       flowId: runtimeFlow.id,
       phone,
       direction: "inbound",
@@ -218,7 +279,9 @@ export async function handleWebhook(c: Context) {
         msg.type === "text"
           ? text
           : msg.type === "interactive"
-            ? msg.interactive?.button_reply?.title ?? msg.interactive?.list_reply?.title ?? null
+            ? (msg.interactive?.button_reply?.title ??
+              msg.interactive?.list_reply?.title ??
+              null)
             : null,
       payload: msg as unknown as Record<string, unknown>,
       metaMessageId: (msg as unknown as { id?: string }).id ?? null,
@@ -227,14 +290,22 @@ export async function handleWebhook(c: Context) {
     let nextState: ConversationState = {
       ...nextBaseState,
       organizationId,
-      metaPhoneNumberId: metaPhoneNumberId || nextBaseState.metaPhoneNumberId || null,
+      metaPhoneNumberId:
+        metaPhoneNumberId || nextBaseState.metaPhoneNumberId || null,
       flowId: runtimeFlow.id,
       flowName: runtimeFlow.name,
-      whatsappInstanceId: instance?.id ?? nextBaseState.whatsappInstanceId ?? null,
+      whatsappInstanceId:
+        instance?.id ?? nextBaseState.whatsappInstanceId ?? null,
     };
 
     if (type === "image") {
-      const imgResult = await classifyAndHandleImage(msg, phone, nextState, instance?.meta_token ?? null);
+      const imgResult = await classifyAndHandleImage(
+        msg,
+        phone,
+        nextState,
+        instance?.meta_token ?? null,
+        instance?.currency ?? "COP",
+      );
       if (imgResult.handled) {
         nextState = imgResult.state;
       }

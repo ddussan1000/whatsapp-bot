@@ -7,6 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCreateInstanceMutation } from "@/lib/hooks";
 
 function Field({
@@ -49,6 +56,7 @@ export function InstanceCreatePage() {
   const [wabaId, setWabaId] = useState("");
   const [metaAppId, setMetaAppId] = useState("");
   const [displayPhone, setDisplayPhone] = useState("");
+  const [currency, setCurrency] = useState("COP");
   const [showToken, setShowToken] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
 
@@ -68,6 +76,7 @@ export function InstanceCreatePage() {
         wabaId: wabaId.trim() || undefined,
         metaAppId: metaAppId.trim() || undefined,
         displayPhoneNumber: displayPhone.trim() || undefined,
+        currency,
       },
       {
         onSuccess: () => {
@@ -129,6 +138,32 @@ export function InstanceCreatePage() {
                 onChange={(e) => setDisplayPhone(e.target.value)}
                 placeholder="+57 300 123 4567"
               />
+            </Field>
+            <Field
+              label="Moneda"
+              hint="Divisa que usan los pagos recibidos en este número. Se usa para interpretar los comprobantes de pago."
+            >
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar moneda" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="COP">COP — Peso colombiano</SelectItem>
+                  <SelectItem value="USD">
+                    USD — Dólar estadounidense
+                  </SelectItem>
+                  <SelectItem value="EUR">EUR — Euro</SelectItem>
+                  <SelectItem value="MXN">MXN — Peso mexicano</SelectItem>
+                  <SelectItem value="BRL">BRL — Real brasileño</SelectItem>
+                  <SelectItem value="ARS">ARS — Peso argentino</SelectItem>
+                  <SelectItem value="CLP">CLP — Peso chileno</SelectItem>
+                  <SelectItem value="PEN">PEN — Sol peruano</SelectItem>
+                  <SelectItem value="VES">VES — Bolívar venezolano</SelectItem>
+                  <SelectItem value="GTQ">
+                    GTQ — Quetzal guatemalteco
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
           </CardContent>
         </Card>

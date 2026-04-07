@@ -1,0 +1,4 @@
+Contact: mailto:admin@dssbot.site
+Expires: 2027-04-05T00:00:00.000Z
+Preferred-Languages: es, en
+Canonical: https://dssbot.site/.well-known/security.txt

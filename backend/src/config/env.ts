@@ -9,6 +9,8 @@ const envSchema = z.object({
   /** Prefer service_role en el servidor API para leer membresías sin depender de RLS con anon. */
   SUPABASE_KEY: z.string().default(""),
   SUPABASE_SERVICE_ROLE_KEY: z.string().default(""),
+  /** Master key for AES-256-GCM encryption (64 hex chars = 32 bytes). Generate with: openssl rand -hex 32 */
+  ENCRYPTION_KEY: z.string().regex(/^([0-9a-fA-F]{64})?$/).default(""),
   ANTHROPIC_API_KEY: z.string().default(""),
   GEMINI_API_KEY: z.string().default(""),
   GROQ_API_KEY: z.string().default(""),
@@ -30,7 +32,8 @@ const envSchema = z.object({
   SUPABASE_STORAGE_BUCKET_RECEIPTS: z.string().default("receipts"),
   SUPABASE_STORAGE_BUCKET_FLOW_MEDIA: z.string().default("flow-media"),
   RECEIPT_RETENTION_DAYS: z.coerce.number().default(7),
-  OCR_PROVIDER: z.enum(["tesseract", "google"]).default("tesseract"),
+  /** OCR provider for receipt images. "auto" uses Gemini if GEMINI_API_KEY is set, else Tesseract. */
+  OCR_PROVIDER: z.enum(["tesseract", "gemini", "auto"]).default("auto"),
 });
 
 export const env = envSchema.parse(process.env);

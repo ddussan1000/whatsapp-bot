@@ -139,6 +139,7 @@ export type WhatsAppInstance = {
   meta_token?: string | null;
   flow_id?: string | null;
   is_active: boolean;
+  currency: string;
   updated_at?: string | null;
 };
 export type InstanceHealth = {
@@ -347,10 +348,12 @@ export type CreateInstanceBody = {
   metaAppId?: string;
   displayPhoneNumber?: string;
   isActive?: boolean;
+  currency?: string;
 };
 export type UpdateInstanceBody = Partial<CreateInstanceBody> & {
   metaToken?: string | null;
   appSecret?: string | null;
+  currency?: string | null;
 };
 export type CreateProductReferralBody = {
   productId: string;

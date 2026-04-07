@@ -1592,6 +1592,8 @@ export interface paths {
               meta_token?: string | null;
               flow_id?: string | null;
               is_active: boolean;
+              /** @default COP */
+              currency: string;
               updated_at?: string | null;
             }[];
           };
@@ -1632,6 +1634,8 @@ export interface paths {
             displayPhoneNumber?: string;
             /** @default true */
             isActive?: boolean;
+            /** @default COP */
+            currency?: string;
           };
         };
       };
@@ -1655,6 +1659,8 @@ export interface paths {
               meta_token?: string | null;
               flow_id?: string | null;
               is_active: boolean;
+              /** @default COP */
+              currency: string;
               updated_at?: string | null;
             };
           };
@@ -1708,6 +1714,7 @@ export interface paths {
             metaAppId?: string | null;
             displayPhoneNumber?: string | null;
             isActive?: boolean;
+            currency?: string | null;
           };
         };
       };
@@ -1731,6 +1738,8 @@ export interface paths {
               meta_token?: string | null;
               flow_id?: string | null;
               is_active: boolean;
+              /** @default COP */
+              currency: string;
               updated_at?: string | null;
             };
           };
@@ -3770,6 +3779,56 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/config/bot/validate-ai": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            provider: "openai" | "gemini" | "anthropic" | "groq";
+            apiKey: string;
+            model: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Validation result */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/config/bot": {
     parameters: {
       query?: never;
@@ -3801,6 +3860,11 @@ export interface paths {
               receiptPendingMessage: string;
               receiptRejectedMessage: string;
               receiptConfirmedMessage: string;
+              ai_enabled?: boolean;
+              ai_provider?: string | null;
+              ai_api_key_configured?: boolean;
+              ai_model?: string | null;
+              ai_system_prompt?: string | null;
             };
           };
         };
@@ -3824,6 +3888,12 @@ export interface paths {
             receiptPendingMessage?: string;
             receiptRejectedMessage?: string;
             receiptConfirmedMessage?: string;
+            ai_enabled?: boolean;
+            /** @enum {string|null} */
+            ai_provider?: "openai" | "gemini" | "anthropic" | "groq" | null;
+            ai_api_key?: string | null;
+            ai_model?: string | null;
+            ai_system_prompt?: string | null;
           };
         };
       };

@@ -171,6 +171,16 @@ export function useUpdateBotConfigMutation() {
   });
 }
 
+export function useValidateAiMutation() {
+  return useMutation({
+    mutationFn: (payload: {
+      provider: "openai" | "gemini" | "anthropic" | "groq";
+      apiKey: string;
+      model: string;
+    }) => api.validateAiProvider(payload),
+  });
+}
+
 export function useFlowTemplatesQuery() {
   return useQuery({
     queryKey: ["flow-templates"],

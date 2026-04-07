@@ -14,8 +14,8 @@ Guía de referencia rápida para no tener que explorar el código en cada sesió
 | Auth | Supabase Auth (Google OAuth) |
 | Cache | Redis (Upstash) — estado de conversaciones |
 | Deploy | Railway (backend), Vercel/Railway (frontend) |
-| IA | Anthropic Claude (claude-haiku) |
-| Pagos OCR | OCR sobre comprobantes de pago en imágenes |
+| IA post-flujo | Multi-proveedor configurable por org (OpenAI, Gemini, Anthropic, Groq) — API key propia del usuario |
+| OCR comprobantes | Gemini Vision (`gemini-2.0-flash-lite`) + Tesseract como fallback |
 
 ---
 
@@ -62,6 +62,13 @@ Guía de referencia rápida para no tener que explorar el código en cada sesió
 ### `organizations`
 - `id`, `name`, `slug`, `bot_config` (jsonb)
 - `bot_config`: `{ systemPrompt, keywords, receiptPendingMessage, receiptRejectedMessage, receiptConfirmedMessage }`
+- **IA post-flujo** (columnas dedicadas, NO en bot_config):
+  - `ai_enabled` (bool, default true) — activa/desactiva respuestas IA cuando el flujo ya terminó
+  - `ai_provider` — proveedor elegido por el usuario: `"openai" | "gemini" | "anthropic" | "groq" | null`
+  - `ai_api_key` — API key del usuario, encriptada con AES-256-GCM. **Nunca se devuelve al frontend** (solo se informa si está configurada)
+  - `ai_model` — modelo específico (nullable, usa default del proveedor si null)
+  - `ai_system_prompt` — prompt extra para respuestas post-flujo (override del systemPrompt de bot_config)
+- **IMPORTANTE**: la IA de OCR (Gemini/Tesseract para comprobantes) es completamente independiente de estas columnas. Usa `GEMINI_API_KEY` del servidor, no la del usuario.
 
 ### `flows`
 - `id`, `organization_id`, `name`, `trigger_phrase`, `trigger_first_word`, `keywords[]`

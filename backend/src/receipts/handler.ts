@@ -2,7 +2,7 @@ import type { ConversationState, WhatsAppMessage } from "../types";
 import { sendMessage } from "../bot/sender";
 import { textMessage } from "../bot/messages";
 import { downloadFromMeta } from "./downloader";
-import { runOcr, isLikelyReceipt, extractPaymentFields } from "./ocr";
+import { runOcrWithFallback } from "./ocr";
 import { saveReceipt } from "./storage";
 import { insertPayment } from "../db/payments";
 import { supabase } from "../db/supabase";
@@ -103,6 +103,7 @@ export async function classifyAndHandleImage(
   phone: string,
   state: ConversationState,
   metaToken?: string | null,
+  currency = "COP",
 ): Promise<{ handled: boolean; state: ConversationState }> {
   if (!state.organizationId) return { handled: false, state };
   if (msg.type !== "image" || !msg.image?.id) return { handled: false, state };
@@ -127,31 +128,36 @@ export async function classifyAndHandleImage(
     return { handled: false, state };
   }
 
-  let ocrText: string;
+  let ocrResult: Awaited<ReturnType<typeof runOcrWithFallback>>;
   try {
-    ocrText = await runOcr(buffer);
+    ocrResult = await runOcrWithFallback(buffer, currency);
     log.debug(
       {
         phone,
-        ocrChars: ocrText.length,
-        ocrPreview: ocrText.slice(0, 120).replace(/\n/g, " "),
+        provider: ocrResult.ocrProvider,
+        isReceipt: ocrResult.isLikelyReceipt,
       },
       "classifyAndHandleImage: OCR done",
     );
   } catch (err) {
-    log.warn({ err, phone }, "classifyAndHandleImage: OCR timeout/error → comprobante_ilegible");
-    const { retryMessage } = await getReceiptMessages(state.organizationId, state.flowId);
+    log.warn(
+      { err, phone },
+      "classifyAndHandleImage: OCR timeout/error → comprobante_ilegible",
+    );
+    const { retryMessage } = await getReceiptMessages(
+      state.organizationId,
+      state.flowId,
+    );
     await sendMessage(phone, textMessage(retryMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: "comprobante_ilegible" } };
+    return {
+      handled: true,
+      state: { ...state, stage: "comprobante_ilegible" },
+    };
   }
 
-  if (!isLikelyReceipt(ocrText)) {
+  if (!ocrResult.isLikelyReceipt) {
     log.info(
-      {
-        phone,
-        event: "image.not_receipt",
-        ocrPreview: ocrText.slice(0, 80).replace(/\n/g, " "),
-      },
+      { phone, event: "image.not_receipt" },
       "classifyAndHandleImage: NOT a receipt, skipping",
     );
     return { handled: false, state };
@@ -159,11 +165,10 @@ export async function classifyAndHandleImage(
 
   log.info(
     { phone, event: "image.is_receipt" },
-    "classifyAndHandleImage: classified as RECEIPT, extracting fields",
+    "classifyAndHandleImage: classified as RECEIPT",
   );
 
-  const { amount, receiptDate, isWithin24Hours } =
-    extractPaymentFields(ocrText);
+  const { amount, receiptDate, isWithin24Hours } = ocrResult;
   log.info(
     {
       phone,
@@ -218,6 +223,7 @@ export async function classifyAndHandleImage(
       flow_id: state.flowId ?? null,
       whatsapp_instance_id: state.whatsappInstanceId ?? null,
       amount,
+      currency: ocrResult.currency ?? currency,
       receipt_url: receiptUrl,
       receipt_date: null,
       conversation_id: state.id ?? null,
@@ -247,6 +253,7 @@ export async function classifyAndHandleImage(
     flow_id: state.flowId ?? null,
     whatsapp_instance_id: state.whatsappInstanceId ?? null,
     amount,
+    currency: ocrResult.currency ?? currency,
     receipt_url: receiptUrl,
     receipt_date: receiptDate ? receiptDate.toISOString() : null,
     conversation_id: state.id ?? null,
