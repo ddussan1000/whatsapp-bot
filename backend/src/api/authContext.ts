@@ -130,6 +130,19 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
   if (requestedOrg) membershipQuery = membershipQuery.eq("organization_id", requestedOrg);
   let { data: membership } = await membershipQuery.maybeSingle<Membership>();
 
+  // Si el X-Organization-Id no coincide con ninguna membresía del usuario, ignorar el filtro
+  // y buscar la primera org disponible (evita 401 por localStorage obsoleto)
+  if (!membership && requestedOrg) {
+    const { data: fallback } = await db
+      .from("organization_members")
+      .select("organization_id, role")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle<Membership>();
+    if (fallback) membership = fallback;
+  }
+
   if (!membership && emailNorm) {
     const { data: allow } = await db
       .from("organization_signup_allowlist")
