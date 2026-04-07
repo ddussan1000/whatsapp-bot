@@ -137,13 +137,15 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
       .eq("email", emailNorm)
       .maybeSingle();
     if (allow) {
-      const { error: insErr } = await db.from("organization_members").insert({
+      // Use the admin singleton (no user JWT override) so RLS is not applied on this privileged insert
+      const adminDb = supabase;
+      const { error: insErr } = await (adminDb ?? db).from("organization_members").insert({
         organization_id: allow.organization_id,
         user_id: user.id,
         role: allow.role,
       });
       if (!insErr) {
-        await db.from("organization_signup_allowlist").delete().eq("id", allow.id);
+        await (adminDb ?? db).from("organization_signup_allowlist").delete().eq("id", allow.id);
         membership = { organization_id: allow.organization_id, role: allow.role };
       }
     }
@@ -160,13 +162,15 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
       .limit(1)
       .maybeSingle();
     if (invite) {
-      const { error: insErr } = await db.from("organization_members").insert({
+      // Use the admin singleton (no user JWT override) so RLS is not applied on this privileged insert
+      const adminDb = supabase;
+      const { error: insErr } = await (adminDb ?? db).from("organization_members").insert({
         organization_id: invite.organization_id,
         user_id: user.id,
         role: invite.role,
       });
       if (!insErr) {
-        await db.from("organization_invites").update({ status: "accepted" }).eq("id", invite.id);
+        await (adminDb ?? db).from("organization_invites").update({ status: "accepted" }).eq("id", invite.id);
         membership = { organization_id: invite.organization_id, role: invite.role };
       }
     }
