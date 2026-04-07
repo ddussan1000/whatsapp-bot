@@ -126,18 +126,20 @@ export async function handleWebhook(c: Context) {
       timestamp?: string;
     }>;
     if (statusUpdates.length > 0) {
-      await Promise.all(
-        statusUpdates
-          .filter((s) => s.id && s.status)
-          .map((s) =>
-            updateMessageDeliveryStatus({
-              organizationId,
-              metaMessageId: s.id as string,
-              status: s.status as string,
-              timestamp: s.timestamp ?? null,
-            }),
-          ),
-      );
+      for (const s of statusUpdates.filter((s) => s.id && s.status)) {
+        if (s.status === "failed") {
+          log.warn(
+            { metaMessageId: s.id, organizationId, metaPhoneNumberId },
+            "webhook: Meta reportó fallo de entrega de mensaje",
+          );
+        }
+        await updateMessageDeliveryStatus({
+          organizationId,
+          metaMessageId: s.id as string,
+          status: s.status as string,
+          timestamp: s.timestamp ?? null,
+        });
+      }
       return c.text("ok");
     }
 

@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { env } from "../config/env";
+import { log } from "../logger";
 
 /**
  * Origen público (https://host) para URLs mostradas al usuario.
@@ -11,8 +12,8 @@ export function getPublicOrigin(c: Context): string {
   if (fromEnv) {
     try {
       return new URL(fromEnv).origin;
-    } catch {
-      // continuar con headers / req
+    } catch (err) {
+      log.warn({ err, PUBLIC_BASE_URL: fromEnv }, "publicOrigin: URL inválida en PUBLIC_BASE_URL → usando headers");
     }
   }
 

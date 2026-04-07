@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { log } from "../logger";
 
 /**
  * Verifica la firma X-Hub-Signature-256 que Meta envía en cada webhook.
@@ -21,7 +22,8 @@ export function validateWebhookSignature(
       Buffer.from(signatureHeader),
       Buffer.from(expected),
     );
-  } catch {
+  } catch (err) {
+    log.warn({ err }, "validateSignature: error en comparación de firma (buffers de distinto tamaño)");
     return false;
   }
 }

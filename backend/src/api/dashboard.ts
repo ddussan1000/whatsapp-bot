@@ -18,6 +18,7 @@ import { sendEmail } from "../email/resend";
 import { buildInviteEmail } from "../email/templates/invite";
 import { encrypt, safeDecrypt } from "../crypto/encrypt";
 import { validateAiProvider } from "../ai/assistant";
+import { log } from "../logger";
 
 function todayStartIso() {
   const d = new Date();
@@ -1107,7 +1108,8 @@ dashboardApi.openapi(
           } else if (parsed.error?.message) {
             detail = parsed.error.message;
           }
-        } catch {
+        } catch (err) {
+          log.warn({ err }, "dashboard: error parseando respuesta de error de Meta");
           detail = "Meta devolvió un error al validar el token.";
         }
         return c.json(
@@ -4225,8 +4227,8 @@ dashboardApi.openapi(
         bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA,
         path: row.storage_path,
       });
-    } catch {
-      // storage delete failed — proceed to remove DB record anyway
+    } catch (err) {
+      log.warn({ err, storagePath: row.storage_path }, "dashboard: error borrando archivo de storage, continuando con eliminación de BD");
     }
     const { error } = await supabase
       .from("org_media")

@@ -235,6 +235,7 @@ export async function extractPaymentData(imgBuffer: Buffer) {
 // ── Unified OCR with Gemini fallback ──────────────────────────────────────
 
 import { env } from "../config/env";
+import { log } from "../logger";
 
 export type OcrResult = {
   amount: number | null;
@@ -254,12 +255,34 @@ export async function runOcrWithFallback(
     env.OCR_PROVIDER === "gemini" ||
     (env.OCR_PROVIDER === "auto" && !!env.GEMINI_API_KEY);
 
+  log.info(
+    {
+      ocrProvider: env.OCR_PROVIDER,
+      useGemini,
+      hasGeminiKey: !!env.GEMINI_API_KEY,
+      imageSizeKb: Math.round(imgBuffer.length / 1024),
+    },
+    "OCR: iniciando análisis de imagen",
+  );
+
   if (useGemini) {
     try {
       const { runGeminiOcr } = await import("./geminiOcr");
       const geminiResult = await runGeminiOcr(imgBuffer, currency);
 
+      log.info(
+        {
+          isReceipt: geminiResult.isReceipt,
+          amount: geminiResult.amount,
+          currency: geminiResult.currency,
+          date: geminiResult.date,
+          reference: geminiResult.reference,
+        },
+        "OCR: respuesta de Gemini",
+      );
+
       if (!geminiResult.isReceipt) {
+        log.info("OCR: Gemini determinó que NO es un comprobante");
         return {
           amount: null,
           receiptDate: null,
@@ -292,6 +315,14 @@ export async function runOcrWithFallback(
         const hoursDiff = receiptDate
           ? (Date.now() - receiptDate.getTime()) / 3600000
           : null;
+        log.info(
+          {
+            receiptDate: receiptDate?.toISOString() ?? null,
+            hoursDiff: hoursDiff !== null ? Math.round(hoursDiff * 10) / 10 : null,
+            isWithin24Hours: receiptDate && hoursDiff !== null ? hoursDiff <= 24 && hoursDiff >= 0 : false,
+          },
+          "OCR: comprobante validado por Gemini",
+        );
         return {
           amount: geminiResult.amount,
           receiptDate,
@@ -306,14 +337,29 @@ export async function runOcrWithFallback(
         };
       }
       // Gemini detected receipt but no data extracted → fall through to Tesseract
-    } catch {
-      // Gemini failed → fall through to Tesseract
+      log.warn(
+        { amount: geminiResult.amount, date: geminiResult.date },
+        "OCR: Gemini detectó comprobante pero no extrajo datos → fallback a Tesseract",
+      );
+    } catch (err) {
+      log.error(
+        { err },
+        "OCR: Gemini lanzó error → fallback a Tesseract",
+      );
     }
   }
 
   // Tesseract path
+  log.info("OCR: ejecutando Tesseract");
   const ocrText = await runOcr(imgBuffer);
   const likelyReceipt = isLikelyReceipt(ocrText);
+  log.info(
+    {
+      likelyReceipt,
+      textSnippet: ocrText.slice(0, 300),
+    },
+    "OCR: resultado Tesseract",
+  );
   if (!likelyReceipt) {
     return {
       amount: null,

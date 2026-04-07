@@ -22,8 +22,8 @@ async function increment(key: string, windowMs: number): Promise<number> {
       pipeline.pexpire(key, windowMs);
       const results = await pipeline.exec();
       return (results?.[0]?.[1] as number) ?? 1;
-    } catch {
-      // Redis falló — usar memoria como fallback
+    } catch (err) {
+      log.warn({ err }, "rateLimiter: Redis falló → fallback a memoria");
     }
   }
 

@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { env } from "../config/env";
+import { log } from "../logger";
 import sharp from "sharp";
 
 export type GeminiOcrResult = {
@@ -64,6 +65,7 @@ Rules:
     .replace(/```(?:json)?\s*/g, "")
     .replace(/```/g, "")
     .trim();
+  log.info({ raw }, "geminiOcr: respuesta raw de Gemini");
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return {
@@ -82,7 +84,8 @@ Rules:
           ? parsed.reference
           : null,
     };
-  } catch {
+  } catch (err) {
+    log.error({ err, raw }, "geminiOcr: error parseando JSON de respuesta");
     return {
       isReceipt: false,
       amount: null,

@@ -1,5 +1,6 @@
 import Redis from "ioredis";
 import { env } from "../config/env";
+import { log } from "../logger";
 import type { ConversationState } from "../types";
 
 class LRUMap<K, V> {
@@ -87,8 +88,8 @@ export async function isDuplicate(key: string, ttlSeconds: number): Promise<bool
       // SET key 1 EX ttl NX — returns "OK" if set, null if already existed
       const result = await redis.set(key, "1", "EX", ttlSeconds, "NX");
       return result === null; // null means key already existed
-    } catch {
-      // Redis error — fall through to memory
+    } catch (err) {
+      log.warn({ err }, "redis: isDuplicate falló → fallback a memoria");
     }
   }
   // In-memory fallback: use a simple Map with expiry timestamps

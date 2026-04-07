@@ -1,11 +1,16 @@
 import {
+  AlertCircle,
   ArrowLeft,
+  Check,
+  CheckCheck,
+  Clock,
   FileText,
   ImageIcon,
   Info,
   Megaphone,
   Paperclip,
   Send,
+  Video,
   Workflow,
   X,
 } from "lucide-react";
@@ -109,13 +114,19 @@ function getMessageMainText(m: ChatMessage): string | null {
     return doc?.caption?.trim() || doc?.filename?.trim() || null;
   }
 
-  return "Mensaje";
+  if (m.message_type === "video") {
+    const video = payload.video as { caption?: string } | undefined;
+    return video?.caption?.trim() || null;
+  }
+
+  return null;
 }
 
 function getAttachmentInfo(m: ChatMessage): {
   label: string;
   href?: string;
   isImage: boolean;
+  isVideo: boolean;
 } | null {
   const payload =
     (m.payload as Record<string, unknown> | null | undefined) ?? {};
@@ -123,7 +134,13 @@ function getAttachmentInfo(m: ChatMessage): {
   if (m.message_type === "image") {
     const image = payload.image as { id?: string; link?: string } | undefined;
     const href = m.media_url ?? image?.link;
-    return { label: "Imagen adjunta", href, isImage: true };
+    return { label: "Imagen adjunta", href, isImage: true, isVideo: false };
+  }
+
+  if (m.message_type === "video") {
+    const video = payload.video as { id?: string; link?: string } | undefined;
+    const href = m.media_url ?? video?.link;
+    return { label: "Video adjunto", href, isImage: false, isVideo: true };
   }
 
   if (m.message_type === "document") {
@@ -132,10 +149,31 @@ function getAttachmentInfo(m: ChatMessage): {
       | undefined;
     const href = m.media_url ?? doc?.link;
     const label = doc?.filename ?? "Documento adjunto";
-    return { label, href, isImage: false };
+    return { label, href, isImage: false, isVideo: false };
   }
 
   return null;
+}
+
+// ── DeliveryIcon ──────────────────────────────────────────────────────────
+
+function DeliveryIcon({ status }: { status: string | null | undefined }) {
+  if (status === "failed")
+    return <AlertCircle size={14} className="text-rose-400 shrink-0" />;
+  if (status === "read")
+    return (
+      <CheckCheck
+        size={14}
+        className="text-sky-300 dark:text-sky-400 shrink-0"
+      />
+    );
+  if (status === "delivered")
+    return (
+      <CheckCheck size={14} className="text-primary-foreground/55 shrink-0" />
+    );
+  if (status === "sent")
+    return <Check size={14} className="text-primary-foreground/55 shrink-0" />;
+  return <Clock size={13} className="text-primary-foreground/45 shrink-0" />;
 }
 
 // ── ChatBubble ─────────────────────────────────────────────────────────────
@@ -144,6 +182,7 @@ function ChatBubble({ m }: { m: ChatMessage }) {
   const isOut = m.direction === "outbound";
   const mainText = getMessageMainText(m);
   const attachment = getAttachmentInfo(m);
+  const isFailed = m.delivery_status === "failed";
 
   return (
     <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
@@ -181,6 +220,43 @@ function ChatBubble({ m }: { m: ChatMessage }) {
                   {attachment.label}
                 </div>
               )
+            ) : attachment.isVideo ? (
+              <div
+                className={`flex items-center gap-1.5 rounded-lg p-2 text-xs ${
+                  isOut ? "bg-primary-foreground/10" : "bg-muted"
+                }`}
+              >
+                <Video
+                  size={14}
+                  className={
+                    isOut
+                      ? "text-primary-foreground/80"
+                      : "text-muted-foreground"
+                  }
+                />
+                {attachment.href ? (
+                  <a
+                    href={attachment.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`underline underline-offset-2 ${
+                      isOut ? "text-primary-foreground" : "text-foreground"
+                    }`}
+                  >
+                    {attachment.label}
+                  </a>
+                ) : (
+                  <span
+                    className={
+                      isOut
+                        ? "text-primary-foreground/70"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {attachment.label}
+                  </span>
+                )}
+              </div>
             ) : (
               <div
                 className={`flex items-center gap-1.5 rounded-lg p-2 text-xs ${
@@ -229,13 +305,19 @@ function ChatBubble({ m }: { m: ChatMessage }) {
         )}
 
         {m.created_at && (
-          <p
-            className={`mt-0.5 text-right text-[10px] leading-none ${
+          <div
+            className={`mt-1 flex items-center justify-end gap-1.5 text-[10px] leading-none ${
               isOut ? "text-primary-foreground/60" : "text-muted-foreground"
             }`}
           >
-            {formatTime(m.created_at)}
-          </p>
+            {isFailed && (
+              <span className="font-semibold text-rose-300 dark:text-rose-400">
+                No entregado
+              </span>
+            )}
+            <span>{formatTime(m.created_at)}</span>
+            {isOut && <DeliveryIcon status={m.delivery_status} />}
+          </div>
         )}
       </div>
     </div>

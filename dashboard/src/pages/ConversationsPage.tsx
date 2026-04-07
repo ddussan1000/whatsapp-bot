@@ -86,17 +86,17 @@ function ConversationRow({
             {conv.contact_name ?? formatPhone(conv.phone)}
           </span>
           {conv.contact_name && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground hidden sm:block">
               {formatPhone(conv.phone)}
             </span>
           )}
           {hasAd ? (
-            <span className="flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-600">
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-600 text-center">
               <Megaphone size={10} />
               {conv.ad_name ?? "Sin Anuncio"}
             </span>
           ) : (
-            <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-red-400">
+            <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-red-400 text-center">
               Sin Anuncio
             </span>
           )}
