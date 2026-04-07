@@ -7,7 +7,8 @@ export type GeminiOcrResult = {
   isReceipt: boolean;
   amount: number | null;
   currency: string | null;
-  date: string | null;
+  /** "DD/MM/YYYY HH:MM" con hora, o "DD/MM/YYYY" solo fecha, o null */
+  datetime: string | null;
   reference: string | null;
 };
 
@@ -38,19 +39,19 @@ export async function runGeminiOcr(
 
   const prompt = `Analyze this payment receipt image. The expected currency is ${currency}.
 Respond ONLY with this JSON (no explanation):
-{"isReceipt":BOOL,"amount":NUMBER_OR_NULL,"currency":"CODE_OR_NULL","date":"DD/MM/YYYY_OR_NULL","reference":"STRING_OR_NULL"}
+{"isReceipt":BOOL,"amount":NUMBER_OR_NULL,"currency":"CODE_OR_NULL","datetime":"DD/MM/YYYY HH:MM_OR_NULL","reference":"STRING_OR_NULL"}
 Rules:
 - isReceipt: true only if this is a payment/transaction receipt
 - amount: numeric value only (no symbols), null if not found
 - currency: ISO 4217 code if clearly visible, otherwise "${currency}"
-- date: format dd/mm/yyyy if found, null otherwise
+- datetime: date AND time in format "dd/mm/yyyy HH:MM" (24h) if both visible, or "dd/mm/yyyy" if only date is visible, null if no date found
 - reference: transaction/operation ID if visible, null otherwise`;
 
   const response = await ai.models.generateContent({
     model,
     config: {
       temperature: 0,
-      maxOutputTokens: 120,
+      maxOutputTokens: 150,
       responseMimeType: "application/json",
     },
     contents: [
@@ -73,7 +74,7 @@ Rules:
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     log.info(
-      { isReceipt: parsed.isReceipt, amount: parsed.amount, date: parsed.date },
+      { isReceipt: parsed.isReceipt, amount: parsed.amount, datetime: parsed.datetime },
       "geminiOcr: JSON parseado correctamente",
     );
     return {
@@ -83,9 +84,9 @@ Rules:
         typeof parsed.currency === "string" && parsed.currency.length > 0
           ? parsed.currency
           : currency,
-      date:
-        typeof parsed.date === "string" && parsed.date.length > 0
-          ? parsed.date
+      datetime:
+        typeof parsed.datetime === "string" && parsed.datetime.length > 0
+          ? parsed.datetime
           : null,
       reference:
         typeof parsed.reference === "string" && parsed.reference.length > 0
@@ -100,7 +101,7 @@ Rules:
       isReceipt: false,
       amount: null,
       currency: null,
-      date: null,
+      datetime: null,
       reference: null,
     };
   }

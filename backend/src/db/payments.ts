@@ -8,6 +8,7 @@ export type PaymentInput = {
   flow_id?: string | null;
   whatsapp_instance_id?: string | null;
   amount: number;
+  currency?: string | null;
   receipt_url?: string | null;
   receipt_date?: string | null;
   conversation_id?: string | null;

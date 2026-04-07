@@ -15,7 +15,7 @@ Guía de referencia rápida para no tener que explorar el código en cada sesió
 | Cache | Redis (Upstash) — estado de conversaciones |
 | Deploy | Railway (backend), Vercel/Railway (frontend) |
 | IA post-flujo | Multi-proveedor configurable por org (OpenAI, Gemini, Anthropic, Groq) — API key propia del usuario |
-| OCR comprobantes | Gemini Vision (`gemini-2.0-flash-lite`) + Tesseract como fallback |
+| OCR comprobantes | Gemini Vision (modelo configurable via `GEMINI_OCR_MODEL`, default `gemini-2.5-flash-lite`) + Tesseract como fallback |
 
 ---
 
@@ -31,7 +31,7 @@ Guía de referencia rápida para no tener que explorar el código en cada sesió
 │   │   │   └── adminRoutes.ts     # Rutas de plataforma admin
 │   │   ├── bot/
 │   │   │   ├── handler.ts / flows.ts / flowEngine.ts / classifier.ts
-│   │   │   └── sender.ts / messages.ts / media.ts / haiku.ts
+│   │   │   └── sender.ts / messages.ts / media.ts
 │   │   ├── receipts/              # OCR de comprobantes
 │   │   │   └── handler.ts         # Lógica de validación y mensajes de respuesta
 │   │   ├── webhook/handler.ts     # Punto de entrada de mensajes WhatsApp
@@ -69,6 +69,7 @@ Guía de referencia rápida para no tener que explorar el código en cada sesió
   - `ai_model` — modelo específico (nullable, usa default del proveedor si null)
   - `ai_system_prompt` — prompt extra para respuestas post-flujo (override del systemPrompt de bot_config)
 - **IMPORTANTE**: la IA de OCR (Gemini/Tesseract para comprobantes) es completamente independiente de estas columnas. Usa `GEMINI_API_KEY` del servidor, no la del usuario.
+- Las variables de servidor `ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `GROQ_MODEL`, `AI_PROVIDER` **no existen** — fueron eliminadas. La IA post-flujo usa exclusivamente la key de cada org. Si la org no tiene key configurada, el bot no responde con IA (no hay fallback al servidor).
 
 ### `flows`
 - `id`, `organization_id`, `name`, `trigger_phrase`, `trigger_first_word`, `keywords[]`
@@ -100,6 +101,7 @@ comprobante_vencido | ayuda | interesado | flow_started
 - `amount`, `currency`, `receipt_date`, `receipt_url`
 - `state`: `pending_manual_review | validated | rejected`
 - `validated_at`
+- `meta_message_id` — tiene constraint `UNIQUE` para deduplicar reintentos del webhook de Meta
 
 ### `ad_click_logs`
 - Registra cada clic desde anuncio CTWA
@@ -221,6 +223,9 @@ useFlowsQuery()                     // GET /flows
 6. Si no → `classify` → maneja según stage (texto AI, imagen → OCR, etc.)
 7. `receipts/handler.ts`: detecta comprobante → OCR → valida → mensaje de respuesta
    - Mensajes de respuesta: primero busca `flows.message_overrides`, luego `organizations.bot_config`, luego defaults hardcoded
+   - OCR usa Gemini como primario (`GEMINI_API_KEY` + `GEMINI_OCR_MODEL`) y Tesseract como fallback
+   - La fecha/hora del comprobante se interpreta en la zona horaria de la divisa (`CURRENCY_UTC_OFFSET` en `receipts/ocr.ts`)
+   - Ventana de validez: 24h si Gemini extrae hora exacta, 36h si solo extrae fecha (tolerancia de zona horaria)
 
 ---
 

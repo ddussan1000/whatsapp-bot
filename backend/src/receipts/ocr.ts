@@ -237,6 +237,74 @@ export async function extractPaymentData(imgBuffer: Buffer) {
 import { env } from "../config/env";
 import { log } from "../logger";
 
+/**
+ * UTC offset en horas para la zona horaria principal de cada divisa.
+ * Permite interpretar correctamente la hora del comprobante según el país.
+ * No se usa DST (horario de verano) — se asume el offset estándar como aproximación.
+ */
+const CURRENCY_UTC_OFFSET: Record<string, number> = {
+  // UTC-6
+  MXN: -6, GTQ: -6, HNL: -6, NIO: -6, CRC: -6, SVC: -6,
+  // UTC-5
+  COP: -5, PEN: -5, PAB: -5, ECU: -5,
+  // UTC-4
+  VES: -4, BOB: -4, PYG: -4, DOP: -4, CLP: -4, GYD: -4,
+  // UTC-3
+  ARS: -3, BRL: -3, UYU: -3, SRD: -3,
+  // UTC-4:30 → redondeamos a -4
+  // UTC+0
+  USD: 0, EUR: 0, GBP: 0,
+  // UTC+1
+  // default: 0 para todo lo demás
+};
+
+/**
+ * Parsea el datetime del comprobante (en hora local del país de la divisa)
+ * y lo convierte a UTC para comparar correctamente con Date.now().
+ *
+ * @param datetime "DD/MM/YYYY HH:MM" o "DD/MM/YYYY"
+ * @param currency  Código ISO 4217 de la divisa (ej: "COP")
+ * @returns { date: Date en UTC, hasTime: boolean }
+ */
+function parseReceiptDatetime(
+  datetime: string,
+  currency: string,
+): { date: Date; hasTime: boolean } | null {
+  // Intentar con fecha + hora: "DD/MM/YYYY HH:MM"
+  const withTime = datetime.match(
+    /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\s+(\d{1,2}):(\d{2})$/,
+  );
+  if (withTime?.[1] && withTime[2] && withTime[3] && withTime[4] && withTime[5]) {
+    const day = Number(withTime[1]);
+    const month = Number(withTime[2]);
+    const year = Number(withTime[3].length === 2 ? `20${withTime[3]}` : withTime[3]);
+    const hour = Number(withTime[4]);
+    const minute = Number(withTime[5]);
+    const utcOffset = CURRENCY_UTC_OFFSET[currency.toUpperCase()] ?? 0;
+    // Convertir hora local → UTC: UTC = local - utcOffset
+    const date = new Date(Date.UTC(year, month - 1, day, hour - utcOffset, minute));
+    return { date, hasTime: true };
+  }
+
+  // Solo fecha: "DD/MM/YYYY"
+  const dateOnly = datetime.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+  if (dateOnly?.[1] && dateOnly[2] && dateOnly[3]) {
+    const day = Number(dateOnly[1]);
+    const month = Number(dateOnly[2]);
+    const year = Number(dateOnly[3].length === 2 ? `20${dateOnly[3]}` : dateOnly[3]);
+    const utcOffset = CURRENCY_UTC_OFFSET[currency.toUpperCase()] ?? 0;
+    // Sin hora: asumir mediodía local para reducir error máximo a ±12h
+    const date = new Date(Date.UTC(year, month - 1, day, 12 - utcOffset, 0));
+    return { date, hasTime: false };
+  }
+
+  // Fallback: intentar parseo nativo
+  const fallback = new Date(datetime);
+  if (!isNaN(fallback.getTime())) return { date: fallback, hasTime: false };
+
+  return null;
+}
+
 export type OcrResult = {
   amount: number | null;
   receiptDate: Date | null;
@@ -275,14 +343,14 @@ export async function runOcrWithFallback(
           isReceipt: geminiResult.isReceipt,
           amount: geminiResult.amount,
           currency: geminiResult.currency,
-          date: geminiResult.date,
+          datetime: geminiResult.datetime,
           reference: geminiResult.reference,
         },
         "OCR: respuesta de Gemini",
       );
 
       if (!geminiResult.isReceipt) {
-        log.info("OCR: Gemini determinó que NO es un comprobante");
+        log.info({ dummy: true }, "OCR: Gemini determinó que NO es un comprobante");
         return {
           amount: null,
           receiptDate: null,
@@ -294,51 +362,56 @@ export async function runOcrWithFallback(
         };
       }
 
-      if (geminiResult.amount !== null || geminiResult.date !== null) {
+      if (geminiResult.amount !== null || geminiResult.datetime !== null) {
         let receiptDate: Date | null = null;
-        if (geminiResult.date) {
-          const m = geminiResult.date.match(
-            /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/,
-          );
-          if (m?.[1] && m[2] && m[3]) {
-            const year = m[3].length === 2 ? `20${m[3]}` : m[3];
-            receiptDate = new Date(
-              Number(year),
-              Number(m[2]) - 1,
-              Number(m[1]),
-            );
-          } else {
-            const d = new Date(geminiResult.date);
-            if (!isNaN(d.getTime())) receiptDate = d;
+        let hasTime = false;
+        const effectiveCurrency = geminiResult.currency ?? currency;
+
+        if (geminiResult.datetime) {
+          const parsed = parseReceiptDatetime(geminiResult.datetime, effectiveCurrency);
+          if (parsed) {
+            receiptDate = parsed.date;
+            hasTime = parsed.hasTime;
           }
         }
+
         const hoursDiff = receiptDate
           ? (Date.now() - receiptDate.getTime()) / 3600000
           : null;
+
+        // Si no se extrajo la hora exacta, permitir ±12h de tolerancia extra
+        const windowHours = hasTime ? 24 : 36;
+        const isWithin24Hours =
+          receiptDate && hoursDiff !== null
+            ? hoursDiff <= windowHours && hoursDiff >= -2 // -2h tolera relojes adelantados
+            : false;
+
         log.info(
           {
-            receiptDate: receiptDate?.toISOString() ?? null,
+            receiptDateUtc: receiptDate?.toISOString() ?? null,
             hoursDiff: hoursDiff !== null ? Math.round(hoursDiff * 10) / 10 : null,
-            isWithin24Hours: receiptDate && hoursDiff !== null ? hoursDiff <= 24 && hoursDiff >= 0 : false,
+            hasTime,
+            windowHours,
+            isWithin24Hours,
+            currency: effectiveCurrency,
+            utcOffset: CURRENCY_UTC_OFFSET[effectiveCurrency.toUpperCase()] ?? 0,
           },
           "OCR: comprobante validado por Gemini",
         );
+
         return {
           amount: geminiResult.amount,
           receiptDate,
-          isWithin24Hours:
-            receiptDate && hoursDiff !== null
-              ? hoursDiff <= 24 && hoursDiff >= 0
-              : false,
+          isWithin24Hours,
           isLikelyReceipt: true,
-          rawText: `[Gemini] amount=${geminiResult.amount} date=${geminiResult.date} ref=${geminiResult.reference}`,
+          rawText: `[Gemini] amount=${geminiResult.amount} datetime=${geminiResult.datetime} ref=${geminiResult.reference}`,
           ocrProvider: "gemini",
           currency: geminiResult.currency,
         };
       }
       // Gemini detected receipt but no data extracted → fall through to Tesseract
       log.warn(
-        { amount: geminiResult.amount, date: geminiResult.date },
+        { amount: geminiResult.amount, datetime: geminiResult.datetime },
         "OCR: Gemini detectó comprobante pero no extrajo datos → fallback a Tesseract",
       );
     } catch (err) {
