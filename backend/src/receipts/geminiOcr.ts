@@ -29,7 +29,8 @@ export async function runGeminiOcr(
 ): Promise<GeminiOcrResult> {
   if (!env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
-  log.info({ model: "gemini-2.0-flash-lite", currency }, "geminiOcr: iniciando llamada a Gemini API");
+  const model = env.GEMINI_OCR_MODEL ?? "gemini-1.5-flash";
+  log.info({ model, currency }, "geminiOcr: iniciando llamada a Gemini API");
 
   const compressed = await compressForGemini(imgBuffer);
   const base64 = compressed.toString("base64");
@@ -46,7 +47,7 @@ Rules:
 - reference: transaction/operation ID if visible, null otherwise`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-lite",
+    model,
     config: {
       temperature: 0,
       maxOutputTokens: 120,

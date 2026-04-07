@@ -34,6 +34,8 @@ const envSchema = z.object({
   RECEIPT_RETENTION_DAYS: z.coerce.number().default(7),
   /** OCR provider for receipt images. "auto" uses Gemini if GEMINI_API_KEY is set, else Tesseract. */
   OCR_PROVIDER: z.enum(["tesseract", "gemini", "auto"]).default("auto"),
+  /** Gemini model used for OCR. Defaults to gemini-1.5-flash (free tier available in more regions). */
+  GEMINI_OCR_MODEL: z.string().default("gemini-1.5-flash"),
 });
 
 export const env = envSchema.parse(process.env);
