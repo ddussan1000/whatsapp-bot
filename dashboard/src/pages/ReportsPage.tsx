@@ -54,17 +54,12 @@ import {
 // ── Stage label normalization ─────────────────────────────────────────────
 
 const STAGE_LABELS: Record<string, string> = {
-  saludo: "Saludo",
-  catalogo: "Catálogo",
-  esperando_comprobante: "Esperando comprobante",
-  confirmar_comprobante: "Confirmar comprobante",
-  pago_confirmado: "Pago confirmado",
-  comprobante_vencido: "Comprobante vencido",
-  comprobante_rechazado: "Comprobante rechazado",
-  comprobante_ilegible: "Comprobante ilegible",
-  ayuda: "Ayuda",
-  interesado: "Interesado",
   flow_started: "En flujo",
+  interesado: "Interesado",
+  listo_pagar: "Listo para pagar",
+  necesita_agente: "Necesita agente",
+  confirmar_comprobante: "En revisión",
+  pago_confirmado: "Pago confirmado",
 };
 
 function stageLabel(stage: string): string {

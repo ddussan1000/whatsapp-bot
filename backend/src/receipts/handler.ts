@@ -142,16 +142,22 @@ export async function classifyAndHandleImage(
   } catch (err) {
     log.warn(
       { err, phone },
-      "classifyAndHandleImage: OCR timeout/error → comprobante_ilegible",
+      "classifyAndHandleImage: OCR timeout/error → confirmar_comprobante",
     );
     const { retryMessage } = await getReceiptMessages(
       state.organizationId,
       state.flowId,
     );
+    await supabase
+      ?.from("scheduled_flow_messages")
+      .update({ status: "cancelled" })
+      .eq("organization_id", state.organizationId)
+      .eq("phone", phone)
+      .eq("status", "pending");
     await sendMessage(phone, textMessage(retryMessage), msgCtx(state));
     return {
       handled: true,
-      state: { ...state, stage: "comprobante_ilegible" },
+      state: { ...state, stage: "confirmar_comprobante" },
     };
   }
 
@@ -186,12 +192,18 @@ export async function classifyAndHandleImage(
   if (!amount) {
     log.warn(
       { phone, event: "receipt.illegible" },
-      "classifyAndHandleImage: amount not detected → comprobante_ilegible",
+      "classifyAndHandleImage: amount not detected → confirmar_comprobante",
     );
+    await supabase
+      ?.from("scheduled_flow_messages")
+      .update({ status: "cancelled" })
+      .eq("organization_id", state.organizationId)
+      .eq("phone", phone)
+      .eq("status", "pending");
     await sendMessage(phone, textMessage(retryMessage), msgCtx(state));
     return {
       handled: true,
-      state: { ...state, stage: "comprobante_ilegible" },
+      state: { ...state, stage: "confirmar_comprobante" },
     };
   }
 
@@ -202,12 +214,18 @@ export async function classifyAndHandleImage(
         event: "receipt.rejected",
         receiptDate: receiptDate.toISOString(),
       },
-      "classifyAndHandleImage: receipt older than 24h → comprobante_rechazado",
+      "classifyAndHandleImage: receipt older than 24h → confirmar_comprobante",
     );
+    await supabase
+      ?.from("scheduled_flow_messages")
+      .update({ status: "cancelled" })
+      .eq("organization_id", state.organizationId)
+      .eq("phone", phone)
+      .eq("status", "pending");
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
     return {
       handled: true,
-      state: { ...state, stage: "comprobante_rechazado" },
+      state: { ...state, stage: "confirmar_comprobante" },
     };
   }
 

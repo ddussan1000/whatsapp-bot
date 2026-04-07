@@ -51,14 +51,12 @@ function timeAgo(iso?: string | null) {
 }
 
 const STAGE_OPTIONS = [
-  { value: "saludo", label: "Saludo" },
-  { value: "catalogo", label: "Catálogo" },
-  { value: "esperando_comprobante", label: "Esp. comprobante" },
+  { value: "flow_started", label: "En flujo" },
+  { value: "interesado", label: "Interesado" },
+  { value: "listo_pagar", label: "Listo para pagar" },
+  { value: "necesita_agente", label: "Necesita agente" },
   { value: "confirmar_comprobante", label: "En revisión" },
   { value: "pago_confirmado", label: "Pago confirmado" },
-  { value: "comprobante_rechazado", label: "Rechazado" },
-  { value: "comprobante_ilegible", label: "Ilegible" },
-  { value: "flow_started", label: "En flujo" },
 ];
 
 // ── ConversationRow ───────────────────────────────────────────────────────
