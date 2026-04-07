@@ -11,11 +11,8 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().default(""),
   /** Master key for AES-256-GCM encryption (64 hex chars = 32 bytes). Generate with: openssl rand -hex 32 */
   ENCRYPTION_KEY: z.string().regex(/^([0-9a-fA-F]{64})?$/).default(""),
-  ANTHROPIC_API_KEY: z.string().default(""),
+  /** Solo para OCR de comprobantes. La IA post-flujo usa la API key configurada por cada organización. */
   GEMINI_API_KEY: z.string().default(""),
-  GROQ_API_KEY: z.string().default(""),
-  GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
-  AI_PROVIDER: z.enum(["anthropic", "gemini", "groq", "auto"]).default("auto"),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   REDIS_ENABLED: z.enum(["true", "false"]).default("false"),
   ADMIN_PHONE: z.string().default(""),
@@ -34,8 +31,8 @@ const envSchema = z.object({
   RECEIPT_RETENTION_DAYS: z.coerce.number().default(7),
   /** OCR provider for receipt images. "auto" uses Gemini if GEMINI_API_KEY is set, else Tesseract. */
   OCR_PROVIDER: z.enum(["tesseract", "gemini", "auto"]).default("auto"),
-  /** Gemini model used for OCR. Defaults to gemini-1.5-flash (free tier available in more regions). */
-  GEMINI_OCR_MODEL: z.string().default("gemini-1.5-flash"),
+  /** Gemini model used for OCR. */
+  GEMINI_OCR_MODEL: z.string().default("gemini-2.5-flash-lite"),
 });
 
 export const env = envSchema.parse(process.env);

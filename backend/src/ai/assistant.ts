@@ -1,5 +1,4 @@
 import { GoogleGenAI } from "@google/genai";
-import { env } from "../config/env";
 import { log } from "../logger";
 import type { OrgAiConfig } from "../db/organizations";
 
@@ -127,51 +126,7 @@ function getDefaultModel(provider: "openai" | "gemini" | "anthropic" | "groq"): 
   }
 }
 
-// System-level assistant (uses env vars), existing behavior preserved
-export async function askAssistant(text: string, systemOverride?: string | null): Promise<AssistantResult> {
-  const systemPrompt = systemOverride && systemOverride.trim().length > 0 ? systemOverride : DEFAULT_SYSTEM;
-  const provider =
-    env.AI_PROVIDER === "auto"
-      ? env.GEMINI_API_KEY
-        ? "gemini"
-        : env.GROQ_API_KEY
-          ? "groq"
-          : env.ANTHROPIC_API_KEY
-            ? "anthropic"
-            : "none"
-      : env.AI_PROVIDER;
-
-  const missingKey =
-    (provider === "gemini" && !env.GEMINI_API_KEY) ||
-    (provider === "groq" && !env.GROQ_API_KEY) ||
-    (provider === "anthropic" && !env.ANTHROPIC_API_KEY) ||
-    provider === "none";
-
-  if (missingKey) {
-    log.warn({ provider }, "askAssistant: no hay API key configurada para el proveedor");
-    return { reply: "Por ahora estoy en modo pruebas. Te ayudamos pronto.", next_state: "interesado", send_catalog: false };
-  }
-
-  try {
-    const model = provider === "anthropic"
-      ? "claude-3-5-haiku-latest"
-      : provider === "gemini"
-        ? "gemini-2.0-flash-lite"
-        : env.GROQ_MODEL;
-    if (provider === "gemini") return await askGemini(text, systemPrompt, env.GEMINI_API_KEY, model);
-    if (provider === "groq") return await askGroq(text, systemPrompt, env.GROQ_API_KEY, model);
-    if (provider === "anthropic") return await askAnthropic(text, systemPrompt, env.ANTHROPIC_API_KEY, model);
-  } catch (err) {
-    log.error({ err, provider }, "askAssistant: fallo al llamar al proveedor de AI");
-  }
-  return {
-    reply: "Por ahora estoy en modo pruebas. Te ayudamos pronto.",
-    next_state: "interesado",
-    send_catalog: false,
-  };
-}
-
-// Org-level assistant: uses org config if available, falls back to system
+// Org-level assistant: uses org's own API key. Returns null if AI is disabled or not configured.
 export async function askAssistantForOrg(
   text: string,
   orgConfig: OrgAiConfig,
@@ -196,12 +151,13 @@ export async function askAssistantForOrg(
       if (orgConfig.ai_provider === "anthropic") return await askAnthropic(text, systemPrompt, apiKey, model);
       if (orgConfig.ai_provider === "groq") return await askGroq(text, systemPrompt, apiKey, model);
     } catch (err) {
-      log.error({ err, provider: orgConfig.ai_provider }, "askAssistantForOrg: fallo proveedor org, usando sistema");
+      log.error({ err, provider: orgConfig.ai_provider }, "askAssistantForOrg: fallo proveedor org");
     }
   }
 
-  // Fallback to system-level
-  return askAssistant(text, systemPrompt);
+  // Org has no AI provider configured
+  log.info({ organizationId: orgConfig.ai_provider }, "askAssistantForOrg: org sin proveedor AI configurado, skipping");
+  return null;
 }
 
 // Validation: test that an API key + model combo works
