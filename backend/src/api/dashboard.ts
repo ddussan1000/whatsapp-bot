@@ -3176,6 +3176,96 @@ dashboardApi.openapi(
 
 dashboardApi.openapi(
   createRoute({
+    method: "post",
+    path: "/conversations/{id}/send-media",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              url: z.string().url(),
+              filename: z.string(),
+              mimeType: z.string(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Media enviada",
+        content: {
+          "application/json": {
+            schema: z.object({ ok: z.boolean(), messageId: z.string().nullable().optional() }),
+          },
+        },
+      },
+      404: {
+        description: "Conversación no encontrada",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { url, filename, mimeType } = c.req.valid("json");
+    const organization = orgId(c);
+
+    const { data: conversation } = await supabase
+      .from("conversations")
+      .select("id, phone, whatsapp_instance_id")
+      .eq("id", id)
+      .eq("organization_id", organization)
+      .maybeSingle();
+    if (!conversation) return c.json({ error: "Conversacion no encontrada" }, 404);
+
+    let metaPhoneNumberId: string | null = null;
+    if (conversation.whatsapp_instance_id) {
+      const { data: instance } = await supabase
+        .from("whatsapp_instances")
+        .select("phone_number_id")
+        .eq("id", conversation.whatsapp_instance_id)
+        .eq("organization_id", organization)
+        .maybeSingle();
+      metaPhoneNumberId = instance?.phone_number_id ?? null;
+    }
+
+    let waType: "image" | "video" | "document";
+    if (mimeType.startsWith("image/")) {
+      waType = "image";
+    } else if (mimeType.startsWith("video/")) {
+      waType = "video";
+    } else {
+      waType = "document";
+    }
+
+    const mediaPayload =
+      waType === "image"
+        ? { type: "image", image: { link: url } }
+        : waType === "video"
+          ? { type: "video", video: { link: url } }
+          : { type: "document", document: { link: url, filename } };
+
+    await sendMessage(conversation.phone, mediaPayload, {
+      metaPhoneNumberId,
+      organizationId: organization,
+      conversationId: id,
+    });
+
+    return c.json({ ok: true }, 200);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
     method: "get",
     path: "/payments",
     request: {
