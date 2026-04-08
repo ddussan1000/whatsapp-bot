@@ -8,9 +8,6 @@ const colorMap: Record<string, string> = {
   esperando_comprobante: "badge badge-amber",
   confirmar_comprobante: "badge badge-purple",
   pago_confirmado: "badge badge-green",
-  comprobante_rechazado: "badge badge-red",
-  comprobante_ilegible: "badge badge-red",
-  comprobante_vencido: "badge badge-red",
   post_venta: "badge badge-orange",
 };
 
@@ -18,11 +15,8 @@ const labelMap: Record<string, string> = {
   flow_started: "En flujo",
   interesado: "Interesado",
   esperando_comprobante: "Esperando comprobante",
-  confirmar_comprobante: "En revisión",
+  confirmar_comprobante: "Revisión manual",
   pago_confirmado: "Pago confirmado",
-  comprobante_rechazado: "Rechazado",
-  comprobante_ilegible: "Ilegible",
-  comprobante_vencido: "Vencido",
   post_venta: "Post venta",
 };
 

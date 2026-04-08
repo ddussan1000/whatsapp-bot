@@ -360,11 +360,8 @@ const STAGE_OPTIONS = [
   { value: "flow_started", label: "En flujo" },
   { value: "interesado", label: "Interesado" },
   { value: "esperando_comprobante", label: "Esperando comprobante" },
-  { value: "confirmar_comprobante", label: "En revisión" },
+  { value: "confirmar_comprobante", label: "Revisión manual" },
   { value: "pago_confirmado", label: "Pago confirmado" },
-  { value: "comprobante_rechazado", label: "Rechazado" },
-  { value: "comprobante_ilegible", label: "Ilegible" },
-  { value: "comprobante_vencido", label: "Vencido" },
   { value: "post_venta", label: "Post venta" },
 ];
 
@@ -384,7 +381,9 @@ function PaymentStateLabel({ state }: { state: string }) {
   const opt = PAYMENT_STATE_OPTIONS.find((o) => o.value === state);
   const color = PAYMENT_STATE_COLORS[state] ?? "text-muted-foreground bg-muted";
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${color}`}>
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${color}`}
+    >
       {opt?.label ?? state}
     </span>
   );
@@ -408,7 +407,9 @@ function ClientInfoModal({
   const knownStage = STAGE_OPTIONS.some((o) => o.value === currentStage);
   const updatePaymentState = useUpdatePaymentStateMutation();
   const { data: paymentsData } = usePaymentsQuery(
-    conversation?.phone ? { phone: conversation.phone, pageSize: 20 } : undefined
+    conversation?.phone
+      ? { phone: conversation.phone, pageSize: 20 }
+      : undefined
   );
   const payments = paymentsData?.items ?? [];
   const displayName =
@@ -423,7 +424,7 @@ function ClientInfoModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90dvh] sm:max-h-[70dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalles del cliente</DialogTitle>
         </DialogHeader>
@@ -550,9 +551,13 @@ function ClientInfoModal({
                         </div>
                         <PaymentStateLabel state={p.state ?? ""} />
                       </div>
-                      {(p as unknown as { receipt_url?: string | null }).receipt_url && (
+                      {(p as unknown as { receipt_url?: string | null })
+                        .receipt_url && (
                         <a
-                          href={(p as unknown as { receipt_url?: string }).receipt_url}
+                          href={
+                            (p as unknown as { receipt_url?: string })
+                              .receipt_url
+                          }
                           target="_blank"
                           rel="noreferrer"
                           className="text-xs text-primary underline underline-offset-2 truncate"

@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Workflow,
   CornerUpLeft,
+  RefreshCw,
 } from "lucide-react";
 import {
   useConversationFiltersQuery,
@@ -55,11 +56,8 @@ const STAGE_OPTIONS = [
   { value: "flow_started", label: "En flujo" },
   { value: "interesado", label: "Interesado" },
   { value: "esperando_comprobante", label: "Esperando comprobante" },
-  { value: "confirmar_comprobante", label: "En revisión" },
+  { value: "confirmar_comprobante", label: "Revisión manual" },
   { value: "pago_confirmado", label: "Pago confirmado" },
-  { value: "comprobante_rechazado", label: "Rechazado" },
-  { value: "comprobante_ilegible", label: "Ilegible" },
-  { value: "comprobante_vencido", label: "Vencido" },
   { value: "post_venta", label: "Post venta" },
 ];
 
@@ -159,7 +157,7 @@ export function ConversationsPage() {
 
   const { data: filters } = useConversationFiltersQuery();
 
-  const { data, isLoading } = useConversationsQuery({
+  const { data, isLoading, isFetching, refetch } = useConversationsQuery({
     page,
     pageSize,
     search: search || undefined,
@@ -204,6 +202,17 @@ export function ConversationsPage() {
               : "Historial de chats con clientes"}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="gap-1.5"
+          >
+            <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
+            Actualizar
+          </Button>
         <Select
           value={`updated_at:${sortDir}`}
           onValueChange={(v) => {
@@ -220,6 +229,7 @@ export function ConversationsPage() {
             <SelectItem value="updated_at:asc">Más antiguas</SelectItem>
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {/* Filters */}
