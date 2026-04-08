@@ -44,11 +44,14 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   useAdReferralsQuery,
   useFlowsV2Query,
   useInstancesQuery,
   useReportsQuery,
+  usePaymentsQuery,
+  useUpdatePaymentStateMutation,
 } from "../lib/hooks";
 
 // ── Stage label normalization ─────────────────────────────────────────────
@@ -161,6 +164,20 @@ const AD_BAR_COLORS = [
   "#6366f1",
 ];
 
+function paymentStateLabel(state: string | null | undefined): string {
+  if (state === "pending_manual_review") return "Pendiente";
+  if (state === "validated") return "Validado";
+  if (state === "rejected") return "Rechazado";
+  return state ?? "-";
+}
+
+function paymentStateColor(state: string | null | undefined): string {
+  if (state === "pending_manual_review") return "text-amber-600";
+  if (state === "validated") return "text-green-600";
+  if (state === "rejected") return "text-red-600";
+  return "text-muted-foreground";
+}
+
 export function ReportsPage() {
   const now = new Date();
   const [fromDate, setFromDate] = useState(
@@ -174,6 +191,11 @@ export function ReportsPage() {
   );
   const [page, setPage] = useState(1);
   const pageSize = 20;
+
+  // Pagos tab state
+  const [paymentsStateFilter, setPaymentsStateFilter] = useState<string>("all");
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const paymentsPageSize = 20;
 
   const queryParams = useMemo(
     () => ({
@@ -197,16 +219,31 @@ export function ReportsPage() {
     [flowId, fromDate, toDate]
   );
 
+  const paymentsQueryParams = useMemo(
+    () => ({
+      page: paymentsPage,
+      pageSize: paymentsPageSize,
+      state:
+        paymentsStateFilter === "all" ? undefined : paymentsStateFilter,
+      from: toIsoStart(fromDate),
+      to: toIsoEnd(toDate),
+      flowId: flowId === "all" ? undefined : flowId,
+      instanceId: instanceId === "all" ? undefined : instanceId,
+    }),
+    [paymentsPage, paymentsStateFilter, fromDate, toDate, flowId, instanceId]
+  );
+
   const { data, isLoading, isFetching, isError, refetch } =
     useReportsQuery(queryParams);
   const { data: adData, isLoading: adLoading } =
     useAdReferralsQuery(adQueryParams);
   const { data: instances = [] } = useInstancesQuery();
   const { data: flows = [] } = useFlowsV2Query();
+  const { data: paymentsData, isLoading: paymentsLoading } =
+    usePaymentsQuery(paymentsQueryParams);
+  const updatePaymentState = useUpdatePaymentStateMutation();
 
-  const table = data?.table;
   const loading = isLoading || isFetching;
-  const empty = !loading && (table?.total ?? 0) === 0;
 
   const kpis = data?.kpis;
   const exportCsv = () => {
@@ -259,6 +296,9 @@ export function ReportsPage() {
     conversions: item.conversions,
   }));
 
+  const payments = paymentsData?.items ?? [];
+  const paymentsTotal = paymentsData?.total ?? 0;
+
   return (
     <section className="flex flex-col gap-3 p-3 sm:gap-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -303,6 +343,7 @@ export function ReportsPage() {
             onValueChange={(v) => {
               setInstanceId(v);
               setPage(1);
+              setPaymentsPage(1);
             }}
           >
             <SelectTrigger className="h-9 w-44 text-sm">
@@ -323,6 +364,7 @@ export function ReportsPage() {
             onValueChange={(v) => {
               setFlowId(v);
               setPage(1);
+              setPaymentsPage(1);
             }}
           >
             <SelectTrigger className="h-9 w-44 text-sm">
@@ -395,557 +437,659 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
-      {isError ? (
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm text-destructive">
-              No se pudo cargar el reporte.
-            </p>
-            <Button
-              className="mt-3"
-              onClick={() => refetch()}
-              loading={loading}
-            >
-              Reintentar
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
+      <Tabs defaultValue="resumen">
+        <TabsList className="flex flex-wrap h-auto">
+          <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="pagos">Pagos</TabsTrigger>
+          <TabsTrigger value="anuncios">Anuncios</TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-3 md:grid-cols-5">
-        {loading || !kpis
-          ? Array.from({ length: 5 }).map((_, idx) => (
-              <Skeleton key={idx} className="h-24 w-full" />
-            ))
-          : [
-              { label: "Ingresos", value: money(kpis.revenueTotal) },
-              {
-                label: "Ventas",
-                value: kpis.salesCount.toLocaleString("es-CO"),
-              },
-              { label: "Ticket promedio", value: money(kpis.avgTicket) },
-              {
-                label: "Conversaciones",
-                value: kpis.conversationsCount.toLocaleString("es-CO"),
-              },
-              {
-                label: "Conversion",
-                value: pct(kpis.conversionRate),
-              },
-            ].map((kpi) => (
-              <Card key={kpi.label}>
-                <CardHeader className="pb-2">
-                  <CardDescription>{kpi.label}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-semibold">{kpi.value}</p>
-                </CardContent>
-              </Card>
-            ))}
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Serie temporal</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-72 w-full" />
-            ) : (
-              <ChartContainer
-                config={{
-                  revenue: { label: "Ingresos", color: "#22c55e" },
-                  sales: { label: "Ventas", color: "#3b82f6" },
-                }}
-                className="h-72 w-full"
-              >
-                <AreaChart
-                  data={data?.timeseries ?? []}
-                  margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+        {/* ── Resumen Tab ────────────────────────────────────────────────── */}
+        <TabsContent value="resumen" className="flex flex-col gap-3 mt-3">
+          {isError ? (
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-sm text-destructive">
+                  No se pudo cargar el reporte.
+                </p>
+                <Button
+                  className="mt-3"
+                  onClick={() => refetch()}
+                  loading={loading}
                 >
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="bucket"
-                    tickFormatter={formatBucket}
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    tickFormatter={moneyShort}
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={52}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <ChartLegend content={<ChartLegendContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="var(--color-revenue)"
-                    fill="var(--color-revenue)"
-                    fillOpacity={0.2}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sales"
-                    stroke="var(--color-sales)"
-                    fill="var(--color-sales)"
-                    fillOpacity={0.2}
-                  />
-                </AreaChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Embudo por etapa</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col flex-1 min-h-0">
-            {loading ? (
-              <Skeleton className="flex-1 min-h-[180px]" />
-            ) : (
-              <ChartContainer
-                config={{
-                  count: { label: "Conversaciones", color: "#f59e0b" },
-                }}
-                className="flex-1 min-h-[120px] w-full"
-              >
-                <BarChart
-                  data={data?.funnel ?? []}
-                  layout="vertical"
-                  margin={{ top: 4, right: 36, bottom: 4, left: 0 }}
-                  barSize={22}
-                  barCategoryGap="30%"
-                >
-                  <CartesianGrid horizontal={false} />
-                  <XAxis
-                    type="number"
-                    allowDecimals={false}
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="stage"
-                    width={120}
-                    tick={<FunnelYAxisTick />}
-                  />
-                  <ChartTooltip
-                    content={<ChartTooltipContent />}
-                    formatter={(value, _name, props) => [
-                      value,
-                      stageLabel(props.payload?.stage ?? ""),
-                    ]}
-                  />
-                  <Bar dataKey="count" fill="var(--color-count)" radius={4}>
-                    <LabelList
-                      dataKey="count"
-                      position="right"
-                      style={{ fontSize: 11 }}
-                    />
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  Reintentar
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Ingresos por flujo</CardTitle>
-            <CardDescription>
-              Cuánto genera cada flujo de ventas
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col flex-1 min-h-0">
-            {loading ? (
-              <Skeleton className="flex-1 min-h-[180px]" />
-            ) : (data?.byFlow ?? []).length === 0 ? (
-              <div className="flex flex-1 min-h-[80px] items-center justify-center text-sm text-muted-foreground">
-                Sin datos para el periodo seleccionado
-              </div>
-            ) : (
-              <ChartContainer
-                config={{
-                  revenue: { label: "Ingresos", color: "#8b5cf6" },
-                  sales: { label: "Ventas", color: "#e9d5ff" },
-                }}
-                className="flex-1 min-h-[120px] w-full"
-              >
-                <BarChart
-                  data={data?.byFlow ?? []}
-                  layout="vertical"
-                  margin={{ top: 4, right: 56, bottom: 4, left: 0 }}
-                  barSize={22}
-                  barCategoryGap="30%"
-                >
-                  <CartesianGrid horizontal={false} />
-                  <XAxis type="number" hide />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    width={100}
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v: string) => truncateLabel(v, 13)}
-                  />
-                  <ChartTooltip
-                    content={<ChartTooltipContent />}
-                    formatter={(value) => [
-                      typeof value === "number" ? money(value) : String(value),
-                      "Ingresos",
-                    ]}
-                  />
-                  <Bar dataKey="revenue" fill="var(--color-revenue)" radius={4}>
-                    <LabelList
-                      dataKey="revenue"
-                      position="right"
-                      style={{ fontSize: 11 }}
-                      formatter={(v) =>
-                        typeof v === "number" ? moneyShort(v) : String(v ?? "")
-                      }
-                    />
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribución por instancia</CardTitle>
-            <CardDescription>
-              Ingresos generados por cada número de WhatsApp
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-72 w-full" />
-            ) : (data?.byInstance ?? []).length === 0 ? (
-              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-                Sin datos para el periodo seleccionado
-              </div>
-            ) : (
-              <ChartContainer
-                config={{ revenue: { label: "Ingresos", color: "#06b6d4" } }}
-                className="h-72 w-full"
-              >
-                <PieChart>
-                  <Pie
-                    data={(data?.byInstance ?? []).map((item, i) => ({
-                      ...item,
-                      fill: AD_BAR_COLORS[i % AD_BAR_COLORS.length],
-                    }))}
-                    dataKey="revenue"
-                    nameKey="label"
-                    outerRadius={95}
-                    innerRadius={40}
-                    paddingAngle={3}
-                  />
-                  <Tooltip
-                    formatter={(value, name) => [
-                      typeof value === "number" ? money(value) : String(value),
-                      name,
-                    ]}
-                  />
-                  <ChartLegend content={<ChartLegendContent />} />
-                </PieChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── Ad Performance Section ──────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Rendimiento de anuncios</CardTitle>
-          <CardDescription>
-            Metricas de anuncios Click-to-WhatsApp (CTWA) en el periodo
-            seleccionado
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {adLoading ? (
-            <Skeleton className="h-24 w-full" />
-          ) : adTotals && adTotals.clicks > 0 ? (
-            <>
-              <div className="grid gap-3 md:grid-cols-5">
-                {[
+          <div className="grid gap-3 md:grid-cols-5">
+            {loading || !kpis
+              ? Array.from({ length: 5 }).map((_, idx) => (
+                  <Skeleton key={idx} className="h-24 w-full" />
+                ))
+              : [
+                  { label: "Ingresos", value: money(kpis.revenueTotal) },
                   {
-                    label: "Clics totales",
-                    value: adTotals.clicks.toLocaleString("es-CO"),
+                    label: "Ventas",
+                    value: kpis.salesCount.toLocaleString("es-CO"),
+                  },
+                  { label: "Ticket promedio", value: money(kpis.avgTicket) },
+                  {
+                    label: "Conversaciones",
+                    value: kpis.conversationsCount.toLocaleString("es-CO"),
                   },
                   {
-                    label: "Leads unicos",
-                    value: adTotals.uniqueLeads.toLocaleString("es-CO"),
-                  },
-                  {
-                    label: "Conversiones",
-                    value: adTotals.conversions.toLocaleString("es-CO"),
-                  },
-                  { label: "Ingresos ads", value: money(adTotals.revenue) },
-                  {
-                    label: "Tasa conversion",
-                    value: pct(adTotals.conversionRate),
+                    label: "Conversion",
+                    value: pct(kpis.conversionRate),
                   },
                 ].map((kpi) => (
-                  <div key={kpi.label} className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                    <p className="text-lg font-semibold">{kpi.value}</p>
-                  </div>
+                  <Card key={kpi.label}>
+                    <CardHeader className="pb-2">
+                      <CardDescription>{kpi.label}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-semibold">{kpi.value}</p>
+                    </CardContent>
+                  </Card>
                 ))}
-              </div>
+          </div>
 
-              <div className="grid gap-3 lg:grid-cols-2">
-                <Card className="border-0 shadow-none">
-                  <CardHeader className="pb-2 px-0">
-                    <CardTitle className="text-base">
-                      Comparativa por anuncio
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-0">
-                    <ChartContainer
-                      config={{
-                        clicks: { label: "Clics", color: "#3b82f6" },
-                        leads: { label: "Leads", color: "#22c55e" },
-                        conversions: {
-                          label: "Conversiones",
-                          color: "#f59e0b",
-                        },
-                      }}
-                      className="h-64 w-full"
+          <div className="grid gap-3 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Serie temporal</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-72 w-full" />
+                ) : (
+                  <ChartContainer
+                    config={{
+                      revenue: { label: "Ingresos", color: "#22c55e" },
+                      sales: { label: "Ventas", color: "#3b82f6" },
+                    }}
+                    className="h-72 w-full"
+                  >
+                    <AreaChart
+                      data={data?.timeseries ?? []}
+                      margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
                     >
-                      <BarChart
-                        data={adChartData}
-                        margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="bucket"
+                        tickFormatter={formatBucket}
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        tickFormatter={moneyShort}
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={52}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="var(--color-revenue)"
+                        fill="var(--color-revenue)"
+                        fillOpacity={0.2}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="sales"
+                        stroke="var(--color-sales)"
+                        fill="var(--color-sales)"
+                        fillOpacity={0.2}
+                      />
+                    </AreaChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="flex flex-col">
+              <CardHeader>
+                <CardTitle>Embudo por etapa</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col flex-1 min-h-0">
+                {loading ? (
+                  <Skeleton className="flex-1 min-h-[180px]" />
+                ) : (
+                  <ChartContainer
+                    config={{
+                      count: { label: "Conversaciones", color: "#f59e0b" },
+                    }}
+                    className="flex-1 min-h-[120px] w-full"
+                  >
+                    <BarChart
+                      data={data?.funnel ?? []}
+                      layout="vertical"
+                      margin={{ top: 4, right: 36, bottom: 4, left: 0 }}
+                      barSize={22}
+                      barCategoryGap="30%"
+                    >
+                      <CartesianGrid horizontal={false} />
+                      <XAxis
+                        type="number"
+                        allowDecimals={false}
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="stage"
+                        width={120}
+                        tick={<FunnelYAxisTick />}
+                      />
+                      <ChartTooltip
+                        content={<ChartTooltipContent />}
+                        formatter={(value, _name, props) => [
+                          value,
+                          stageLabel(props.payload?.stage ?? ""),
+                        ]}
+                      />
+                      <Bar dataKey="count" fill="var(--color-count)" radius={4}>
+                        <LabelList
+                          dataKey="count"
+                          position="right"
+                          style={{ fontSize: 11 }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <Card className="flex flex-col">
+              <CardHeader>
+                <CardTitle>Ingresos por flujo</CardTitle>
+                <CardDescription>
+                  Cuánto genera cada flujo de ventas
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col flex-1 min-h-0">
+                {loading ? (
+                  <Skeleton className="flex-1 min-h-[180px]" />
+                ) : (data?.byFlow ?? []).length === 0 ? (
+                  <div className="flex flex-1 min-h-[80px] items-center justify-center text-sm text-muted-foreground">
+                    Sin datos para el periodo seleccionado
+                  </div>
+                ) : (
+                  <ChartContainer
+                    config={{
+                      revenue: { label: "Ingresos", color: "#8b5cf6" },
+                      sales: { label: "Ventas", color: "#e9d5ff" },
+                    }}
+                    className="flex-1 min-h-[120px] w-full"
+                  >
+                    <BarChart
+                      data={data?.byFlow ?? []}
+                      layout="vertical"
+                      margin={{ top: 4, right: 56, bottom: 4, left: 0 }}
+                      barSize={22}
+                      barCategoryGap="30%"
+                    >
+                      <CartesianGrid horizontal={false} />
+                      <XAxis type="number" hide />
+                      <YAxis
+                        type="category"
+                        dataKey="label"
+                        width={100}
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: string) => truncateLabel(v, 13)}
+                      />
+                      <ChartTooltip
+                        content={<ChartTooltipContent />}
+                        formatter={(value) => [
+                          typeof value === "number"
+                            ? money(value)
+                            : String(value),
+                          "Ingresos",
+                        ]}
+                      />
+                      <Bar
+                        dataKey="revenue"
+                        fill="var(--color-revenue)"
+                        radius={4}
                       >
-                        <CartesianGrid vertical={false} />
-                        <XAxis dataKey="name" hide />
-                        <YAxis
-                          allowDecimals={false}
-                          tick={{ fontSize: 11 }}
-                          tickLine={false}
-                          axisLine={false}
-                          width={36}
-                        />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <ChartLegend content={<ChartLegendContent />} />
-                        <Bar
-                          dataKey="clicks"
-                          fill="var(--color-clicks)"
-                          radius={[4, 4, 0, 0]}
-                        />
-                        <Bar
-                          dataKey="leads"
-                          fill="var(--color-leads)"
-                          radius={[4, 4, 0, 0]}
-                        />
-                        <Bar
-                          dataKey="conversions"
-                          fill="var(--color-conversions)"
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ChartContainer>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-none">
-                  <CardHeader className="pb-2 px-0">
-                    <CardTitle className="text-base">
-                      Distribucion de clics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-0">
-                    <ChartContainer
-                      config={{ clicks: { label: "Clics", color: "#8b5cf6" } }}
-                      className="h-64 w-full"
-                    >
-                      <PieChart>
-                        <Pie
-                          data={adChartData.map((item, i) => ({
-                            ...item,
-                            fill: AD_BAR_COLORS[i % AD_BAR_COLORS.length],
-                          }))}
-                          dataKey="clicks"
-                          nameKey="name"
-                          outerRadius={90}
-                          label={({
-                            name,
-                            percent,
-                          }: {
-                            name?: string;
-                            percent?: number;
-                          }) => {
-                            const n = name ?? "";
-                            const p = percent ?? 0;
-                            return `${n.slice(0, 12)}${n.length > 12 ? "..." : ""} ${(p * 100).toFixed(0)}%`;
-                          }}
-                          labelLine={false}
-                        />
-                        <Tooltip
-                          formatter={(value) =>
-                            typeof value === "number"
-                              ? value.toLocaleString("es-CO")
-                              : String(value)
+                        <LabelList
+                          dataKey="revenue"
+                          position="right"
+                          style={{ fontSize: 11 }}
+                          formatter={(v) =>
+                            typeof v === "number"
+                              ? moneyShort(v)
+                              : String(v ?? "")
                           }
                         />
-                      </PieChart>
-                    </ChartContainer>
-                  </CardContent>
-                </Card>
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribución por instancia</CardTitle>
+                <CardDescription>
+                  Ingresos generados por cada número de WhatsApp
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-72 w-full" />
+                ) : (data?.byInstance ?? []).length === 0 ? (
+                  <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                    Sin datos para el periodo seleccionado
+                  </div>
+                ) : (
+                  <ChartContainer
+                    config={{
+                      revenue: { label: "Ingresos", color: "#06b6d4" },
+                    }}
+                    className="h-72 w-full"
+                  >
+                    <PieChart>
+                      <Pie
+                        data={(data?.byInstance ?? []).map((item, i) => ({
+                          ...item,
+                          fill: AD_BAR_COLORS[i % AD_BAR_COLORS.length],
+                        }))}
+                        dataKey="revenue"
+                        nameKey="label"
+                        outerRadius={95}
+                        innerRadius={40}
+                        paddingAngle={3}
+                      />
+                      <Tooltip
+                        formatter={(value, name) => [
+                          typeof value === "number"
+                            ? money(value)
+                            : String(value),
+                          name,
+                        ]}
+                      />
+                      <ChartLegend content={<ChartLegendContent />} />
+                    </PieChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ── Pagos Tab ─────────────────────────────────────────────────── */}
+        <TabsContent value="pagos" className="mt-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pagos</CardTitle>
+              <CardDescription>
+                Gestiona y actualiza el estado de cada pago
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Select
+                  value={paymentsStateFilter}
+                  onValueChange={(v) => {
+                    setPaymentsStateFilter(v);
+                    setPaymentsPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-9 w-52 text-sm">
+                    <SelectValue placeholder="Estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los estados</SelectItem>
+                    <SelectItem value="pending_manual_review">
+                      Pendiente
+                    </SelectItem>
+                    <SelectItem value="validated">Validado</SelectItem>
+                    <SelectItem value="rejected">Rechazado</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Anuncio</TableHead>
-                    <TableHead>ID fuente</TableHead>
-                    <TableHead className="text-right">Clics</TableHead>
-                    <TableHead className="text-right">Leads</TableHead>
-                    <TableHead className="text-right">Conversiones</TableHead>
-                    <TableHead className="text-right">Ingresos</TableHead>
-                    <TableHead className="text-right">Conversion</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Telefono</TableHead>
+                    <TableHead>Flujo</TableHead>
+                    <TableHead>Instancia</TableHead>
+                    <TableHead>Monto</TableHead>
+                    <TableHead>Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {adItems.map((item, idx) => (
-                    <TableRow key={item.sourceId ?? idx}>
-                      <TableCell className="font-medium max-w-50 truncate">
-                        {item.headline || "-"}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-30 truncate">
-                        {item.sourceId || "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.clicks.toLocaleString("es-CO")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.uniqueLeads.toLocaleString("es-CO")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.conversions.toLocaleString("es-CO")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {money(item.revenue)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {pct(item.conversionRate)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {adItems.length === 0 && (
+                  {paymentsLoading ? (
+                    Array.from({ length: 8 }).map((_, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell colSpan={6}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : payments.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={6}
                         className="text-center text-muted-foreground"
                       >
-                        No hay datos de anuncios para este periodo.
+                        No hay pagos para estos filtros.
                       </TableCell>
                     </TableRow>
+                  ) : (
+                    payments.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell>
+                          {p.validated_at
+                            ? new Date(p.validated_at).toLocaleString("es-CO")
+                            : p.receipt_date
+                              ? new Date(p.receipt_date).toLocaleString(
+                                  "es-CO"
+                                )
+                              : "-"}
+                        </TableCell>
+                        <TableCell>{p.phone}</TableCell>
+                        <TableCell>{p.flow_name ?? "-"}</TableCell>
+                        <TableCell>{p.instance_label ?? "-"}</TableCell>
+                        <TableCell>
+                          {p.amount != null ? money(p.amount) : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={p.state ?? ""}
+                            onValueChange={(newState) =>
+                              updatePaymentState.mutate({
+                                id: p.id,
+                                state: newState,
+                              })
+                            }
+                          >
+                            <SelectTrigger className="h-8 w-44 text-sm border-0 shadow-none p-0 focus:ring-0">
+                              <SelectValue>
+                                <span
+                                  className={`font-medium ${paymentStateColor(p.state)}`}
+                                >
+                                  {paymentStateLabel(p.state)}
+                                </span>
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending_manual_review">
+                                <span className="text-amber-600 font-medium">
+                                  Pendiente
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="validated">
+                                <span className="text-green-600 font-medium">
+                                  Validado
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="rejected">
+                                <span className="text-red-600 font-medium">
+                                  Rechazado
+                                </span>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
                 </TableBody>
               </Table>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No se han registrado clics de anuncios CTWA en este periodo.
-              Cuando los usuarios lleguen desde anuncios de Click-to-WhatsApp,
-              las metricas apareceran aqui.
-            </p>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* ── Sales Detail Table ─────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Detalle de ventas</CardTitle>
-          <CardDescription>Dataset filtrado con paginacion</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Telefono</TableHead>
-                <TableHead>Flow</TableHead>
-                <TableHead>Instancia</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 8 }).map((_, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell colSpan={6}>
-                      <Skeleton className="h-5 w-full" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : empty ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center text-muted-foreground"
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Total: {paymentsTotal}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={paymentsPage <= 1}
+                    onClick={() => setPaymentsPage((p) => p - 1)}
                   >
-                    No hay ventas para estos filtros.
-                  </TableCell>
-                </TableRow>
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={paymentsPage * paymentsPageSize >= paymentsTotal}
+                    onClick={() => setPaymentsPage((p) => p + 1)}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Anuncios Tab ──────────────────────────────────────────────── */}
+        <TabsContent value="anuncios" className="mt-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Rendimiento de anuncios</CardTitle>
+              <CardDescription>
+                Metricas de anuncios Click-to-WhatsApp (CTWA) en el periodo
+                seleccionado
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {adLoading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : adTotals && adTotals.clicks > 0 ? (
+                <>
+                  <div className="grid gap-3 md:grid-cols-5">
+                    {[
+                      {
+                        label: "Clics totales",
+                        value: adTotals.clicks.toLocaleString("es-CO"),
+                      },
+                      {
+                        label: "Leads unicos",
+                        value: adTotals.uniqueLeads.toLocaleString("es-CO"),
+                      },
+                      {
+                        label: "Conversiones",
+                        value: adTotals.conversions.toLocaleString("es-CO"),
+                      },
+                      {
+                        label: "Ingresos ads",
+                        value: money(adTotals.revenue),
+                      },
+                      {
+                        label: "Tasa conversion",
+                        value: pct(adTotals.conversionRate),
+                      },
+                    ].map((kpi) => (
+                      <div key={kpi.label} className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">
+                          {kpi.label}
+                        </p>
+                        <p className="text-lg font-semibold">{kpi.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <Card className="border-0 shadow-none">
+                      <CardHeader className="pb-2 px-0">
+                        <CardTitle className="text-base">
+                          Comparativa por anuncio
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-0">
+                        <ChartContainer
+                          config={{
+                            clicks: { label: "Clics", color: "#3b82f6" },
+                            leads: { label: "Leads", color: "#22c55e" },
+                            conversions: {
+                              label: "Conversiones",
+                              color: "#f59e0b",
+                            },
+                          }}
+                          className="h-64 w-full"
+                        >
+                          <BarChart
+                            data={adChartData}
+                            margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                          >
+                            <CartesianGrid vertical={false} />
+                            <XAxis dataKey="name" hide />
+                            <YAxis
+                              allowDecimals={false}
+                              tick={{ fontSize: 11 }}
+                              tickLine={false}
+                              axisLine={false}
+                              width={36}
+                            />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                            <Bar
+                              dataKey="clicks"
+                              fill="var(--color-clicks)"
+                              radius={[4, 4, 0, 0]}
+                            />
+                            <Bar
+                              dataKey="leads"
+                              fill="var(--color-leads)"
+                              radius={[4, 4, 0, 0]}
+                            />
+                            <Bar
+                              dataKey="conversions"
+                              fill="var(--color-conversions)"
+                              radius={[4, 4, 0, 0]}
+                            />
+                          </BarChart>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-0 shadow-none">
+                      <CardHeader className="pb-2 px-0">
+                        <CardTitle className="text-base">
+                          Distribucion de clics
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-0">
+                        <ChartContainer
+                          config={{
+                            clicks: { label: "Clics", color: "#8b5cf6" },
+                          }}
+                          className="h-64 w-full"
+                        >
+                          <PieChart>
+                            <Pie
+                              data={adChartData.map((item, i) => ({
+                                ...item,
+                                fill: AD_BAR_COLORS[i % AD_BAR_COLORS.length],
+                              }))}
+                              dataKey="clicks"
+                              nameKey="name"
+                              outerRadius={90}
+                              label={({
+                                name,
+                                percent,
+                              }: {
+                                name?: string;
+                                percent?: number;
+                              }) => {
+                                const n = name ?? "";
+                                const p = percent ?? 0;
+                                return `${n.slice(0, 12)}${n.length > 12 ? "..." : ""} ${(p * 100).toFixed(0)}%`;
+                              }}
+                              labelLine={false}
+                            />
+                            <Tooltip
+                              formatter={(value) =>
+                                typeof value === "number"
+                                  ? value.toLocaleString("es-CO")
+                                  : String(value)
+                              }
+                            />
+                          </PieChart>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Anuncio</TableHead>
+                        <TableHead>ID fuente</TableHead>
+                        <TableHead className="text-right">Clics</TableHead>
+                        <TableHead className="text-right">Leads</TableHead>
+                        <TableHead className="text-right">
+                          Conversiones
+                        </TableHead>
+                        <TableHead className="text-right">Ingresos</TableHead>
+                        <TableHead className="text-right">Conversion</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adItems.map((item, idx) => (
+                        <TableRow key={item.sourceId ?? idx}>
+                          <TableCell className="font-medium max-w-50 truncate">
+                            {item.headline || "-"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-30 truncate">
+                            {item.sourceId || "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.clicks.toLocaleString("es-CO")}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.uniqueLeads.toLocaleString("es-CO")}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.conversions.toLocaleString("es-CO")}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {money(item.revenue)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {pct(item.conversionRate)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {adItems.length === 0 && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className="text-center text-muted-foreground"
+                          >
+                            No hay datos de anuncios para este periodo.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </>
               ) : (
-                (table?.items ?? []).map((row) => (
-                  <TableRow key={row.paymentId}>
-                    <TableCell>
-                      {row.validatedAt
-                        ? new Date(row.validatedAt).toLocaleString("es-CO")
-                        : "-"}
-                    </TableCell>
-                    <TableCell>{row.phone}</TableCell>
-                    <TableCell>{row.flowName ?? "-"}</TableCell>
-                    <TableCell>{row.instanceLabel ?? "-"}</TableCell>
-                    <TableCell>{row.state ?? "-"}</TableCell>
-                    <TableCell className="text-right">
-                      {money(row.amount)}
-                    </TableCell>
-                  </TableRow>
-                ))
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No se han registrado clics de anuncios CTWA en este periodo.
+                  Cuando los usuarios lleguen desde anuncios de
+                  Click-to-WhatsApp, las metricas apareceran aqui.
+                </p>
               )}
-            </TableBody>
-          </Table>
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              Total: {table?.total ?? 0}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Anterior
-              </Button>
-              <Button
-                variant="outline"
-                disabled={!table || page * pageSize >= table.total}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Siguiente
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }

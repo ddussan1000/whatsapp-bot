@@ -3,7 +3,6 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppLayout } from "./layout/AppLayout";
 import { HomePage } from "./pages/HomePage";
 import { ConversationsPage } from "./pages/ConversationsPage";
-import { PaymentsPage } from "./pages/PaymentsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ConversationDetailPage } from "./pages/ConversationDetailPage";
@@ -50,7 +49,6 @@ function App() {
             path="/conversations/:id"
             element={<ConversationDetailPage />}
           />
-          <Route path="/payments" element={<PaymentsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/organization" element={<OrganizationPage />} />
           <Route path="/flows" element={<FlowsPage />} />
