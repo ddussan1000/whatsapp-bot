@@ -5,19 +5,19 @@ type Props = {
 const colorMap: Record<string, string> = {
   flow_started: "badge badge-indigo",
   interesado: "badge badge-blue",
-  listo_pagar: "badge badge-amber",
-  necesita_agente: "badge badge-orange",
+  esperando_comprobante: "badge badge-amber",
   confirmar_comprobante: "badge badge-purple",
   pago_confirmado: "badge badge-green",
+  post_venta: "badge badge-orange",
 };
 
 const labelMap: Record<string, string> = {
   flow_started: "En flujo",
   interesado: "Interesado",
-  listo_pagar: "Listo para pagar",
-  necesita_agente: "Necesita agente",
-  confirmar_comprobante: "En revisión",
+  esperando_comprobante: "Esperando comprobante",
+  confirmar_comprobante: "Revisión manual",
   pago_confirmado: "Pago confirmado",
+  post_venta: "Post venta",
 };
 
 export function StatusBadge({ state }: Props) {

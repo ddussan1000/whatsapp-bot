@@ -140,6 +140,23 @@ export function useUploadFlowMediaMutation() {
   });
 }
 
+export function useSendMediaFromLibraryMutation(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      url: string;
+      filename: string;
+      mimeType: string;
+    }) => api.sendMediaFromLibrary(conversationId, payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({
+        queryKey: ["conversation-messages", conversationId],
+      });
+      void qc.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+}
+
 export function usePaymentsQuery(params?: {
   page?: number;
   pageSize?: number;
@@ -150,10 +167,20 @@ export function usePaymentsQuery(params?: {
   instanceId?: string;
   from?: string;
   to?: string;
+  phone?: string;
 }) {
   return useQuery({
     queryKey: ["payments", params],
     queryFn: () => api.getPayments(params),
+  });
+}
+
+export function useUpdatePaymentStateMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, state }: { id: string; state: string }) =>
+      api.updatePaymentState(id, state),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["payments"] }),
   });
 }
 

@@ -292,6 +292,20 @@ export const api = {
     if (!res.ok) throw new Error(`API ${res.status}`);
     return (await res.json()) as FlowMediaUploadResponse;
   },
+  sendMediaFromLibrary: (
+    id: string,
+    payload: { url: string; filename: string; mimeType: string }
+  ) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/conversations/${id}/send-media`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<SendMessageResponse>;
+      })
+    ),
   getPayments: (params?: {
     page?: number;
     pageSize?: number;
@@ -302,6 +316,7 @@ export const api = {
     instanceId?: string;
     from?: string;
     to?: string;
+    phone?: string;
   }) => {
     const q = new URLSearchParams();
     if (params?.page) q.set("page", String(params.page));
@@ -313,8 +328,20 @@ export const api = {
     if (params?.instanceId) q.set("instanceId", params.instanceId);
     if (params?.from) q.set("from", params.from);
     if (params?.to) q.set("to", params.to);
+    if (params?.phone) q.set("phone", params.phone);
     return request<Paginated<Payment>>(`/api/payments?${q.toString()}`);
   },
+  updatePaymentState: (id: string, state: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/payments/${id}/state`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ state }),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
   getBotConfig: () => request<BotConfig>("/api/config/bot"),
   updateBotConfig: (payload: UpdateBotConfigBody) =>
     buildHeaders(true).then((headers) =>

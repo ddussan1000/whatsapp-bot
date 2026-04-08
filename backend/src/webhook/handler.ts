@@ -163,7 +163,7 @@ export async function handleWebhook(c: Context) {
       )?.[0]?.profile?.name ?? null;
     const previousConversation = await supabase
       ?.from("conversations")
-      .select("id, updated_at, flow_id, product")
+      .select("id, updated_at, flow_id, product, stage")
       .eq("organization_id", organizationId)
       .eq("phone", phone)
       .order("updated_at", { ascending: false })
@@ -172,6 +172,20 @@ export async function handleWebhook(c: Context) {
     const previous = previousConversation?.data ?? null;
 
     const state = await getState(phone, metaPhoneNumberId || null);
+
+    // Fall back to DB stage if Redis cache expired
+    if (!state.stage && previous?.stage) {
+      state.stage = previous.stage as string;
+    }
+
+    // Transition to post_venta when client writes after a terminal stage
+    // (successful payment or manual review after receipt error)
+    if (
+      state.stage === "pago_confirmado" ||
+      state.stage === "confirmar_comprobante"
+    ) {
+      state.stage = "post_venta";
+    }
 
     const referral = extractReferral(msg);
     const ctwaClid = referral?.ctwa_clid ?? null;

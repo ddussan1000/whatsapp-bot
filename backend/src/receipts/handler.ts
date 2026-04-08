@@ -8,19 +8,13 @@ import { insertPayment } from "../db/payments";
 import { supabase } from "../db/supabase";
 import { log } from "../logger";
 
-const DEFAULT_RECEIPT_PENDING_MESSAGE =
-  "Gracias por tu comprobante. Lo estamos validando.";
 const DEFAULT_RECEIPT_REJECTED_MESSAGE =
-  "No pudimos validar tu comprobante. Por favor verifica que la imagen sea legible y que la fecha sea de las ultimas 24 horas.";
-const DEFAULT_RECEIPT_RETRY_MESSAGE =
-  "No pudimos leer tu comprobante. Por favor envia una foto mas clara. Asegurate de que se vean los datos del pago completos.";
+  "No pudimos validar tu comprobante. Un agente lo revisara manualmente y te informara.";
 const DEFAULT_RECEIPT_CONFIRMED_MESSAGE =
   "¡Gracias! Recibimos tu pago correctamente.";
 
 type ReceiptMessages = {
-  pendingMessage: string;
   rejectedMessage: string;
-  retryMessage: string;
   confirmedMessage: string;
 };
 
@@ -36,9 +30,7 @@ async function getReceiptMessages(
 ): Promise<ReceiptMessages> {
   if (!supabase) {
     return {
-      pendingMessage: DEFAULT_RECEIPT_PENDING_MESSAGE,
       rejectedMessage: DEFAULT_RECEIPT_REJECTED_MESSAGE,
-      retryMessage: DEFAULT_RECEIPT_RETRY_MESSAGE,
       confirmedMessage: DEFAULT_RECEIPT_CONFIRMED_MESSAGE,
     };
   }
@@ -64,17 +56,9 @@ async function getReceiptMessages(
   const orgCfg = (orgRow?.bot_config ?? {}) as Record<string, unknown>;
 
   return {
-    pendingMessage: pick(
-      flowOverrides.receiptPendingMessage,
-      pick(orgCfg.receiptPendingMessage, DEFAULT_RECEIPT_PENDING_MESSAGE),
-    ),
     rejectedMessage: pick(
       flowOverrides.receiptRejectedMessage,
       pick(orgCfg.receiptRejectedMessage, DEFAULT_RECEIPT_REJECTED_MESSAGE),
-    ),
-    retryMessage: pick(
-      flowOverrides.receiptRetryMessage,
-      pick(orgCfg.receiptRetryMessage, DEFAULT_RECEIPT_RETRY_MESSAGE),
     ),
     confirmedMessage: pick(
       flowOverrides.receiptConfirmedMessage,
@@ -144,7 +128,7 @@ export async function classifyAndHandleImage(
       { err, phone },
       "classifyAndHandleImage: OCR timeout/error → confirmar_comprobante",
     );
-    const { retryMessage } = await getReceiptMessages(
+    const { rejectedMessage } = await getReceiptMessages(
       state.organizationId,
       state.flowId,
     );
@@ -154,7 +138,7 @@ export async function classifyAndHandleImage(
       .eq("organization_id", state.organizationId)
       .eq("phone", phone)
       .eq("status", "pending");
-    await sendMessage(phone, textMessage(retryMessage), msgCtx(state));
+    await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
     return {
       handled: true,
       state: { ...state, stage: "confirmar_comprobante" },
@@ -186,47 +170,35 @@ export async function classifyAndHandleImage(
   );
 
   const receiptUrl = await saveReceipt(buffer, phone, state.organizationId);
-  const { pendingMessage, rejectedMessage, retryMessage, confirmedMessage } =
+  const { rejectedMessage, confirmedMessage } =
     await getReceiptMessages(state.organizationId, state.flowId);
+
+  const cancelPending = () =>
+    supabase
+      ?.from("scheduled_flow_messages")
+      .update({ status: "cancelled" })
+      .eq("organization_id", state.organizationId!)
+      .eq("phone", phone)
+      .eq("status", "pending");
 
   if (!amount) {
     log.warn(
       { phone, event: "receipt.illegible" },
       "classifyAndHandleImage: amount not detected → confirmar_comprobante",
     );
-    await supabase
-      ?.from("scheduled_flow_messages")
-      .update({ status: "cancelled" })
-      .eq("organization_id", state.organizationId)
-      .eq("phone", phone)
-      .eq("status", "pending");
-    await sendMessage(phone, textMessage(retryMessage), msgCtx(state));
-    return {
-      handled: true,
-      state: { ...state, stage: "confirmar_comprobante" },
-    };
+    await cancelPending();
+    await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
+    return { handled: true, state: { ...state, stage: "confirmar_comprobante" } };
   }
 
   if (receiptDate && !isWithin24Hours) {
     log.warn(
-      {
-        phone,
-        event: "receipt.rejected",
-        receiptDate: receiptDate.toISOString(),
-      },
+      { phone, event: "receipt.rejected", receiptDate: receiptDate.toISOString() },
       "classifyAndHandleImage: receipt older than 24h → confirmar_comprobante",
     );
-    await supabase
-      ?.from("scheduled_flow_messages")
-      .update({ status: "cancelled" })
-      .eq("organization_id", state.organizationId)
-      .eq("phone", phone)
-      .eq("status", "pending");
+    await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
-    return {
-      handled: true,
-      state: { ...state, stage: "confirmar_comprobante" },
-    };
+    return { handled: true, state: { ...state, stage: "confirmar_comprobante" } };
   }
 
   if (!receiptDate && amount) {
@@ -248,17 +220,9 @@ export async function classifyAndHandleImage(
       state: "pending_manual_review",
       meta_message_id: (msg as unknown as { id?: string }).id ?? null,
     });
-    await supabase
-      ?.from("scheduled_flow_messages")
-      .update({ status: "cancelled" })
-      .eq("organization_id", state.organizationId)
-      .eq("phone", phone)
-      .eq("status", "pending");
-    await sendMessage(phone, textMessage(pendingMessage), msgCtx(state));
-    return {
-      handled: true,
-      state: { ...state, stage: "confirmar_comprobante" },
-    };
+    await cancelPending();
+    await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
+    return { handled: true, state: { ...state, stage: "confirmar_comprobante" } };
   }
 
   log.info(
@@ -284,13 +248,7 @@ export async function classifyAndHandleImage(
     state: "validated",
     meta_message_id: (msg as unknown as { id?: string }).id ?? null,
   });
-  await supabase
-    ?.from("scheduled_flow_messages")
-    .update({ status: "cancelled" })
-    .eq("organization_id", state.organizationId)
-    .eq("phone", phone)
-    .eq("status", "pending");
-
+  await cancelPending();
   await sendMessage(phone, textMessage(confirmedMessage), msgCtx(state));
   return { handled: true, state: { ...state, stage: "pago_confirmado" } };
 }

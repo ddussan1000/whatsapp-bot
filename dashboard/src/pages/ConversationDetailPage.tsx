@@ -7,15 +7,13 @@ import {
   FileText,
   ImageIcon,
   Info,
+  Library,
   Megaphone,
-  Paperclip,
   Send,
   Video,
   Workflow,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DragEventHandler } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
@@ -36,12 +34,18 @@ import {
 } from "../components/ui/select";
 import {
   useConversationQuery,
+  usePaymentsQuery,
   useSendConversationMessageMutation,
-  useUploadAndSendFileMutation,
+  useSendMediaFromLibraryMutation,
   useUpdateConversationStageMutation,
+  useUpdatePaymentStateMutation,
 } from "../lib/hooks";
 import { api } from "../lib/api";
 import type { ChatMessage, Conversation } from "../types/api";
+import {
+  MediaPickerModal,
+  type MediaPickerResult,
+} from "../components/ui/media-picker-modal";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -355,11 +359,35 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 const STAGE_OPTIONS = [
   { value: "flow_started", label: "En flujo" },
   { value: "interesado", label: "Interesado" },
-  { value: "listo_pagar", label: "Listo para pagar" },
-  { value: "necesita_agente", label: "Necesita agente" },
-  { value: "confirmar_comprobante", label: "En revisión" },
+  { value: "esperando_comprobante", label: "Esperando comprobante" },
+  { value: "confirmar_comprobante", label: "Revisión manual" },
   { value: "pago_confirmado", label: "Pago confirmado" },
+  { value: "post_venta", label: "Post venta" },
 ];
+
+const PAYMENT_STATE_OPTIONS = [
+  { value: "pending_manual_review", label: "Pendiente revisión" },
+  { value: "validated", label: "Validado" },
+  { value: "rejected", label: "Rechazado" },
+];
+
+const PAYMENT_STATE_COLORS: Record<string, string> = {
+  pending_manual_review: "text-amber-600 bg-amber-500/10",
+  validated: "text-green-600 bg-green-500/10",
+  rejected: "text-red-600 bg-red-500/10",
+};
+
+function PaymentStateLabel({ state }: { state: string }) {
+  const opt = PAYMENT_STATE_OPTIONS.find((o) => o.value === state);
+  const color = PAYMENT_STATE_COLORS[state] ?? "text-muted-foreground bg-muted";
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${color}`}
+    >
+      {opt?.label ?? state}
+    </span>
+  );
+}
 
 function ClientInfoModal({
   open,
@@ -377,6 +405,13 @@ function ClientInfoModal({
   const ad = conversation?.ad_source;
   const currentStage = conversation ? String(conversation.stage) : "";
   const knownStage = STAGE_OPTIONS.some((o) => o.value === currentStage);
+  const updatePaymentState = useUpdatePaymentStateMutation();
+  const { data: paymentsData } = usePaymentsQuery(
+    conversation?.phone
+      ? { phone: conversation.phone, pageSize: 20 }
+      : undefined
+  );
+  const payments = paymentsData?.items ?? [];
   const displayName =
     conversation?.contact_name ??
     (conversation ? formatPhone(conversation.phone) : "");
@@ -389,7 +424,7 @@ function ClientInfoModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-sm max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90dvh] sm:max-h-[70dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalles del cliente</DialogTitle>
         </DialogHeader>
@@ -484,6 +519,76 @@ function ClientInfoModal({
               )}
             </div>
 
+            {/* Payments */}
+            {payments.length > 0 && (
+              <>
+                <div className="h-px bg-border" />
+                <div className="flex flex-col gap-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Pagos ({payments.length})
+                  </p>
+                  {payments.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-xl border bg-muted/20 p-3 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-semibold text-sm">
+                            {p.amount != null
+                              ? new Intl.NumberFormat("es-CO", {
+                                  style: "currency",
+                                  currency: p.currency ?? "COP",
+                                  maximumFractionDigits: 0,
+                                }).format(p.amount)
+                              : "Sin monto"}
+                          </span>
+                          {p.receipt_date && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatDateTime(p.receipt_date)}
+                            </span>
+                          )}
+                        </div>
+                        <PaymentStateLabel state={p.state ?? ""} />
+                      </div>
+                      {(p as unknown as { receipt_url?: string | null })
+                        .receipt_url && (
+                        <a
+                          href={
+                            (p as unknown as { receipt_url?: string })
+                              .receipt_url
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary underline underline-offset-2 truncate"
+                        >
+                          Ver comprobante
+                        </a>
+                      )}
+                      <Select
+                        value={p.state ?? undefined}
+                        onValueChange={(v) =>
+                          updatePaymentState.mutate({ id: p.id, state: v })
+                        }
+                        disabled={updatePaymentState.isPending}
+                      >
+                        <SelectTrigger className="h-8 text-xs bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_STATE_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
             {/* Ad source */}
             {ad && (
               <>
@@ -521,9 +626,8 @@ export function ConversationDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const [text, setText] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const chatWindowRef = useRef<HTMLDivElement | null>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -535,7 +639,7 @@ export function ConversationDetailPage() {
   const { data: conversation, isLoading: convLoading } =
     useConversationQuery(id);
   const sendMutation = useSendConversationMessageMutation(id);
-  const uploadMutation = useUploadAndSendFileMutation(id);
+  const sendMediaMutation = useSendMediaFromLibraryMutation(id);
   const stageMutation = useUpdateConversationStageMutation(id);
 
   // Initial load
@@ -623,22 +727,10 @@ export function ConversationDetailPage() {
     return groups;
   }, [messages]);
 
-  const isSending = sendMutation.isPending || uploadMutation.isPending;
+  const isSending = sendMutation.isPending || sendMediaMutation.isPending;
 
   const onSend = async () => {
-    if (isSending) return;
-    if (file) {
-      await uploadMutation.mutateAsync({
-        kind: file.type.startsWith("image/") ? "image" : "document",
-        caption: text || undefined,
-        file,
-      });
-      setText("");
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-    if (!text.trim()) return;
+    if (isSending || !text.trim()) return;
     await sendMutation.mutateAsync({ type: "text", text });
     setText("");
     const res = await api.getConversationMessages(id, 1, PAGE_SIZE, true);
@@ -650,10 +742,20 @@ export function ConversationDetailPage() {
     });
   };
 
-  const onDropFile: DragEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    const dropped = e.dataTransfer.files?.[0];
-    if (dropped) setFile(dropped);
+  const onMediaSelected = async (result: MediaPickerResult) => {
+    setMediaPickerOpen(false);
+    await sendMediaMutation.mutateAsync({
+      url: result.url,
+      filename: result.filename,
+      mimeType: result.mimeType,
+    });
+    const res = await api.getConversationMessages(id, 1, PAGE_SIZE, true);
+    setMessages([...res.items].reverse());
+    setTotal(res.total);
+    requestAnimationFrame(() => {
+      const el = chatWindowRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
   };
 
   const adSource = conversation?.ad_source;
@@ -722,8 +824,6 @@ export function ConversationDetailPage() {
           ref={chatWindowRef}
           className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-3"
           onScroll={onScroll}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={onDropFile}
         >
           {loadingOlder && (
             <p className="py-2 text-center text-xs text-muted-foreground">
@@ -773,57 +873,21 @@ export function ConversationDetailPage() {
         </div>
 
         {/* ── Composer ── */}
-        <div
-          className="shrink-0 border-t bg-background px-4 py-3"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={onDropFile}
-        >
-          {file && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg border bg-muted px-3 py-1.5 text-xs">
-              <Paperclip size={12} className="shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">
-                {file.name}{" "}
-                <span className="text-muted-foreground">
-                  ({Math.round(file.size / 1024)} KB)
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setFile(null);
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Quitar adjunto"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-
+        <div className="shrink-0 border-t bg-background px-4 py-3">
           <div className="flex items-center gap-2">
             <button
               type="button"
-              aria-label="Adjuntar archivo"
-              onClick={() => fileInputRef.current?.click()}
+              aria-label="Adjuntar desde biblioteca"
+              onClick={() => setMediaPickerOpen(true)}
               disabled={isSending}
               className="mb-1 shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-40"
             >
-              <Paperclip size={18} />
+              <Library size={18} />
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.ppt,.pptx"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
             <textarea
               rows={1}
               aria-label="Mensaje"
-              placeholder={
-                file ? "Agrega un caption (opcional)…" : "Escribe un mensaje…"
-              }
+              placeholder="Escribe un mensaje…"
               value={text}
               onChange={(e) => {
                 setText(e.target.value);
@@ -842,7 +906,7 @@ export function ConversationDetailPage() {
             <Button
               size="icon"
               onClick={() => void onSend()}
-              disabled={isSending || (!text.trim() && !file)}
+              disabled={isSending || !text.trim()}
               className="mb-0.5 shrink-0 rounded-xl"
               aria-label="Enviar"
             >
@@ -851,6 +915,13 @@ export function ConversationDetailPage() {
           </div>
         </div>
       </section>
+
+      <MediaPickerModal
+        open={mediaPickerOpen}
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={(result) => void onMediaSelected(result)}
+        title="Enviar desde biblioteca"
+      />
 
       <ClientInfoModal
         open={infoOpen}
