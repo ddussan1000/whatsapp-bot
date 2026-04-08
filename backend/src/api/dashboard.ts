@@ -128,6 +128,9 @@ const ConversationSchema = z.object({
   updated_at: z.string().nullable().optional(),
   ad_name: z.string().nullable().optional(),
   ad_source: AdSourceSchema.nullable().optional(),
+  last_message_text: z.string().nullable().optional(),
+  last_message_direction: z.enum(["inbound", "outbound"]).nullable().optional(),
+  unread_count: z.number().optional(),
 });
 const PAYMENT_STATES = [
   "pending_manual_review",
@@ -2721,11 +2724,57 @@ dashboardApi.openapi(
       }
     }
 
+    // Batch-fetch last message and unread count per conversation
+    type MsgRow = {
+      conversation_id: string;
+      text_body: string | null;
+      direction: string;
+      message_type: string;
+      created_at: string;
+    };
+    let lastMsgByConvId = new Map<string, MsgRow>();
+    let unreadByConvId = new Map<string, number>();
+
+    if ((data ?? []).length > 0) {
+      const convIds = (data ?? []).map(
+        (conv) => (conv as Record<string, unknown>).id as string,
+      );
+
+      const { data: msgRows } = await supabase
+        .from("messages")
+        .select("conversation_id, text_body, direction, message_type, created_at")
+        .in("conversation_id", convIds)
+        .order("created_at", { ascending: false });
+
+      for (const row of (msgRows ?? []) as unknown as MsgRow[]) {
+        if (!lastMsgByConvId.has(row.conversation_id)) {
+          lastMsgByConvId.set(row.conversation_id, row);
+        }
+      }
+
+      // Compute unread per conv: inbound messages since last outbound
+      const allMsgs = ((msgRows ?? []) as unknown as MsgRow[]).sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+      for (const cid of convIds) {
+        const convMsgs = allMsgs.filter((m) => m.conversation_id === cid);
+        const lastOutboundIdx = convMsgs.map((m) => m.direction).lastIndexOf("outbound");
+        const unread =
+          lastOutboundIdx === -1
+            ? convMsgs.filter((m) => m.direction === "inbound").length
+            : convMsgs.slice(lastOutboundIdx + 1).filter((m) => m.direction === "inbound").length;
+        unreadByConvId.set(cid, unread);
+      }
+    }
+
     const items: z.infer<typeof ConversationSchema>[] = (data ?? []).map(
       (conv) => {
         const c = conv as Record<string, unknown>;
+        const convId = c.id as string;
+        const lastMsg = lastMsgByConvId.get(convId);
+        const lastMsgText = lastMsg?.text_body?.trim() || null;
         return {
-          id: c.id as string,
+          id: convId,
           phone: c.phone as string,
           stage: c.stage as string,
           contact_name: (c.contact_name as string | null) ?? null,
@@ -2734,6 +2783,11 @@ dashboardApi.openapi(
           started_at: (c.started_at as string | null) ?? null,
           updated_at: (c.updated_at as string | null) ?? null,
           ad_name: adNameByPhone.get(c.phone as string) ?? null,
+          last_message_text: lastMsgText,
+          last_message_direction: lastMsg
+            ? (lastMsg.direction as "inbound" | "outbound")
+            : null,
+          unread_count: unreadByConvId.get(convId) ?? 0,
         };
       },
     );
