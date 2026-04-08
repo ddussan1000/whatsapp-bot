@@ -108,7 +108,7 @@ En `ConversationDetailPage.tsx`, el `ClientInfoModal` agrega una sección **al f
 - Bloque de origen de anuncio Meta (si aplica)
 
 **Nueva sección Pagos:**
-- Título: `💳 Pagos de esta conversación`
+- Título con icono Lucide `<CreditCard size={12} />` + texto "Pagos de esta conversación" (sin emojis)
 - Se cargan con `usePaymentsQuery({ phone: conversation.phone, pageSize: 20 })`
 - Cada pago muestra: monto + moneda, flujo, fecha, badge de estado
 - Si estado es `pending_manual_review`: botones **Aprobar** y **Rechazar**
@@ -206,6 +206,12 @@ Agregar `post_venta` a los arrays `STAGE_OPTIONS` en:
 ### 3e. Frontend — `StatusBadge` component
 
 Agregar estilo para `post_venta` en `dashboard/src/components/StatusBadge.tsx`.
+
+---
+
+## Convención visual
+
+**Sin emojis en el frontend.** Donde se necesite un ícono, usar exclusivamente componentes de Lucide React (`lucide-react`). Esto aplica a títulos de sección, badges, botones y cualquier elemento UI. Los mockups del spec usan emojis solo como referencia de concepto.
 
 ---
 
