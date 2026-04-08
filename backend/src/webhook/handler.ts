@@ -178,8 +178,12 @@ export async function handleWebhook(c: Context) {
       state.stage = previous.stage as string;
     }
 
-    // Transition to post_venta when client writes after a completed payment
-    if (state.stage === "pago_confirmado") {
+    // Transition to post_venta when client writes after a terminal stage
+    // (successful payment or manual review after receipt error)
+    if (
+      state.stage === "pago_confirmado" ||
+      state.stage === "confirmar_comprobante"
+    ) {
       state.stage = "post_venta";
     }
 
