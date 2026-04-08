@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   LayoutDashboard,
   MessagesSquare,
-  Receipt,
   BarChart3,
   Building2,
   Workflow,
@@ -77,7 +76,6 @@ type NavItem = { to: string; label: string; icon: React.ElementType };
 const operationsLinks: NavItem[] = [
   { to: "/", label: "Resumen", icon: LayoutDashboard },
   { to: "/conversations", label: "Conversaciones", icon: MessagesSquare },
-  { to: "/payments", label: "Pagos", icon: Receipt },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
 ];
 
