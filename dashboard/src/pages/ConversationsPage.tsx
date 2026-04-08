@@ -70,9 +70,14 @@ function ConversationRow({
   conv: Conversation;
   onClick: () => void;
 }) {
-  const unread = (conv as Conversation & { unread_count?: number }).unread_count ?? 0;
-  const lastText = (conv as Conversation & { last_message_text?: string | null }).last_message_text ?? null;
-  const lastDir = (conv as Conversation & { last_message_direction?: string | null }).last_message_direction ?? null;
+  const unread =
+    (conv as Conversation & { unread_count?: number }).unread_count ?? 0;
+  const lastText =
+    (conv as Conversation & { last_message_text?: string | null })
+      .last_message_text ?? null;
+  const lastDir =
+    (conv as Conversation & { last_message_direction?: string | null })
+      .last_message_direction ?? null;
   const hasAd = Boolean(conv.ad_source);
 
   return (
@@ -98,7 +103,9 @@ function ConversationRow({
         {/* Row 1: name + time */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className={`font-medium text-sm truncate ${unread > 0 ? "text-foreground" : ""}`}>
+            <span
+              className={`font-medium text-sm truncate ${unread > 0 ? "text-foreground" : ""}`}
+            >
               {conv.contact_name ?? formatPhone(conv.phone)}
             </span>
             {conv.contact_name && (
@@ -115,10 +122,14 @@ function ConversationRow({
         {/* Row 2: last message preview */}
         <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0">
           {lastDir === "outbound" && (
-            <CornerUpLeft size={11} className="shrink-0 text-muted-foreground/60" />
+            <CornerUpLeft
+              size={11}
+              className="shrink-0 text-muted-foreground/60"
+            />
           )}
           <span className="truncate">
-            {lastText ?? (conv.flow_name ? `Flujo: ${conv.flow_name}` : "Sin mensajes")}
+            {lastText ??
+              (conv.flow_name ? `Flujo: ${conv.flow_name}` : "Sin mensajes")}
           </span>
         </div>
 
@@ -134,7 +145,9 @@ function ConversationRow({
           {hasAd && (
             <span className="flex items-center gap-1 rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-violet-600">
               <Megaphone size={9} />
-              <span className="truncate max-w-24">{conv.ad_name ?? "Anuncio"}</span>
+              <span className="truncate max-w-24">
+                {conv.ad_name ?? "Anuncio"}
+              </span>
             </span>
           )}
         </div>
@@ -213,22 +226,22 @@ export function ConversationsPage() {
             <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
             Actualizar
           </Button>
-        <Select
-          value={`updated_at:${sortDir}`}
-          onValueChange={(v) => {
-            const [, dir] = v.split(":");
-            setSortDir(dir as "asc" | "desc");
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-44 h-9 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="updated_at:desc">Más recientes</SelectItem>
-            <SelectItem value="updated_at:asc">Más antiguas</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select
+            value={`updated_at:${sortDir}`}
+            onValueChange={(v) => {
+              const [, dir] = v.split(":");
+              setSortDir(dir as "asc" | "desc");
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-44 h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updated_at:desc">Más recientes</SelectItem>
+              <SelectItem value="updated_at:asc">Más antiguas</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

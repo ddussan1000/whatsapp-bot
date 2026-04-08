@@ -143,8 +143,11 @@ export function useUploadFlowMediaMutation() {
 export function useSendMediaFromLibraryMutation(conversationId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { url: string; filename: string; mimeType: string }) =>
-      api.sendMediaFromLibrary(conversationId, payload),
+    mutationFn: (payload: {
+      url: string;
+      filename: string;
+      mimeType: string;
+    }) => api.sendMediaFromLibrary(conversationId, payload),
     onSuccess: () => {
       void qc.invalidateQueries({
         queryKey: ["conversation-messages", conversationId],

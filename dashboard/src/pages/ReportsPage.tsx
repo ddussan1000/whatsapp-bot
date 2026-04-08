@@ -223,8 +223,7 @@ export function ReportsPage() {
     () => ({
       page: paymentsPage,
       pageSize: paymentsPageSize,
-      state:
-        paymentsStateFilter === "all" ? undefined : paymentsStateFilter,
+      state: paymentsStateFilter === "all" ? undefined : paymentsStateFilter,
       from: toIsoStart(fromDate),
       to: toIsoEnd(toDate),
       flowId: flowId === "all" ? undefined : flowId,
@@ -797,9 +796,7 @@ export function ReportsPage() {
                           {p.validated_at
                             ? new Date(p.validated_at).toLocaleString("es-CO")
                             : p.receipt_date
-                              ? new Date(p.receipt_date).toLocaleString(
-                                  "es-CO"
-                                )
+                              ? new Date(p.receipt_date).toLocaleString("es-CO")
                               : "-"}
                         </TableCell>
                         <TableCell>{p.phone}</TableCell>
