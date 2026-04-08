@@ -3391,7 +3391,7 @@ dashboardApi.openapi(
         content: {
           "application/json": {
             schema: z.object({
-              state: z.enum(["validated", "rejected"]),
+              state: z.enum(["pending_manual_review", "validated", "rejected"]),
             }),
           },
         },
