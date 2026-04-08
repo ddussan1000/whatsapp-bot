@@ -7,15 +7,13 @@ import {
   FileText,
   ImageIcon,
   Info,
+  Library,
   Megaphone,
-  Paperclip,
   Send,
   Video,
   Workflow,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DragEventHandler } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
@@ -37,11 +35,15 @@ import {
 import {
   useConversationQuery,
   useSendConversationMessageMutation,
-  useUploadAndSendFileMutation,
+  useSendMediaFromLibraryMutation,
   useUpdateConversationStageMutation,
 } from "../lib/hooks";
 import { api } from "../lib/api";
 import type { ChatMessage, Conversation } from "../types/api";
+import {
+  MediaPickerModal,
+  type MediaPickerResult,
+} from "../components/ui/media-picker-modal";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -521,9 +523,8 @@ export function ConversationDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const [text, setText] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const chatWindowRef = useRef<HTMLDivElement | null>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -535,7 +536,7 @@ export function ConversationDetailPage() {
   const { data: conversation, isLoading: convLoading } =
     useConversationQuery(id);
   const sendMutation = useSendConversationMessageMutation(id);
-  const uploadMutation = useUploadAndSendFileMutation(id);
+  const sendMediaMutation = useSendMediaFromLibraryMutation(id);
   const stageMutation = useUpdateConversationStageMutation(id);
 
   // Initial load
@@ -623,22 +624,10 @@ export function ConversationDetailPage() {
     return groups;
   }, [messages]);
 
-  const isSending = sendMutation.isPending || uploadMutation.isPending;
+  const isSending = sendMutation.isPending || sendMediaMutation.isPending;
 
   const onSend = async () => {
-    if (isSending) return;
-    if (file) {
-      await uploadMutation.mutateAsync({
-        kind: file.type.startsWith("image/") ? "image" : "document",
-        caption: text || undefined,
-        file,
-      });
-      setText("");
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-    if (!text.trim()) return;
+    if (isSending || !text.trim()) return;
     await sendMutation.mutateAsync({ type: "text", text });
     setText("");
     const res = await api.getConversationMessages(id, 1, PAGE_SIZE, true);
@@ -650,10 +639,20 @@ export function ConversationDetailPage() {
     });
   };
 
-  const onDropFile: DragEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    const dropped = e.dataTransfer.files?.[0];
-    if (dropped) setFile(dropped);
+  const onMediaSelected = async (result: MediaPickerResult) => {
+    setMediaPickerOpen(false);
+    await sendMediaMutation.mutateAsync({
+      url: result.url,
+      filename: result.filename,
+      mimeType: result.mimeType,
+    });
+    const res = await api.getConversationMessages(id, 1, PAGE_SIZE, true);
+    setMessages([...res.items].reverse());
+    setTotal(res.total);
+    requestAnimationFrame(() => {
+      const el = chatWindowRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
   };
 
   const adSource = conversation?.ad_source;
@@ -722,8 +721,6 @@ export function ConversationDetailPage() {
           ref={chatWindowRef}
           className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-3"
           onScroll={onScroll}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={onDropFile}
         >
           {loadingOlder && (
             <p className="py-2 text-center text-xs text-muted-foreground">
@@ -773,57 +770,21 @@ export function ConversationDetailPage() {
         </div>
 
         {/* ── Composer ── */}
-        <div
-          className="shrink-0 border-t bg-background px-4 py-3"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={onDropFile}
-        >
-          {file && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg border bg-muted px-3 py-1.5 text-xs">
-              <Paperclip size={12} className="shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">
-                {file.name}{" "}
-                <span className="text-muted-foreground">
-                  ({Math.round(file.size / 1024)} KB)
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setFile(null);
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Quitar adjunto"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-
+        <div className="shrink-0 border-t bg-background px-4 py-3">
           <div className="flex items-center gap-2">
             <button
               type="button"
-              aria-label="Adjuntar archivo"
-              onClick={() => fileInputRef.current?.click()}
+              aria-label="Adjuntar desde biblioteca"
+              onClick={() => setMediaPickerOpen(true)}
               disabled={isSending}
               className="mb-1 shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-40"
             >
-              <Paperclip size={18} />
+              <Library size={18} />
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.ppt,.pptx"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
             <textarea
               rows={1}
               aria-label="Mensaje"
-              placeholder={
-                file ? "Agrega un caption (opcional)…" : "Escribe un mensaje…"
-              }
+              placeholder="Escribe un mensaje…"
               value={text}
               onChange={(e) => {
                 setText(e.target.value);
@@ -842,7 +803,7 @@ export function ConversationDetailPage() {
             <Button
               size="icon"
               onClick={() => void onSend()}
-              disabled={isSending || (!text.trim() && !file)}
+              disabled={isSending || !text.trim()}
               className="mb-0.5 shrink-0 rounded-xl"
               aria-label="Enviar"
             >
@@ -851,6 +812,13 @@ export function ConversationDetailPage() {
           </div>
         </div>
       </section>
+
+      <MediaPickerModal
+        open={mediaPickerOpen}
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={(result) => void onMediaSelected(result)}
+        title="Enviar desde biblioteca"
+      />
 
       <ClientInfoModal
         open={infoOpen}
