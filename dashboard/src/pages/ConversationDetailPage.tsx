@@ -34,9 +34,11 @@ import {
 } from "../components/ui/select";
 import {
   useConversationQuery,
+  usePaymentsQuery,
   useSendConversationMessageMutation,
   useSendMediaFromLibraryMutation,
   useUpdateConversationStageMutation,
+  useUpdatePaymentStateMutation,
 } from "../lib/hooks";
 import { api } from "../lib/api";
 import type { ChatMessage, Conversation } from "../types/api";
@@ -357,11 +359,36 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 const STAGE_OPTIONS = [
   { value: "flow_started", label: "En flujo" },
   { value: "interesado", label: "Interesado" },
-  { value: "listo_pagar", label: "Listo para pagar" },
-  { value: "necesita_agente", label: "Necesita agente" },
+  { value: "esperando_comprobante", label: "Esperando comprobante" },
   { value: "confirmar_comprobante", label: "En revisión" },
   { value: "pago_confirmado", label: "Pago confirmado" },
+  { value: "comprobante_rechazado", label: "Rechazado" },
+  { value: "comprobante_ilegible", label: "Ilegible" },
+  { value: "comprobante_vencido", label: "Vencido" },
+  { value: "post_venta", label: "Post venta" },
 ];
+
+const PAYMENT_STATE_OPTIONS = [
+  { value: "pending_manual_review", label: "Pendiente revisión" },
+  { value: "validated", label: "Validado" },
+  { value: "rejected", label: "Rechazado" },
+];
+
+const PAYMENT_STATE_COLORS: Record<string, string> = {
+  pending_manual_review: "text-amber-600 bg-amber-500/10",
+  validated: "text-green-600 bg-green-500/10",
+  rejected: "text-red-600 bg-red-500/10",
+};
+
+function PaymentStateLabel({ state }: { state: string }) {
+  const opt = PAYMENT_STATE_OPTIONS.find((o) => o.value === state);
+  const color = PAYMENT_STATE_COLORS[state] ?? "text-muted-foreground bg-muted";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${color}`}>
+      {opt?.label ?? state}
+    </span>
+  );
+}
 
 function ClientInfoModal({
   open,
@@ -379,6 +406,11 @@ function ClientInfoModal({
   const ad = conversation?.ad_source;
   const currentStage = conversation ? String(conversation.stage) : "";
   const knownStage = STAGE_OPTIONS.some((o) => o.value === currentStage);
+  const updatePaymentState = useUpdatePaymentStateMutation();
+  const { data: paymentsData } = usePaymentsQuery(
+    conversation?.phone ? { phone: conversation.phone, pageSize: 20 } : undefined
+  );
+  const payments = paymentsData?.items ?? [];
   const displayName =
     conversation?.contact_name ??
     (conversation ? formatPhone(conversation.phone) : "");
@@ -485,6 +517,72 @@ function ClientInfoModal({
                 />
               )}
             </div>
+
+            {/* Payments */}
+            {payments.length > 0 && (
+              <>
+                <div className="h-px bg-border" />
+                <div className="flex flex-col gap-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Pagos ({payments.length})
+                  </p>
+                  {payments.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-xl border bg-muted/20 p-3 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-semibold text-sm">
+                            {p.amount != null
+                              ? new Intl.NumberFormat("es-CO", {
+                                  style: "currency",
+                                  currency: p.currency ?? "COP",
+                                  maximumFractionDigits: 0,
+                                }).format(p.amount)
+                              : "Sin monto"}
+                          </span>
+                          {p.receipt_date && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatDateTime(p.receipt_date)}
+                            </span>
+                          )}
+                        </div>
+                        <PaymentStateLabel state={p.state ?? ""} />
+                      </div>
+                      {(p as unknown as { receipt_url?: string | null }).receipt_url && (
+                        <a
+                          href={(p as unknown as { receipt_url?: string }).receipt_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary underline underline-offset-2 truncate"
+                        >
+                          Ver comprobante
+                        </a>
+                      )}
+                      <Select
+                        value={p.state ?? undefined}
+                        onValueChange={(v) =>
+                          updatePaymentState.mutate({ id: p.id, state: v })
+                        }
+                        disabled={updatePaymentState.isPending}
+                      >
+                        <SelectTrigger className="h-8 text-xs bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_STATE_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* Ad source */}
             {ad && (
