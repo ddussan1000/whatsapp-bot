@@ -173,6 +173,16 @@ export async function handleWebhook(c: Context) {
 
     const state = await getState(phone, metaPhoneNumberId || null);
 
+    const TERMINAL_STAGES = [
+      "pago_confirmado",
+      "comprobante_rechazado",
+      "comprobante_vencido",
+      "comprobante_ilegible",
+    ];
+    if (state.stage && TERMINAL_STAGES.includes(state.stage)) {
+      state.stage = "post_venta";
+    }
+
     const referral = extractReferral(msg);
     const ctwaClid = referral?.ctwa_clid ?? null;
     const referredFlow =
