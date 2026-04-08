@@ -3136,6 +3136,7 @@ dashboardApi.openapi(
         instanceId: z.string().optional(),
         from: z.string().optional(),
         to: z.string().optional(),
+        phone: z.string().optional(),
       }),
     },
     responses: {
@@ -3172,6 +3173,7 @@ dashboardApi.openapi(
       instanceId,
       from: fromDate,
       to: toDate,
+      phone,
     } = c.req.valid("query");
     const rangeFrom = (page - 1) * pageSize;
     const rangeTo = rangeFrom + pageSize - 1;
@@ -3194,6 +3196,7 @@ dashboardApi.openapi(
     if (instanceId) query = query.eq("whatsapp_instance_id", instanceId);
     if (fromDate) query = query.gte("validated_at", fromDate);
     if (toDate) query = query.lte("validated_at", toDate);
+    if (phone) query = query.eq("phone", phone);
 
     const { data, error } = await query;
     if (error) return c.json({ error: error.message }, 500);
@@ -3208,6 +3211,7 @@ dashboardApi.openapi(
       countQuery = countQuery.eq("whatsapp_instance_id", instanceId);
     if (fromDate) countQuery = countQuery.gte("validated_at", fromDate);
     if (toDate) countQuery = countQuery.lte("validated_at", toDate);
+    if (phone) countQuery = countQuery.eq("phone", phone);
     const { count } = await countQuery;
 
     const items: z.infer<typeof PaymentSchema>[] = (
