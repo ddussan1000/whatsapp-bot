@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Bot,
-  Clock,
   XCircle,
   CheckCircle2,
   Loader2,
@@ -98,7 +97,6 @@ export function ConfigPage() {
 
   // Existing fields (uncontrolled refs)
   const systemPromptRef = useRef<HTMLTextAreaElement | null>(null);
-  const pendingRef = useRef<HTMLTextAreaElement | null>(null);
   const rejectedRef = useRef<HTMLTextAreaElement | null>(null);
   const confirmedRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -124,7 +122,6 @@ export function ConfigPage() {
   const defaults = useMemo(
     () => ({
       systemPrompt: data?.systemPrompt ?? "",
-      receiptPendingMessage: data?.receiptPendingMessage ?? "",
       receiptRejectedMessage: data?.receiptRejectedMessage ?? "",
       receiptConfirmedMessage: data?.receiptConfirmedMessage ?? "",
     }),
@@ -170,8 +167,6 @@ export function ConfigPage() {
   const onSave = async () => {
     const payload: UpdateBotConfigBody = {
       systemPrompt: systemPromptRef.current?.value ?? defaults.systemPrompt,
-      receiptPendingMessage:
-        pendingRef.current?.value ?? defaults.receiptPendingMessage,
       receiptRejectedMessage:
         rejectedRef.current?.value ?? defaults.receiptRejectedMessage,
       receiptConfirmedMessage:
@@ -389,23 +384,9 @@ export function ConfigPage() {
         </Field>
         <Separator />
         <Field
-          icon={Clock}
-          label="Pago en revisión manual"
-          description="Se envía cuando se detecta un monto pero no se puede leer la fecha del comprobante."
-        >
-          <Textarea
-            ref={pendingRef}
-            rows={3}
-            placeholder="Gracias por tu comprobante. Lo estamos validando manualmente y te confirmaremos pronto."
-            defaultValue={defaults.receiptPendingMessage}
-            className="resize-none text-sm"
-          />
-        </Field>
-        <Separator />
-        <Field
           icon={XCircle}
-          label="Comprobante rechazado o ilegible"
-          description="Se envía cuando el comprobante tiene una fecha mayor a 24 horas, o cuando la imagen no es legible."
+          label="Comprobante con error"
+          description="Se envía cuando el comprobante está vencido, no se puede leer o tiene datos incompletos. El agente lo revisará manualmente."
         >
           <Textarea
             ref={rejectedRef}
