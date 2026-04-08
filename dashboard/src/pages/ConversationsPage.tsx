@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Workflow,
+  CornerUpLeft,
 } from "lucide-react";
 import {
   useConversationFiltersQuery,
@@ -53,10 +54,13 @@ function timeAgo(iso?: string | null) {
 const STAGE_OPTIONS = [
   { value: "flow_started", label: "En flujo" },
   { value: "interesado", label: "Interesado" },
-  { value: "listo_pagar", label: "Listo para pagar" },
-  { value: "necesita_agente", label: "Necesita agente" },
+  { value: "esperando_comprobante", label: "Esperando comprobante" },
   { value: "confirmar_comprobante", label: "En revisión" },
   { value: "pago_confirmado", label: "Pago confirmado" },
+  { value: "comprobante_rechazado", label: "Rechazado" },
+  { value: "comprobante_ilegible", label: "Ilegible" },
+  { value: "comprobante_vencido", label: "Vencido" },
+  { value: "post_venta", label: "Post venta" },
 ];
 
 // ── ConversationRow ───────────────────────────────────────────────────────
@@ -68,55 +72,74 @@ function ConversationRow({
   conv: Conversation;
   onClick: () => void;
 }) {
+  const unread = (conv as Conversation & { unread_count?: number }).unread_count ?? 0;
+  const lastText = (conv as Conversation & { last_message_text?: string | null }).last_message_text ?? null;
+  const lastDir = (conv as Conversation & { last_message_direction?: string | null }).last_message_direction ?? null;
   const hasAd = Boolean(conv.ad_source);
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex w-full items-center gap-4 rounded-xl border bg-card px-4 py-3.5 text-left transition-all hover:bg-muted/40 hover:shadow-sm"
+      className="group flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-all hover:bg-muted/40 hover:shadow-sm"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-        {conv.phone.slice(-2)}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-0.5 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm">
-            {conv.contact_name ?? formatPhone(conv.phone)}
+      {/* Avatar with unread badge */}
+      <div className="relative shrink-0">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+          {conv.phone.slice(-2)}
+        </div>
+        {unread > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-green-500 px-1 text-[10px] font-bold text-white">
+            {unread > 99 ? "99+" : unread}
           </span>
-          {conv.contact_name && (
-            <span className="text-xs text-muted-foreground hidden sm:block">
-              {formatPhone(conv.phone)}
-            </span>
-          )}
-          {hasAd ? (
-            <span className="flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-600 text-center">
-              <Megaphone size={10} />
-              {conv.ad_name ?? "Sin Anuncio"}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-red-400 text-center">
-              Sin Anuncio
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {conv.flow_name && (
-            <>
-              <Workflow size={11} className="shrink-0" />
-              <span className="truncate max-w-40">{conv.flow_name}</span>
-              <span className="opacity-40">·</span>
-            </>
-          )}
-          <StatusBadge state={String(conv.stage)} />
-        </div>
+        )}
       </div>
 
-      <div className="shrink-0 text-right">
-        <span className="text-xs text-muted-foreground">
-          {timeAgo(conv.updated_at)}
-        </span>
+      {/* Content */}
+      <div className="flex flex-1 flex-col gap-0.5 min-w-0">
+        {/* Row 1: name + time */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className={`font-medium text-sm truncate ${unread > 0 ? "text-foreground" : ""}`}>
+              {conv.contact_name ?? formatPhone(conv.phone)}
+            </span>
+            {conv.contact_name && (
+              <span className="text-xs text-muted-foreground hidden sm:block shrink-0">
+                {formatPhone(conv.phone)}
+              </span>
+            )}
+          </div>
+          <span className="text-xs text-muted-foreground shrink-0">
+            {timeAgo(conv.updated_at)}
+          </span>
+        </div>
+
+        {/* Row 2: last message preview */}
+        <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0">
+          {lastDir === "outbound" && (
+            <CornerUpLeft size={11} className="shrink-0 text-muted-foreground/60" />
+          )}
+          <span className="truncate">
+            {lastText ?? (conv.flow_name ? `Flujo: ${conv.flow_name}` : "Sin mensajes")}
+          </span>
+        </div>
+
+        {/* Row 3: stage + flow + ad */}
+        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+          <StatusBadge state={String(conv.stage)} />
+          {conv.flow_name && (
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Workflow size={10} className="shrink-0" />
+              <span className="truncate max-w-32">{conv.flow_name}</span>
+            </span>
+          )}
+          {hasAd && (
+            <span className="flex items-center gap-1 rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-violet-600">
+              <Megaphone size={9} />
+              <span className="truncate max-w-24">{conv.ad_name ?? "Anuncio"}</span>
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );
