@@ -1,4 +1,5 @@
 import { Workflow, BarChart2, CreditCard } from "lucide-react";
+import { Link } from "react-router-dom";
 import { LoginForm } from "@/components/login-form";
 import { ModeToggle } from "@/components/mode-toggle";
 
@@ -98,8 +99,17 @@ export function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 pb-6 text-center">
-        <p className="text-sm text-muted-foreground/70">
+      <footer className="relative z-10 pb-6 text-center space-y-2">
+        <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/60">
+          <Link to="/privacy" className="hover:text-muted-foreground transition-colors">
+            Política de Privacidad
+          </Link>
+          <span>·</span>
+          <Link to="/terms" className="hover:text-muted-foreground transition-colors">
+            Términos de Servicio
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground/50">
           © {new Date().getFullYear()} DSS Bot · Todos los derechos reservados
         </p>
       </footer>

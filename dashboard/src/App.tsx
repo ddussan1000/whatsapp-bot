@@ -18,12 +18,16 @@ import { InstructionsPage } from "./pages/InstructionsPage";
 import { AdminGuard } from "./components/AdminGuard";
 import { AdminLayout } from "./layout/AdminLayout";
 import { AdminPage } from "./pages/AdminPage";
+import { PrivacyPage } from "./pages/PrivacyPage";
+import { TermsPage } from "./pages/TermsPage";
 
 function App() {
   return (
     <ErrorBoundary>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route
           path="/admin"
           element={
