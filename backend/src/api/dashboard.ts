@@ -770,6 +770,23 @@ const InstanceSchema = z.object({
   updated_at: z.string().nullable().optional(),
 });
 
+const AutoConfigResultSchema = z.object({
+  wabaSubscribed: z.boolean(),
+  webhookConfigured: z.boolean(),
+  messagesSubscribed: z.boolean(),
+  errors: z.array(z.string()),
+});
+
+const MetaStatusSchema = z.object({
+  tokenType: z.enum(["user", "system_user", "unknown"]),
+  expiresAt: z.number(),
+  permissions: z.array(z.object({ name: z.string(), granted: z.boolean() })),
+  wabaSubscribed: z.boolean().nullable(),
+  webhookConfigured: z.boolean().nullable(),
+  messagesSubscribed: z.boolean().nullable(),
+  webhookUrl: z.string().nullable(),
+});
+
 const InstanceHealthSchema = z.object({
   ok: z.boolean(),
   status: z.enum(["connected", "invalid_token", "error"]),
@@ -1536,6 +1553,7 @@ dashboardApi.openapi(
               displayPhoneNumber: z.string().optional(),
               isActive: z.boolean().default(true),
               currency: z.string().default("COP"),
+              flowId: z.string().optional(),
             }),
           },
         },
@@ -1543,8 +1561,12 @@ dashboardApi.openapi(
     },
     responses: {
       200: {
-        description: "Instance created",
-        content: { "application/json": { schema: InstanceSchema } },
+        description: "Instance created with Meta auto-configuration results",
+        content: {
+          "application/json": {
+            schema: z.object({ instance: InstanceSchema, autoConfig: AutoConfigResultSchema }),
+          },
+        },
       },
       500: {
         description: "Error",
@@ -1556,10 +1578,12 @@ dashboardApi.openapi(
     if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
     const session = getSession(c);
     const body = c.req.valid("json");
+    const org = orgId(c);
+
     const { data, error } = await supabase
       .from("whatsapp_instances")
       .insert({
-        organization_id: orgId(c),
+        organization_id: org,
         provider: "meta",
         label: body.label,
         phone_number_id: body.phoneNumberId,
@@ -1575,15 +1599,103 @@ dashboardApi.openapi(
         "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, updated_at",
       )
       .single();
+
     if (error) return c.json({ error: error.message }, 500);
-    const maskedInsert = (data
-      ? {
-          ...data,
-          meta_token: data.meta_token ? "configured" : null,
-          app_secret: data.app_secret ? "configured" : null,
+
+    const maskedInstance = {
+      ...data!,
+      meta_token: data!.meta_token ? "configured" : null,
+      app_secret: data!.app_secret ? "configured" : null,
+    } as unknown as z.infer<typeof InstanceSchema>;
+
+    // ── Auto-configuración de Meta ────────────────────────────────────────
+    const autoConfig: z.infer<typeof AutoConfigResultSchema> = {
+      wabaSubscribed: false,
+      webhookConfigured: false,
+      messagesSubscribed: false,
+      errors: [],
+    };
+
+    const metaToken = body.metaToken;
+    const appSecret = body.appSecret;
+    const wabaId = body.wabaId;
+
+    if (metaToken) {
+      // Obtener verify token de la org
+      let verifyToken = "";
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("verify_token")
+        .eq("id", org)
+        .maybeSingle();
+      if (orgData?.verify_token) verifyToken = orgData.verify_token;
+
+      const origin = getPublicOrigin(c);
+      const webhookUrl = `${origin}/webhook`;
+
+      // 1. Suscribir WABA al app
+      if (wabaId) {
+        const wabaRes = await fetch(
+          `https://graph.facebook.com/v19.0/${wabaId}/subscribed_apps`,
+          { method: "POST", headers: { Authorization: `Bearer ${metaToken}` } },
+        ).catch(() => null);
+        if (wabaRes?.ok) {
+          autoConfig.wabaSubscribed = true;
+        } else {
+          const errBody = await wabaRes?.json().catch(() => null) as { error?: { message?: string } } | null;
+          autoConfig.errors.push(`WABA subscription: ${errBody?.error?.message ?? "Error desconocido"}`);
         }
-      : data) as unknown as z.infer<typeof InstanceSchema>;
-    return c.json(maskedInsert, 200);
+      }
+
+      // 2. Configurar webhook via App Access Token (requiere appSecret)
+      if (appSecret && verifyToken) {
+        // Obtener app_id desde debug_token
+        const debugRes = await fetch(
+          `https://graph.facebook.com/v19.0/debug_token?input_token=${encodeURIComponent(metaToken)}&access_token=${encodeURIComponent(metaToken)}`,
+        ).catch(() => null);
+        const debugData = debugRes?.ok
+          ? (await debugRes.json() as { data?: { app_id?: string } })
+          : null;
+        const appId = debugData?.data?.app_id;
+
+        if (appId) {
+          const appToken = `${appId}|${appSecret}`;
+
+          // POST /{app_id}/subscriptions — registra webhook URL + campo messages
+          const subUrl = new URL(`https://graph.facebook.com/v19.0/${appId}/subscriptions`);
+          subUrl.searchParams.set("object", "whatsapp_business_account");
+          subUrl.searchParams.set("callback_url", webhookUrl);
+          subUrl.searchParams.set("verify_token", verifyToken);
+          subUrl.searchParams.set("fields", "messages");
+          subUrl.searchParams.set("access_token", appToken);
+
+          const subRes = await fetch(subUrl.toString(), { method: "POST" }).catch(() => null);
+          if (subRes?.ok) {
+            const subData = await subRes.json() as { success?: boolean };
+            if (subData.success) {
+              autoConfig.webhookConfigured = true;
+              autoConfig.messagesSubscribed = true;
+            } else {
+              autoConfig.errors.push("Webhook no pudo verificarse con Meta.");
+            }
+          } else {
+            const errBody = await subRes?.json().catch(() => null) as { error?: { message?: string } } | null;
+            autoConfig.errors.push(`Webhook config: ${errBody?.error?.message ?? "Error desconocido"}`);
+          }
+        }
+      }
+    }
+
+    // Asignar flow si se proveyó
+    if (body.flowId && data) {
+      await supabase
+        .from("whatsapp_instances")
+        .update({ flow_id: body.flowId })
+        .eq("id", data.id)
+        .eq("organization_id", org);
+    }
+
+    return c.json({ instance: maskedInstance, autoConfig }, 200);
   },
 );
 
@@ -1663,6 +1775,312 @@ dashboardApi.openapi(
         }
       : data) as unknown as z.infer<typeof InstanceSchema>;
     return c.json(maskedUpdate, 200);
+  },
+);
+
+// ── GET /instances/{id}/meta-status ──────────────────────────────────────
+
+dashboardApi.openapi(
+  createRoute({
+    method: "get",
+    path: "/instances/{id}/meta-status",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "Meta status for this instance",
+        content: { "application/json": { schema: MetaStatusSchema } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const org = orgId(c);
+    const origin = getPublicOrigin(c);
+
+    const { data: instance, error: fetchError } = await supabase
+      .from("whatsapp_instances")
+      .select("id, waba_id, meta_token, app_secret")
+      .eq("id", id)
+      .eq("organization_id", org)
+      .maybeSingle();
+
+    if (fetchError || !instance) return c.json({ error: "Instancia no encontrada" }, 500);
+
+    const REQUIRED_PERMS = [
+      "whatsapp_business_messaging",
+      "whatsapp_business_management",
+      "ads_read",
+    ];
+
+    const result: z.infer<typeof MetaStatusSchema> = {
+      tokenType: "unknown",
+      expiresAt: 0,
+      permissions: REQUIRED_PERMS.map((name) => ({ name, granted: false })),
+      wabaSubscribed: null,
+      webhookConfigured: null,
+      messagesSubscribed: null,
+      webhookUrl: null,
+    };
+
+    const rawToken = instance.meta_token ? await safeDecrypt(instance.meta_token) : null;
+    if (!rawToken) return c.json(result, 200);
+
+    // 1. debug_token — tipo, expiración, permisos
+    const debugRes = await fetch(
+      `https://graph.facebook.com/v19.0/debug_token?input_token=${encodeURIComponent(rawToken)}&access_token=${encodeURIComponent(rawToken)}`,
+    ).catch(() => null);
+
+    let appId: string | undefined;
+    if (debugRes?.ok) {
+      const body = await debugRes.json() as {
+        data?: {
+          type?: string;
+          expires_at?: number;
+          scopes?: string[];
+          app_id?: string;
+        };
+      };
+      const d = body.data;
+      if (d) {
+        if (d.type === "SYSTEM_USER") result.tokenType = "system_user";
+        else if (d.type === "USER") result.tokenType = "user";
+        result.expiresAt = d.expires_at ?? 0;
+        appId = d.app_id;
+        const scopes = d.scopes ?? [];
+        result.permissions = REQUIRED_PERMS.map((name) => ({
+          name,
+          granted: scopes.includes(name),
+        }));
+      }
+    }
+
+    // 2. WABA subscription
+    if (instance.waba_id) {
+      const wabaRes = await fetch(
+        `https://graph.facebook.com/v19.0/${instance.waba_id}/subscribed_apps`,
+        { headers: { Authorization: `Bearer ${rawToken}` } },
+      ).catch(() => null);
+      if (wabaRes?.ok) {
+        const wabaData = await wabaRes.json() as { data?: { id: string }[] };
+        result.wabaSubscribed = (wabaData.data ?? []).some((a) => a.id === appId);
+      } else {
+        result.wabaSubscribed = false;
+      }
+    }
+
+    // 3. Webhook configuration (requires appSecret)
+    const rawSecret = instance.app_secret ? await safeDecrypt(instance.app_secret) : null;
+    if (rawSecret && appId) {
+      const appToken = `${appId}|${rawSecret}`;
+      const subRes = await fetch(
+        `https://graph.facebook.com/v19.0/${appId}/subscriptions?access_token=${encodeURIComponent(appToken)}`,
+      ).catch(() => null);
+      if (subRes?.ok) {
+        const subData = await subRes.json() as {
+          data?: { object: string; callback_url?: string; fields?: { name: string }[] }[];
+        };
+        const wabaObj = (subData.data ?? []).find((s) => s.object === "whatsapp_business_account");
+        const webhookUrl = `${origin}/webhook`;
+        result.webhookUrl = wabaObj?.callback_url ?? null;
+        result.webhookConfigured = wabaObj?.callback_url === webhookUrl;
+        result.messagesSubscribed = (wabaObj?.fields ?? []).some((f) => f.name === "messages");
+      }
+    }
+
+    return c.json(result, 200);
+  },
+);
+
+// ── POST /instances/{id}/reconfigure-meta ────────────────────────────────
+// Re-ejecuta la auto-configuración de Meta para una instancia existente.
+// Usa el token y app_secret almacenados. Devuelve un resultado detallado
+// indicando qué se pudo configurar, qué se saltó y por qué.
+
+const ReconfigureResultSchema = z.object({
+  tokenValid: z.boolean(),
+  missingPermissions: z.array(z.string()),
+  wabaSubscribed: z.boolean().nullable(),   // null = saltado (sin wabaId)
+  webhookConfigured: z.boolean().nullable(), // null = saltado (sin appSecret)
+  messagesSubscribed: z.boolean().nullable(),
+  skipped: z.array(z.string()),  // razones por las que se saltaron pasos
+  errors: z.array(z.string()),
+});
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/instances/{id}/reconfigure-meta",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "Resultado de la re-configuración",
+        content: { "application/json": { schema: ReconfigureResultSchema } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const org = orgId(c);
+    const origin = getPublicOrigin(c);
+
+    const REQUIRED_PERMS = [
+      "whatsapp_business_messaging",
+      "whatsapp_business_management",
+      "ads_read",
+    ];
+
+    const result: z.infer<typeof ReconfigureResultSchema> = {
+      tokenValid: false,
+      missingPermissions: [],
+      wabaSubscribed: null,
+      webhookConfigured: null,
+      messagesSubscribed: null,
+      skipped: [],
+      errors: [],
+    };
+
+    // Obtener instancia
+    const { data: instance, error: fetchError } = await supabase
+      .from("whatsapp_instances")
+      .select("id, waba_id, meta_token, app_secret")
+      .eq("id", id)
+      .eq("organization_id", org)
+      .maybeSingle();
+
+    if (fetchError || !instance) return c.json({ error: "Instancia no encontrada" }, 500);
+
+    // Verificar que hay token
+    const rawToken = instance.meta_token ? await safeDecrypt(instance.meta_token) : null;
+    if (!rawToken) {
+      result.skipped.push("No hay token configurado en esta instancia. Editala y agregá un token de acceso de Meta.");
+      return c.json(result, 200);
+    }
+
+    // Validar token y obtener app_id + permisos
+    const debugRes = await fetch(
+      `https://graph.facebook.com/v19.0/debug_token?input_token=${encodeURIComponent(rawToken)}&access_token=${encodeURIComponent(rawToken)}`,
+    ).catch(() => null);
+
+    if (!debugRes?.ok) {
+      result.errors.push("No se pudo conectar con la API de Meta para validar el token.");
+      return c.json(result, 200);
+    }
+
+    const debugData = (await debugRes.json()) as {
+      data?: {
+        is_valid?: boolean;
+        app_id?: string;
+        scopes?: string[];
+        error?: { message?: string };
+      };
+      error?: { message?: string };
+    };
+
+    if (debugData.error || debugData.data?.is_valid === false) {
+      result.errors.push(
+        debugData.error?.message ??
+        debugData.data?.error?.message ??
+        "El token no es válido o venció. Generá uno nuevo en Meta.",
+      );
+      return c.json(result, 200);
+    }
+
+    result.tokenValid = true;
+    const appId = debugData.data?.app_id;
+    const scopes = debugData.data?.scopes ?? [];
+    result.missingPermissions = REQUIRED_PERMS.filter((p) => !scopes.includes(p));
+
+    if (result.missingPermissions.length > 0) {
+      result.errors.push(
+        `Al token le faltan permisos: ${result.missingPermissions.join(", ")}. Regeneralo en Meta con todos los permisos.`,
+      );
+      // No retornamos — intentamos lo que se pueda con los permisos que hay
+    }
+
+    // Obtener verify token de la org
+    let verifyToken = "";
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("verify_token")
+      .eq("id", org)
+      .maybeSingle();
+    if (orgData?.verify_token) verifyToken = orgData.verify_token;
+
+    // ── Paso 1: Suscribir WABA ────────────────────────────────────────────
+    if (!instance.waba_id) {
+      result.skipped.push("Suscripción WABA saltada: la instancia no tiene WABA ID configurado.");
+    } else {
+      const wabaRes = await fetch(
+        `https://graph.facebook.com/v19.0/${instance.waba_id}/subscribed_apps`,
+        { method: "POST", headers: { Authorization: `Bearer ${rawToken}` } },
+      ).catch(() => null);
+
+      if (wabaRes?.ok) {
+        result.wabaSubscribed = true;
+      } else {
+        const errBody = await wabaRes?.json().catch(() => null) as { error?: { message?: string } } | null;
+        result.wabaSubscribed = false;
+        result.errors.push(`WABA subscription: ${errBody?.error?.message ?? "Error al suscribir la cuenta de WhatsApp Business."}`);
+      }
+    }
+
+    // ── Paso 2: Configurar webhook ────────────────────────────────────────
+    const rawSecret = instance.app_secret ? await safeDecrypt(instance.app_secret) : null;
+
+    if (!rawSecret) {
+      result.skipped.push("Webhook saltado: la instancia no tiene App Secret configurado. Editala y agregá el App Secret para configurar el webhook automáticamente.");
+    } else if (!appId) {
+      result.skipped.push("Webhook saltado: no se pudo obtener el App ID desde el token.");
+    } else if (!verifyToken) {
+      result.skipped.push("Webhook saltado: la organización no tiene un Verify Token configurado.");
+    } else {
+      const appToken = `${appId}|${rawSecret}`;
+      const webhookUrl = `${origin}/webhook`;
+
+      const subUrl = new URL(`https://graph.facebook.com/v19.0/${appId}/subscriptions`);
+      subUrl.searchParams.set("object", "whatsapp_business_account");
+      subUrl.searchParams.set("callback_url", webhookUrl);
+      subUrl.searchParams.set("verify_token", verifyToken);
+      subUrl.searchParams.set("fields", "messages");
+      subUrl.searchParams.set("access_token", appToken);
+
+      const subRes = await fetch(subUrl.toString(), { method: "POST" }).catch(() => null);
+
+      if (subRes?.ok) {
+        const subData = await subRes.json() as { success?: boolean };
+        if (subData.success) {
+          result.webhookConfigured = true;
+          result.messagesSubscribed = true;
+        } else {
+          result.webhookConfigured = false;
+          result.messagesSubscribed = false;
+          result.errors.push("Meta no pudo verificar el webhook. Asegurate de que la URL sea accesible públicamente.");
+        }
+      } else {
+        const errBody = await subRes?.json().catch(() => null) as { error?: { message?: string } } | null;
+        result.webhookConfigured = false;
+        result.messagesSubscribed = false;
+        result.errors.push(`Webhook config: ${errBody?.error?.message ?? "Error al configurar el webhook."}`);
+      }
+    }
+
+    return c.json(result, 200);
   },
 );
 

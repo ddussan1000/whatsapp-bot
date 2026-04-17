@@ -60,6 +60,9 @@ import type {
   UpdateFlowStepBody,
   UpdateFlowStepMessageBody,
   UploadSendResponse,
+  CreateInstanceResponse,
+  MetaStatusResponse,
+  ReconfigureMetaResult,
 } from "../types/api";
 import { supabase } from "./supabase";
 
@@ -573,7 +576,7 @@ export const api = {
         body: JSON.stringify(payload),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<WhatsAppInstance>;
+        return r.json() as Promise<CreateInstanceResponse>;
       })
     ),
   updateInstance: (id: string, payload: UpdateInstanceBody) =>
@@ -596,6 +599,23 @@ export const api = {
       fetch(`${API_URL}/api/instances/${id}`, { method: "DELETE", headers }).then((r) => {
         if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
+  getInstanceMetaStatus: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/instances/${id}/meta-status`, { headers }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<MetaStatusResponse>;
+      })
+    ),
+  reconfigureMeta: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/instances/${id}/reconfigure-meta`, {
+        method: "POST",
+        headers,
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<ReconfigureMetaResult>;
       })
     ),
   /** Descubre números de WhatsApp disponibles a partir de un token de Meta.

@@ -349,6 +349,7 @@ export type CreateInstanceBody = {
   displayPhoneNumber?: string;
   isActive?: boolean;
   currency?: string;
+  flowId?: string;
 };
 export type UpdateInstanceBody = Partial<CreateInstanceBody> & {
   metaToken?: string | null;
@@ -381,6 +382,41 @@ export type DiscoverInstancesBody = {
   /** WABA ID manual (fallback cuando el auto-discovery no encuentra números). */
   wabaId?: string;
 };
+
+export type AutoConfigResult = {
+  wabaSubscribed: boolean;
+  webhookConfigured: boolean;
+  messagesSubscribed: boolean;
+  errors: string[];
+};
+
+export type CreateInstanceResponse = {
+  instance: WhatsAppInstance;
+  autoConfig: AutoConfigResult;
+};
+
+export type MetaStatusPermission = { name: string; granted: boolean };
+
+export type MetaStatusResponse = {
+  tokenType: "user" | "system_user" | "unknown";
+  expiresAt: number;
+  permissions: MetaStatusPermission[];
+  wabaSubscribed: boolean | null;
+  webhookConfigured: boolean | null;
+  messagesSubscribed: boolean | null;
+  webhookUrl: string | null;
+};
+
+export type ReconfigureMetaResult = {
+  tokenValid: boolean;
+  missingPermissions: string[];
+  wabaSubscribed: boolean | null;
+  webhookConfigured: boolean | null;
+  messagesSubscribed: boolean | null;
+  skipped: string[];
+  errors: string[];
+};
+
 export type CreateProductReferralBody = {
   productId: string;
   ctwaClid: string;

@@ -20,6 +20,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +49,7 @@ import {
 import type {
   DiscoveredPhoneNumber,
   DiscoverInstancesResponse,
+  AutoConfigResult,
 } from "@/types/api";
 
 // ── Constantes ────────────────────────────────────────────────────────────
@@ -78,6 +87,7 @@ type WizardData = {
   currency: string;
   flowId: string | null;
   appSecret: string;
+  autoConfig: AutoConfigResult | null;
 };
 
 // ── Componentes utilitarios ───────────────────────────────────────────────
@@ -698,9 +708,18 @@ function DetailsStep({
   const [showSecret, setShowSecret] = useState(false);
   const [showVerifyToken, setShowVerifyToken] = useState(false);
   const [showWebhook, setShowWebhook] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const flows = useFlowsV2Query();
   const webhookConfig = useWebhookConfigQuery();
+
+  const handleCreate = () => {
+    if (!appSecret.trim()) {
+      setShowConfirm(true);
+    } else {
+      onConfirm({ label: label.trim(), currency, flowId: flowId === NO_FLOW_VALUE ? null : flowId, appSecret: appSecret.trim() });
+    }
+  };
   const activeFlows = (flows.data ?? []).filter((f) => f.is_active);
 
   return (
@@ -795,7 +814,7 @@ function DetailsStep({
       <div className="flex flex-col gap-1.5">
         <div className="flex items-baseline gap-1.5">
           <Label className="text-sm font-semibold">App Secret</Label>
-          <span className="text-xs text-muted-foreground">(opcional)</span>
+          <span className="text-xs text-muted-foreground">(recomendado)</span>
         </div>
         <div className="flex gap-2">
           <Input
@@ -814,99 +833,103 @@ function DetailsStep({
           </button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Meta for Developers → App Settings → Basic → App Secret. Activa
-          verificación de firma en webhooks (seguridad extra).
+          <span className="font-medium text-foreground">Meta for Developers → tu app → App Settings → Basic → App Secret.</span>{" "}
+          Necesario para configurar el webhook automáticamente y verificar que cada
+          mensaje realmente viene de Meta.
         </p>
       </div>
 
-      {/* Webhook config colapsable */}
-      <div className="rounded-xl border border-primary/20 bg-primary/5">
-        <button
-          type="button"
-          onClick={() => setShowWebhook((v) => !v)}
-          className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium"
-        >
-          <span className="flex items-center gap-2">
-            <ShieldCheck size={14} className="text-primary" />
-            Configuración del webhook en Meta
-          </span>
-          <ChevronDown
-            size={15}
-            className={`text-muted-foreground transition-transform duration-200 ${showWebhook ? "rotate-180" : ""}`}
-          />
-        </button>
-
-        {showWebhook && (
-          <div className="border-t px-4 pb-4 pt-3">
-            <p className="mb-3 text-xs text-muted-foreground">
-              Copiá estos valores y pegálos en{" "}
-              <span className="font-medium text-foreground">
-                Meta for Developers → tu app → WhatsApp → Configuration →
-                Webhooks
-              </span>
-              .
+      {/* Webhook — automático si hay App Secret, manual si no */}
+      {appSecret.trim() ? (
+        <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-900/20">
+          <Zap size={15} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <div className="text-sm">
+            <p className="font-semibold text-emerald-800 dark:text-emerald-300">
+              Webhook se configurará automáticamente
             </p>
-            {webhookConfig.isLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-full" />
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    <Link size={11} />
-                    Callback URL
-                  </span>
-                  <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-                    <code className="flex-1 break-all text-xs">
-                      {webhookConfig.data?.webhookUrl ?? "—"}
-                    </code>
-                    <CopyButton value={webhookConfig.data?.webhookUrl ?? ""} />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    <ShieldCheck size={11} />
-                    Verify Token
-                  </span>
-                  <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-                    <code className="flex-1 text-xs">
-                      {showVerifyToken
-                        ? (webhookConfig.data?.verifyToken ?? "—")
-                        : "•".repeat(
-                            Math.min(
-                              webhookConfig.data?.verifyToken?.length ?? 8,
-                              20
-                            )
-                          )}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => setShowVerifyToken((v) => !v)}
-                      className="rounded p-1 text-muted-foreground hover:bg-muted"
-                    >
-                      {showVerifyToken ? (
-                        <EyeOff size={13} />
-                      ) : (
-                        <Eye size={13} />
-                      )}
-                    </button>
-                    <CopyButton value={webhookConfig.data?.verifyToken ?? ""} />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Después de pegar, suscribite al evento{" "}
-                  <code className="rounded bg-background px-1.5 py-0.5">
-                    messages
-                  </code>
-                  .
-                </p>
-              </div>
-            )}
+            <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-400">
+              Al crear la instancia registraremos la URL del webhook, el verify token
+              y el campo <code className="rounded bg-emerald-100 px-1 dark:bg-emerald-900/40">messages</code> en
+              Meta por vos.
+            </p>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-primary/20 bg-primary/5">
+          <button
+            type="button"
+            onClick={() => setShowWebhook((v) => !v)}
+            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium"
+          >
+            <span className="flex items-center gap-2">
+              <ShieldCheck size={14} className="text-primary" />
+              Configuración manual del webhook
+            </span>
+            <ChevronDown
+              size={15}
+              className={`text-muted-foreground transition-transform duration-200 ${showWebhook ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {showWebhook && (
+            <div className="border-t px-4 pb-4 pt-3">
+              <p className="mb-3 text-xs text-muted-foreground">
+                Sin App Secret el webhook hay que configurarlo a mano en{" "}
+                <span className="font-medium text-foreground">
+                  Meta for Developers → tu app → WhatsApp → Configuration → Webhooks
+                </span>
+                .
+              </p>
+              {webhookConfig.isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <Link size={11} />
+                      Callback URL
+                    </span>
+                    <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
+                      <code className="flex-1 break-all text-xs">
+                        {webhookConfig.data?.webhookUrl ?? "—"}
+                      </code>
+                      <CopyButton value={webhookConfig.data?.webhookUrl ?? ""} />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <ShieldCheck size={11} />
+                      Verify Token
+                    </span>
+                    <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
+                      <code className="flex-1 text-xs">
+                        {showVerifyToken
+                          ? (webhookConfig.data?.verifyToken ?? "—")
+                          : "•".repeat(Math.min(webhookConfig.data?.verifyToken?.length ?? 8, 20))}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => setShowVerifyToken((v) => !v)}
+                        className="rounded p-1 text-muted-foreground hover:bg-muted"
+                      >
+                        {showVerifyToken ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                      <CopyButton value={webhookConfig.data?.verifyToken ?? ""} />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Después de pegar, suscribite al evento{" "}
+                    <code className="rounded bg-background px-1.5 py-0.5">messages</code>.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Navegación */}
       <div className="flex items-center justify-between pt-1">
@@ -914,39 +937,264 @@ function DetailsStep({
           <ArrowLeft size={14} className="mr-1.5" />
           Volver
         </Button>
-        <Button
-          onClick={() =>
-            onConfirm({
-              label: label.trim(),
-              currency,
-              flowId: flowId === NO_FLOW_VALUE ? null : flowId,
-              appSecret: appSecret.trim(),
-            })
-          }
-          disabled={!label.trim()}
-          size="lg"
-        >
+        <Button onClick={handleCreate} disabled={!label.trim()} size="lg">
           Crear instancia
         </Button>
       </div>
+
+      {/* Confirmación sin App Secret */}
+      <Dialog open={showConfirm} onOpenChange={(o) => !o && setShowConfirm(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>¿Continuar sin App Secret?</DialogTitle>
+            <DialogDescription>
+              Sin App Secret la instancia se crea, pero algunas configuraciones
+              deberás hacerlas a mano.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-2.5 rounded-lg border bg-muted/40 px-3.5 py-3 text-sm">
+              <Check size={14} className="mt-0.5 shrink-0 text-emerald-500" />
+              <span className="text-muted-foreground">
+                <span className="font-medium text-foreground">WABA</span> — se suscribirá
+                automáticamente al crear.
+              </span>
+            </div>
+            <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm dark:border-amber-800 dark:bg-amber-900/20">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-500" />
+              <span className="text-amber-800 dark:text-amber-300">
+                <span className="font-medium">Webhook</span> — deberás configurarlo
+                manualmente en{" "}
+                <span className="font-medium">
+                  Meta for Developers → tu app → WhatsApp → Configuration → Webhooks
+                </span>
+                .
+              </span>
+            </div>
+            <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm dark:border-amber-800 dark:bg-amber-900/20">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-500" />
+              <span className="text-amber-800 dark:text-amber-300">
+                <span className="font-medium">Verificación de firma</span> — los mensajes
+                entrantes no se verificarán criptográficamente (menor seguridad).
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirm(false)}>
+              Agregar App Secret
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => {
+                setShowConfirm(false);
+                onConfirm({
+                  label: label.trim(),
+                  currency,
+                  flowId: flowId === NO_FLOW_VALUE ? null : flowId,
+                  appSecret: "",
+                });
+              }}
+            >
+              Continuar sin App Secret
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 // ── Paso 4: Confirmación ──────────────────────────────────────────────────
 
+function AutoConfigChecklist({ autoConfig }: { autoConfig: AutoConfigResult | null }) {
+  const webhookConfig = useWebhookConfigQuery();
+  const [showManual, setShowManual] = useState(false);
+  const [showVerifyToken, setShowVerifyToken] = useState(false);
+
+  if (!autoConfig) {
+    return (
+      <div className="flex flex-col gap-2 rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+        <p>Cargando resultado de la auto-configuración…</p>
+      </div>
+    );
+  }
+
+  const allOk = autoConfig.wabaSubscribed && autoConfig.webhookConfigured && autoConfig.messagesSubscribed;
+  const webhookFailed = !autoConfig.webhookConfigured || !autoConfig.messagesSubscribed;
+
+  function StatusIcon({ value }: { value: boolean | null }) {
+    if (value === null) return <span className="text-muted-foreground">—</span>;
+    if (value) return <span className="text-emerald-600 dark:text-emerald-400">✅</span>;
+    return <span className="text-destructive">❌</span>;
+  }
+
+  const items = [
+    { label: "WABA suscripta al app", value: autoConfig.wabaSubscribed },
+    { label: "Webhook URL registrada", value: autoConfig.webhookConfigured },
+    { label: "Campo messages activo", value: autoConfig.messagesSubscribed },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      <h4 className="font-semibold">Auto-configuración en Meta</h4>
+
+      <div className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+        {items.map((item) => (
+          <div key={item.label} className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">{item.label}</span>
+            <StatusIcon value={item.value} />
+          </div>
+        ))}
+      </div>
+
+      {autoConfig.errors.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {autoConfig.errors.map((err, i) => (
+            <p key={i} className="text-xs text-destructive">{err}</p>
+          ))}
+        </div>
+      )}
+
+      {allOk && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">
+          <Check size={15} />
+          Todo listo — podés empezar a recibir mensajes
+        </div>
+      )}
+
+      {!allOk && webhookFailed && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-muted-foreground">
+            El webhook requiere el App Secret. Podés configurarlo manualmente en Meta for Developers.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowManual((v) => !v)}
+            className="self-start flex items-center gap-1.5 text-xs text-primary underline-offset-2 hover:underline"
+          >
+            <ChevronDown
+              size={13}
+              className={`transition-transform duration-200 ${showManual ? "rotate-180" : ""}`}
+            />
+            {showManual ? "Ocultar pasos manuales" : "Ver pasos manuales"}
+          </button>
+
+          {showManual && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-4">
+                <ol className="flex flex-col gap-4 text-sm">
+                  {[
+                    <>
+                      Entrá a{" "}
+                      <span className="font-medium text-foreground">
+                        Meta for Developers
+                      </span>{" "}
+                      → tu app → WhatsApp → Configuration → Webhooks.
+                      <a
+                        href="https://developers.facebook.com/apps"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-1.5 inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                      >
+                        Abrir Meta for Developers
+                        <ExternalLink size={11} />
+                      </a>
+                    </>,
+                    <>
+                      Hacé click en{" "}
+                      <span className="font-medium text-foreground">Edit</span> y
+                      pegá la{" "}
+                      <span className="font-medium text-foreground">
+                        Callback URL
+                      </span>
+                      :
+                      {webhookConfig.data?.webhookUrl && (
+                        <div className="mt-1.5 flex items-center gap-2 rounded border bg-background px-2.5 py-1.5">
+                          <code className="flex-1 break-all text-xs">
+                            {webhookConfig.data.webhookUrl}
+                          </code>
+                          <CopyButton value={webhookConfig.data.webhookUrl} />
+                        </div>
+                      )}
+                    </>,
+                    <>
+                      Pegá el{" "}
+                      <span className="font-medium text-foreground">
+                        Verify Token
+                      </span>
+                      :
+                      {webhookConfig.data?.verifyToken && (
+                        <div className="mt-1.5 flex items-center gap-2 rounded border bg-background px-2.5 py-1.5">
+                          <code className="flex-1 text-xs">
+                            {showVerifyToken
+                              ? webhookConfig.data.verifyToken
+                              : "•".repeat(
+                                  Math.min(
+                                    webhookConfig.data.verifyToken.length,
+                                    20
+                                  )
+                                )}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => setShowVerifyToken((v) => !v)}
+                            className="rounded p-1 text-muted-foreground hover:bg-muted"
+                          >
+                            {showVerifyToken ? (
+                              <EyeOff size={12} />
+                            ) : (
+                              <Eye size={12} />
+                            )}
+                          </button>
+                          <CopyButton value={webhookConfig.data.verifyToken} />
+                        </div>
+                      )}
+                    </>,
+                    <>
+                      En{" "}
+                      <span className="font-medium text-foreground">
+                        Webhook Fields
+                      </span>
+                      , suscribite al evento{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5">
+                        messages
+                      </code>
+                      . Hacé click en{" "}
+                      <span className="font-medium text-foreground">Subscribe</span>
+                      .
+                    </>,
+                  ].map((step, i) => (
+                    <li key={i} className="flex gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
+                        {i + 1}
+                      </span>
+                      <span className="leading-6">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SuccessStep({
   selectedNumber,
   label,
   currency,
+  autoConfig,
 }: {
   selectedNumber: DiscoveredPhoneNumber;
   label: string;
   currency: string;
+  autoConfig: AutoConfigResult | null;
 }) {
   const navigate = useNavigate();
-  const webhookConfig = useWebhookConfigQuery();
-  const [showVerifyToken, setShowVerifyToken] = useState(false);
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
@@ -990,111 +1238,8 @@ function SuccessStep({
         </CardContent>
       </Card>
 
-      {/* Próximos pasos */}
-      <div className="flex flex-col gap-3">
-        <h4 className="font-semibold">
-          Paso siguiente: configurar el webhook en Meta
-        </h4>
-        <p className="text-sm text-muted-foreground">
-          Para que Meta envíe los mensajes a la plataforma, tenés que configurar
-          el webhook una única vez.
-        </p>
-
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-4">
-            <ol className="flex flex-col gap-4 text-sm">
-              {[
-                <>
-                  Entrá a{" "}
-                  <span className="font-medium text-foreground">
-                    Meta for Developers
-                  </span>{" "}
-                  → tu app → WhatsApp → Configuration → Webhooks.
-                  <a
-                    href="https://developers.facebook.com/apps"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-1.5 inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
-                  >
-                    Abrir Meta for Developers
-                    <ExternalLink size={11} />
-                  </a>
-                </>,
-                <>
-                  Hacé click en{" "}
-                  <span className="font-medium text-foreground">Edit</span> y
-                  pegá la{" "}
-                  <span className="font-medium text-foreground">
-                    Callback URL
-                  </span>
-                  :
-                  {webhookConfig.data?.webhookUrl && (
-                    <div className="mt-1.5 flex items-center gap-2 rounded border bg-background px-2.5 py-1.5">
-                      <code className="flex-1 break-all text-xs">
-                        {webhookConfig.data.webhookUrl}
-                      </code>
-                      <CopyButton value={webhookConfig.data.webhookUrl} />
-                    </div>
-                  )}
-                </>,
-                <>
-                  Pegá el{" "}
-                  <span className="font-medium text-foreground">
-                    Verify Token
-                  </span>
-                  :
-                  {webhookConfig.data?.verifyToken && (
-                    <div className="mt-1.5 flex items-center gap-2 rounded border bg-background px-2.5 py-1.5">
-                      <code className="flex-1 text-xs">
-                        {showVerifyToken
-                          ? webhookConfig.data.verifyToken
-                          : "•".repeat(
-                              Math.min(
-                                webhookConfig.data.verifyToken.length,
-                                20
-                              )
-                            )}
-                      </code>
-                      <button
-                        type="button"
-                        onClick={() => setShowVerifyToken((v) => !v)}
-                        className="rounded p-1 text-muted-foreground hover:bg-muted"
-                      >
-                        {showVerifyToken ? (
-                          <EyeOff size={12} />
-                        ) : (
-                          <Eye size={12} />
-                        )}
-                      </button>
-                      <CopyButton value={webhookConfig.data.verifyToken} />
-                    </div>
-                  )}
-                </>,
-                <>
-                  En{" "}
-                  <span className="font-medium text-foreground">
-                    Webhook Fields
-                  </span>
-                  , suscribite al evento{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5">
-                    messages
-                  </code>
-                  . Hacé click en{" "}
-                  <span className="font-medium text-foreground">Subscribe</span>
-                  .
-                </>,
-              ].map((step, i) => (
-                <li key={i} className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
-                    {i + 1}
-                  </span>
-                  <span className="leading-6">{step}</span>
-                </li>
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Auto-configuración */}
+      <AutoConfigChecklist autoConfig={autoConfig} />
 
       <Button
         size="lg"
@@ -1123,6 +1268,7 @@ export function InstanceCreatePage() {
     currency: "COP",
     flowId: null,
     appSecret: "",
+    autoConfig: null,
   });
 
   const handleDiscovered = (
@@ -1160,10 +1306,11 @@ export function InstanceCreatePage() {
         appSecret: appSecret || undefined,
         currency,
         isActive: true,
+        flowId: flowId || undefined,
       },
       {
-        onSuccess: () => {
-          setWizardData((d) => ({ ...d, label, currency, flowId, appSecret }));
+        onSuccess: (res) => {
+          setWizardData((d) => ({ ...d, label, currency, flowId, appSecret, autoConfig: res.autoConfig }));
           setStep(4);
         },
         onError: (e) => toast.error(`Error al crear: ${(e as Error).message}`),
@@ -1234,6 +1381,7 @@ export function InstanceCreatePage() {
                   selectedNumber={wizardData.selectedNumber}
                   label={wizardData.label}
                   currency={wizardData.currency}
+                  autoConfig={wizardData.autoConfig}
                 />
               )}
             </>

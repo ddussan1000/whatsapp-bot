@@ -25,6 +25,7 @@ import type {
   ReportsQueryParams,
   UpsertFlowBody,
   CreateFlowReferralBody,
+  CreateInstanceResponse,
 } from "../types/api";
 
 export function useTodayStatsQuery() {
@@ -416,7 +417,7 @@ export function useWebhookConfigQuery() {
 
 export function useCreateInstanceMutation() {
   const qc = useQueryClient();
-  return useMutation({
+  return useMutation<CreateInstanceResponse, Error, CreateInstanceBody>({
     mutationFn: (payload: CreateInstanceBody) => api.createInstance(payload),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["instances"] }),
   });
@@ -459,6 +460,24 @@ export function useDeleteInstanceMutation() {
   return useMutation({
     mutationFn: (id: string) => api.deleteInstance(id),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["instances"] }),
+  });
+}
+
+export function useInstanceMetaStatusQuery(id: string | null) {
+  return useQuery({
+    queryKey: ["instances", id, "meta-status"],
+    queryFn: () => api.getInstanceMetaStatus(id!),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+  });
+}
+export function useReconfigureMetaMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.reconfigureMeta(id),
+    onSuccess: (_data, id) => {
+      void qc.invalidateQueries({ queryKey: ["instances", id, "meta-status"] });
+    },
   });
 }
 

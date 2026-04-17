@@ -14,6 +14,7 @@ import {
   CircleDot,
   Trash2,
   AlertTriangle,
+  Activity,
 } from "lucide-react";
 import {
   InfoModal,
@@ -58,33 +59,14 @@ import {
   useDeleteInstanceMutation,
   useFlowsV2Query,
   useInstancesQuery,
-  useTestInstanceHealthMutation,
   useUpdateInstanceMutation,
   useWebhookConfigQuery,
+  useInstanceMetaStatusQuery,
+  useReconfigureMetaMutation,
 } from "@/lib/hooks";
-import type { InstanceHealth } from "@/types/api";
+import type { MetaStatusResponse, ReconfigureMetaResult } from "@/types/api";
 
 const NO_FLOW_VALUE = "__none__";
-
-function getInstanceHealthMessage(res: InstanceHealth): string {
-  if (res.detail && res.detail.trim().length > 0) return res.detail;
-  switch (res.reason) {
-    case "token_expired":
-      return "El token venció. Generá uno nuevo en Meta.";
-    case "token_invalid":
-      return "Token inválido o revocado.";
-    case "insufficient_permissions":
-      return "El token no tiene los permisos necesarios.";
-    case "phone_number_not_found":
-      return "El ID del número no existe en Meta.";
-    case "app_not_subscribed":
-      return "La app no está habilitada para usar WhatsApp.";
-    case "rate_limited":
-      return "Meta está limitando las peticiones. Intentá más tarde.";
-    default:
-      return "No se pudo verificar la conexión con Meta.";
-  }
-}
 
 // ── Copy button ───────────────────────────────────────────────────────────
 
@@ -242,7 +224,6 @@ function EditDialog({
 }) {
   const updateInstance = useUpdateInstanceMutation();
   const assignFlow = useAssignFlowMutation();
-  const testHealth = useTestInstanceHealthMutation();
 
   const [label, setLabel] = useState(instance.label);
   const [metaToken, setMetaToken] = useState(instance.meta_token ?? "");
@@ -539,24 +520,6 @@ function EditDialog({
 
         {/* ── Footer fijo con acciones ──────────────────────────── */}
         <div className="shrink-0 flex items-center gap-2 border-t bg-muted/30 px-6 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            loading={testHealth.isPending}
-            loadingText="Verificando…"
-            onClick={() =>
-              testHealth.mutate(instance.id, {
-                onSuccess: (res) => {
-                  if (res.status === "connected")
-                    toast.success("Token vigente — conexión OK.");
-                  else toast.error(getInstanceHealthMessage(res));
-                },
-                onError: (e) => toast.error(`Error: ${(e as Error).message}`),
-              })
-            }
-          >
-            Verificar conexión
-          </Button>
           <div className="ml-auto flex gap-2">
             <Button variant="outline" onClick={onClose} disabled={isSaving}>
               Cancelar
@@ -566,6 +529,251 @@ function EditDialog({
             </Button>
           </div>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Meta status modal ─────────────────────────────────────────────────────
+
+function MetaStatusModal({
+  instance,
+  onClose,
+}: {
+  instance: WhatsAppInstance;
+  onClose: () => void;
+}) {
+  const { data, isLoading, isError } = useInstanceMetaStatusQuery(instance.id);
+  const reconfigure = useReconfigureMetaMutation();
+  const [reconfResult, setReconfResult] = useState<ReconfigureMetaResult | null>(null);
+
+  const PERM_LABELS: Record<string, string> = {
+    whatsapp_business_messaging: "Enviar y recibir mensajes",
+    whatsapp_business_management: "Gestionar números y suscribir webhooks",
+    ads_read: "Enriquecer datos de anuncios (CTWA)",
+  };
+
+  const tokenBadge = (status: MetaStatusResponse | undefined) => {
+    if (!status) return null;
+    if (status.tokenType === "system_user") {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400">
+          <Check size={11} />
+          Permanente (System User)
+        </span>
+      );
+    }
+    if (status.tokenType === "user") {
+      const expiry =
+        status.expiresAt > 0
+          ? new Date(status.expiresAt * 1000).toLocaleDateString("es", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })
+          : null;
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+          Personal{expiry ? ` · vence ${expiry}` : ""}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+        Tipo desconocido
+      </span>
+    );
+  };
+
+  function ConfigStatus({ value, label, nullNote }: { value: boolean | null; label: string; nullNote?: string }) {
+    return (
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        {value === null ? (
+          <span className="text-muted-foreground text-xs">{nullNote ?? "—"}</span>
+        ) : value ? (
+          <span className="text-emerald-600 dark:text-emerald-400">✅</span>
+        ) : (
+          <span className="text-destructive">❌</span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Estado de la conexión</DialogTitle>
+          <DialogDescription>
+            {instance.display_phone_number ?? instance.label}
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading && (
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        )}
+
+        {isError && (
+          <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+            <AlertTriangle size={15} className="shrink-0" />
+            No se pudo obtener el estado de Meta.
+          </div>
+        )}
+
+        {data && (
+          <div className="flex flex-col gap-5">
+            {/* Token section */}
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Token de acceso
+              </p>
+              <div>{tokenBadge(data)}</div>
+              <div className="flex flex-col gap-2">
+                {data.permissions.map((perm) => (
+                  <div
+                    key={perm.name}
+                    className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
+                      perm.granted
+                        ? "border-muted bg-muted/30"
+                        : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20"
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${perm.granted ? "bg-emerald-500" : "bg-amber-500"}`}
+                    />
+                    <div>
+                      <code className="font-mono font-semibold">{perm.name}</code>
+                      <p className="mt-0.5 text-muted-foreground">
+                        {PERM_LABELS[perm.name] ?? ""}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Meta configuration section */}
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Configuración Meta
+              </p>
+              <div className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+                <ConfigStatus
+                  value={data.wabaSubscribed}
+                  label="WABA suscripta"
+                  nullNote="Sin WABA ID configurado"
+                />
+                <ConfigStatus
+                  value={data.webhookConfigured}
+                  label="Webhook URL"
+                  nullNote="Sin App Secret"
+                />
+                <ConfigStatus
+                  value={data.messagesSubscribed}
+                  label="Campo messages"
+                  nullNote="Sin App Secret"
+                />
+              </div>
+              {data.webhookConfigured === null && (
+                <p className="text-xs text-muted-foreground">
+                  Configurá el App Secret para verificar el webhook automáticamente.
+                </p>
+              )}
+              {data.webhookUrl && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs text-muted-foreground">URL configurada en Meta:</p>
+                  <code className="break-all rounded bg-muted px-2 py-1 text-xs">
+                    {data.webhookUrl}
+                  </code>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Resultado de re-configuración */}
+        {reconfResult && (
+          <div className="flex flex-col gap-2 rounded-xl border bg-muted/40 p-4 text-sm">
+            <p className="font-semibold text-foreground">Resultado de la configuración</p>
+
+            {/* Errores */}
+            {reconfResult.errors.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                {reconfResult.errors.map((e, i) => (
+                  <div key={i} className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                    {e}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Pasos saltados */}
+            {reconfResult.skipped.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                {reconfResult.skipped.map((s, i) => (
+                  <div key={i} className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                    <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                    {s}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Checklist de resultados */}
+            <div className="flex flex-col gap-1 rounded-lg border bg-card px-3 py-2">
+              {[
+                { label: "WABA suscripta", value: reconfResult.wabaSubscribed },
+                { label: "Webhook URL", value: reconfResult.webhookConfigured },
+                { label: "Campo messages", value: reconfResult.messagesSubscribed },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{label}</span>
+                  {value === null ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : value ? (
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">Configurado</span>
+                  ) : (
+                    <span className="font-medium text-destructive">Falló</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {reconfResult.errors.length === 0 && reconfResult.skipped.length === 0 && (
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                Todo configurado correctamente.
+              </p>
+            )}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cerrar
+          </Button>
+          <Button
+            onClick={() =>
+              reconfigure.mutate(instance.id, {
+                onSuccess: (res) => setReconfResult(res),
+                onError: (e) => toast.error((e as Error).message),
+              })
+            }
+            loading={reconfigure.isPending}
+            loadingText="Configurando…"
+            disabled={reconfigure.isPending}
+          >
+            Re-configurar Meta
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -662,6 +870,7 @@ export function InstancesPage() {
   const flows = useFlowsV2Query();
   const [editing, setEditing] = useState<WhatsAppInstance | null>(null);
   const [deleting, setDeleting] = useState<WhatsAppInstance | null>(null);
+  const [viewingStatus, setViewingStatus] = useState<WhatsAppInstance | null>(null);
 
   const flowMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -786,6 +995,14 @@ export function InstancesPage() {
                           <Button
                             variant="ghost"
                             size="icon-sm"
+                            className="text-muted-foreground hover:text-primary"
+                            onClick={() => setViewingStatus(instance)}
+                          >
+                            <Activity size={14} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
                             className="text-muted-foreground hover:text-destructive"
                             onClick={() => setDeleting(instance)}
                           >
@@ -816,6 +1033,14 @@ export function InstancesPage() {
         <DeleteDialog
           instance={deleting}
           onClose={() => setDeleting(null)}
+        />
+      )}
+
+      {/* Meta status modal */}
+      {viewingStatus && (
+        <MetaStatusModal
+          instance={viewingStatus}
+          onClose={() => setViewingStatus(null)}
         />
       )}
     </div>
