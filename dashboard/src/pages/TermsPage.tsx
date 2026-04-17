@@ -27,15 +27,17 @@ export function TermsPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <FileText size={20} />
             </div>
-            <span className="text-sm font-medium text-muted-foreground">Legal</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Legal
+            </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Términos de Servicio
           </h1>
           <p className="text-muted-foreground">
-            Al acceder y utilizar DSS Bot, la organización o usuario acepta estos
-            términos en su totalidad. Si no estás de acuerdo, no utilices el
-            servicio.
+            Al acceder y utilizar DSS Bot, la organización o usuario acepta
+            estos términos en su totalidad. Si no estás de acuerdo, no utilices
+            el servicio.
           </p>
           <p className="text-xs text-muted-foreground/60">
             Última actualización: abril de 2026
@@ -46,11 +48,11 @@ export function TermsPage() {
           <Section number="1" title="Descripción del servicio">
             <p className="mt-3 text-muted-foreground">
               DSS Bot es una plataforma SaaS que permite a empresas automatizar
-              conversaciones en WhatsApp mediante flujos configurables, gestionar
-              pagos, validar comprobantes con IA y visualizar reportes. El servicio
-              se presta a través del dashboard en{" "}
-              <span className="font-medium text-foreground">dssbot.site</span> y de
-              la API del bot conectada a la API de WhatsApp Business de Meta.
+              conversaciones en WhatsApp mediante flujos configurables,
+              gestionar pagos, validar comprobantes con IA y visualizar
+              reportes. El servicio se presta a través del dashboard en{" "}
+              <span className="font-medium text-foreground">dssbot.site</span> y
+              de la API del bot conectada a la API de WhatsApp Business de Meta.
             </p>
           </Section>
 
@@ -96,17 +98,17 @@ export function TermsPage() {
           <Section number="4" title="Responsabilidades de la organización">
             <div className="mt-3 space-y-3 text-muted-foreground">
               <p>
-                Cada organización es responsable de configurar sus flujos, mensajes y
-                respuestas de forma acorde con la ley y los términos de Meta. DSS Bot
-                actúa como herramienta tecnológica y no tiene control sobre el
-                contenido que las organizaciones deciden enviar a través de la
-                plataforma.
+                Cada organización es responsable de configurar sus flujos,
+                mensajes y respuestas de forma acorde con la ley y los términos
+                de Meta. DSS Bot actúa como herramienta tecnológica y no tiene
+                control sobre el contenido que las organizaciones deciden enviar
+                a través de la plataforma.
               </p>
               <p>
-                La organización también es responsable de gestionar correctamente los
-                datos personales de sus contactos de WhatsApp conforme a la normativa
-                de privacidad vigente en su jurisdicción (RGPD, Ley Federal de
-                Protección de Datos, etc.).
+                La organización también es responsable de gestionar
+                correctamente los datos personales de sus contactos de WhatsApp
+                conforme a la normativa de privacidad vigente en su jurisdicción
+                (RGPD, Ley Federal de Protección de Datos, etc.).
               </p>
             </div>
           </Section>
@@ -114,7 +116,8 @@ export function TermsPage() {
           <Section number="5" title="Inteligencia artificial">
             <div className="mt-3 space-y-3 text-muted-foreground">
               <p>
-                DSS Bot utiliza inteligencia artificial en dos contextos distintos:
+                DSS Bot utiliza inteligencia artificial en dos contextos
+                distintos:
               </p>
               <div className="space-y-3">
                 <div className="rounded-lg border border-border/30 bg-muted/20 px-4 py-3">
@@ -122,10 +125,11 @@ export function TermsPage() {
                     OCR de comprobantes de pago
                   </p>
                   <p className="mt-1 text-sm">
-                    Las imágenes de comprobantes enviadas por los contactos se procesan
-                    con Gemini Vision (Google) para extraer datos como monto, fecha y
-                    banco. Esta funcionalidad está activa para todas las organizaciones
-                    y usa la infraestructura de DSS Bot.
+                    Las imágenes de comprobantes enviadas por los contactos se
+                    procesan con Gemini Vision (Google) para extraer datos como
+                    monto, fecha y banco. Esta funcionalidad está activa para
+                    todas las organizaciones y usa la infraestructura de DSS
+                    Bot.
                   </p>
                 </div>
                 <div className="rounded-lg border border-border/30 bg-muted/20 px-4 py-3">
@@ -133,11 +137,12 @@ export function TermsPage() {
                     Respuestas conversacionales post-flujo
                   </p>
                   <p className="mt-1 text-sm">
-                    Las organizaciones pueden activar respuestas con IA una vez que el
-                    flujo concluye. Para ello deben configurar su propio proveedor (OpenAI,
-                    Gemini, Anthropic o Groq) y su propia API key. DSS Bot no garantiza
-                    la exactitud, veracidad ni adecuación de las respuestas generadas por
-                    modelos de IA de terceros.
+                    Las organizaciones pueden activar respuestas con IA una vez
+                    que el flujo concluye. Para ello deben configurar su propio
+                    proveedor (OpenAI, Gemini, Anthropic o Groq) y su propia API
+                    key. DSS Bot no garantiza la exactitud, veracidad ni
+                    adecuación de las respuestas generadas por modelos de IA de
+                    terceros.
                   </p>
                 </div>
               </div>
@@ -147,20 +152,20 @@ export function TermsPage() {
           <Section number="6" title="Disponibilidad del servicio">
             <p className="mt-3 text-muted-foreground">
               DSS Bot se ofrece tal como está ("as-is"). No garantizamos
-              disponibilidad ininterrumpida ni un tiempo de respuesta específico.
-              Podemos realizar mantenimientos programados o aplicar actualizaciones en
-              cualquier momento. No somos responsables por pérdidas derivadas de
-              interrupciones del servicio, errores de terceros (Meta, Google, etc.) o
-              caídas de infraestructura.
+              disponibilidad ininterrumpida ni un tiempo de respuesta
+              específico. Podemos realizar mantenimientos programados o aplicar
+              actualizaciones en cualquier momento. No somos responsables por
+              pérdidas derivadas de interrupciones del servicio, errores de
+              terceros (Meta, Google, etc.) o caídas de infraestructura.
             </p>
           </Section>
 
           <Section number="7" title="Suspensión y cancelación">
             <div className="mt-3 space-y-3 text-muted-foreground">
               <p>
-                DSS Bot se reserva el derecho de suspender o cancelar el acceso de
-                cualquier organización o usuario que incumpla estos términos, sin
-                previo aviso y sin derecho a reembolso.
+                DSS Bot se reserva el derecho de suspender o cancelar el acceso
+                de cualquier organización o usuario que incumpla estos términos,
+                sin previo aviso y sin derecho a reembolso.
               </p>
               <p>
                 Las organizaciones pueden solicitar la cancelación de su cuenta
@@ -179,11 +184,12 @@ export function TermsPage() {
 
           <Section number="8" title="Limitación de responsabilidad">
             <p className="mt-3 text-muted-foreground">
-              DSS Bot no será responsable por daños directos, indirectos, incidentales
-              o consecuentes derivados del uso o la imposibilidad de uso del servicio,
-              incluyendo pérdida de datos, lucro cesante o daños a la reputación. La
-              responsabilidad total de DSS Bot no excederá el importe abonado por la
-              organización en los últimos 30 días.
+              DSS Bot no será responsable por daños directos, indirectos,
+              incidentales o consecuentes derivados del uso o la imposibilidad
+              de uso del servicio, incluyendo pérdida de datos, lucro cesante o
+              daños a la reputación. La responsabilidad total de DSS Bot no
+              excederá el importe abonado por la organización en los últimos 30
+              días.
             </p>
           </Section>
 
@@ -191,8 +197,8 @@ export function TermsPage() {
             <p className="mt-3 text-muted-foreground">
               Podemos modificar estos términos en cualquier momento. La versión
               actualizada se publicará en esta página con nueva fecha. El uso
-              continuado del servicio tras la publicación implica la aceptación de los
-              términos modificados.
+              continuado del servicio tras la publicación implica la aceptación
+              de los términos modificados.
             </p>
           </Section>
 
@@ -228,7 +234,10 @@ export function TermsPage() {
             </p>
           </div>
           <div className="ml-auto">
-            <Link to="/privacy" className="text-xs text-primary hover:underline">
+            <Link
+              to="/privacy"
+              className="text-xs text-primary hover:underline"
+            >
               Ver Política de Privacidad →
             </Link>
           </div>

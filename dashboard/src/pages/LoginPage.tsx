@@ -101,11 +101,17 @@ export function LoginPage() {
       {/* Footer */}
       <footer className="relative z-10 pb-6 text-center space-y-2">
         <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/60">
-          <Link to="/privacy" className="hover:text-muted-foreground transition-colors">
+          <Link
+            to="/privacy"
+            className="hover:text-muted-foreground transition-colors"
+          >
             Política de Privacidad
           </Link>
           <span>·</span>
-          <Link to="/terms" className="hover:text-muted-foreground transition-colors">
+          <Link
+            to="/terms"
+            className="hover:text-muted-foreground transition-colors"
+          >
             Términos de Servicio
           </Link>
         </div>

@@ -23,6 +23,8 @@ import type {
   WhatsAppInstance,
   CreateInstanceBody,
   UpdateInstanceBody,
+  DiscoverInstancesBody,
+  DiscoverInstancesResponse,
   ProductReferral,
   CreateProductReferralBody,
   FlowV2,
@@ -589,6 +591,20 @@ export const api = {
     request<WebhookConfig>("/api/instances/webhook-config"),
   testInstanceHealth: (id: string) =>
     request<InstanceHealth>(`/api/instances/${id}/health`),
+  /** Descubre números de WhatsApp disponibles a partir de un token de Meta.
+   *  El token se usa solo para consultar la API de Meta y NO se almacena aquí. */
+  discoverInstances: (payload: DiscoverInstancesBody) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/instances/discover`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<DiscoverInstancesResponse>;
+      })
+    ),
   getProductReferrals: () =>
     request<ProductReferral[]>("/api/product-referrals"),
   getFlowReferrals: () => request<FlowReferral[]>("/api/flow-referrals"),

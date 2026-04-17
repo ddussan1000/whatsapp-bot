@@ -242,8 +242,6 @@ function EditDialog({
 
   const [label, setLabel] = useState(instance.label);
   const [metaToken, setMetaToken] = useState(instance.meta_token ?? "");
-  const [wabaId, setWabaId] = useState(instance.waba_id ?? "");
-  const [metaAppId, setMetaAppId] = useState(instance.meta_app_id ?? "");
   const [displayPhone, setDisplayPhone] = useState(
     instance.display_phone_number ?? ""
   );
@@ -262,8 +260,6 @@ function EditDialog({
         payload: {
           label: label.trim() || instance.label,
           metaToken: metaToken.trim() || undefined,
-          wabaId: wabaId.trim() || undefined,
-          metaAppId: metaAppId.trim() || undefined,
           displayPhoneNumber: displayPhone.trim() || undefined,
           currency: currency || undefined,
         },
@@ -296,8 +292,14 @@ function EditDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
+      {/*
+       * flex flex-col + max-h-[90dvh]:  limita la altura al 90% del viewport dinámico.
+       * p-0 gap-0:  el padding lo manejan las secciones internas para que el scroll
+       *             no corte el contenido contra el borde del diálogo.
+       */}
+      <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-2xl max-h-[90dvh]">
+        {/* ── Cabecera fija ─────────────────────────────────────── */}
+        <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle>Editar número de WhatsApp</DialogTitle>
           <DialogDescription>
             {instance.display_phone_number
@@ -306,281 +308,258 @@ function EditDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5">
-          {/* Sección: Identificación */}
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Identificación
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field
-                label="Nombre del número"
-                hint="Solo para reconocerlo en el panel, no lo ve el cliente."
-              >
-                <Input
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  placeholder="Ej: Línea principal, Ventas, Soporte…"
-                />
-              </Field>
-              <Field
-                label="Número de teléfono"
-                hint="Con formato internacional. Ej: +57 300 123 4567"
-                optional
-              >
-                <Input
-                  value={displayPhone}
-                  onChange={(e) => setDisplayPhone(e.target.value)}
-                  placeholder="+57 300 123 4567"
-                />
-              </Field>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Sección: Credenciales de Meta */}
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Credenciales de Meta
-            </p>
-            <Field
-              label="ID del número (Phone Number ID)"
-              hint="Identificador único que Meta asignó a este número. No se puede cambiar."
-            >
-              <Input
-                value={instance.phone_number_id}
-                readOnly
-                className="bg-muted text-muted-foreground"
-              />
-            </Field>
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold">Token de acceso</span>
-                <InfoModal title="¿Dónde obtengo el token?" iconOnly>
-                  <InfoSection title="Tipos de token">
-                    <p>
-                      Hay 3 tipos. Para producción usá siempre el{" "}
-                      <strong>System User Token</strong>:
-                    </p>
-                  </InfoSection>
-                  <div className="flex flex-col gap-2 text-xs">
-                    {[
-                      {
-                        type: "Token temporal",
-                        dur: "1–2 horas",
-                        ok: false,
-                        desc: "Solo para pruebas rápidas en el panel de Meta.",
-                      },
-                      {
-                        type: "Token de larga duración",
-                        dur: "60 días",
-                        ok: false,
-                        desc: "Hay que renovarlo manualmente cada 2 meses.",
-                      },
-                      {
-                        type: "System User Token",
-                        dur: "No vence",
-                        ok: true,
-                        desc: "Recomendado para producción.",
-                      },
-                    ].map((t) => (
-                      <div
-                        key={t.type}
-                        className={`rounded-lg border p-2.5 ${t.ok ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10" : "border-muted bg-muted/30"}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold">{t.type}</span>
-                          <span className="text-muted-foreground">{t.dur}</span>
-                        </div>
-                        <p className="text-muted-foreground mt-0.5">{t.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <InfoSection title="Cómo obtener el System User Token">
-                    <div className="flex flex-col gap-2 mt-1">
-                      <InfoStep n={1}>
-                        Entrá a <strong>business.facebook.com</strong> →
-                        Configuración del negocio.
-                      </InfoStep>
-                      <InfoStep n={2}>
-                        En el menú izquierdo:{" "}
-                        <strong>Usuarios → Usuarios del sistema</strong>. Creá
-                        un usuario del sistema con rol{" "}
-                        <InfoCode>Admin</InfoCode>.
-                      </InfoStep>
-                      <InfoStep n={3}>
-                        Hacé click en <strong>Generar token</strong>, seleccioná
-                        tu app y activá los permisos:{" "}
-                        <InfoCode>whatsapp_business_messaging</InfoCode> y{" "}
-                        <InfoCode>whatsapp_business_management</InfoCode>.
-                      </InfoStep>
-                      <InfoStep n={4}>
-                        Si querés que el sistema enriquezca datos de anuncios
-                        automáticamente, también activá{" "}
-                        <InfoCode>ads_read</InfoCode>.
-                      </InfoStep>
-                      <InfoStep n={5}>
-                        Copiá el token generado y pegálo acá.{" "}
-                        <strong>No vence.</strong>
-                      </InfoStep>
-                    </div>
-                  </InfoSection>
-                  <InfoAlert>
-                    Sin <InfoCode>whatsapp_business_messaging</InfoCode> el bot
-                    no puede enviar mensajes ni descargar imágenes de
-                    comprobantes.
-                  </InfoAlert>
-                </InfoModal>
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  type={showToken ? "text" : "password"}
-                  value={metaToken}
-                  onChange={(e) => setMetaToken(e.target.value)}
-                  placeholder="EAAP…"
-                  className="flex-1 font-mono text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowToken((v) => !v)}
-                  className="rounded-md border bg-background px-2 text-muted-foreground hover:bg-muted"
-                >
-                  {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Token permanente de Meta. Lo encontrás en Meta for Developers →
-                tu app → WhatsApp → API Setup.
+        {/* ── Cuerpo scrollable ─────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="flex flex-col gap-5">
+            {/* Identificación */}
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Identificación
               </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field
+                  label="Nombre del número"
+                  hint="Solo para reconocerlo en el panel, no lo ve el cliente."
+                >
+                  <Input
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    placeholder="Ej: Línea principal, Ventas, Soporte…"
+                  />
+                </Field>
+                <Field
+                  label="Número de teléfono"
+                  hint="Con formato internacional. Ej: +57 300 123 4567"
+                  optional
+                >
+                  <Input
+                    value={displayPhone}
+                    onChange={(e) => setDisplayPhone(e.target.value)}
+                    placeholder="+57 300 123 4567"
+                  />
+                </Field>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+
+            <Separator />
+
+            {/* Credenciales de Meta */}
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Credenciales de Meta
+              </p>
               <Field
-                label="WABA ID"
-                hint="ID de tu cuenta de WhatsApp Business."
-                optional
+                label="ID del número (Phone Number ID)"
+                hint="Identificador único que Meta asignó a este número. No se puede cambiar."
               >
                 <Input
-                  value={wabaId}
-                  onChange={(e) => setWabaId(e.target.value)}
-                  placeholder="123456789"
+                  value={instance.phone_number_id}
+                  readOnly
+                  className="bg-muted text-muted-foreground font-mono text-xs"
                 />
               </Field>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold">Token de acceso</span>
+                  <InfoModal title="¿Dónde obtengo el token?" iconOnly>
+                    <InfoSection title="Tipos de token">
+                      <p>
+                        Hay 3 tipos. Para producción usá siempre el{" "}
+                        <strong>System User Token</strong>:
+                      </p>
+                    </InfoSection>
+                    <div className="flex flex-col gap-2 text-xs">
+                      {[
+                        {
+                          type: "Token temporal",
+                          dur: "1–2 horas",
+                          ok: false,
+                          desc: "Solo para pruebas rápidas en el panel de Meta.",
+                        },
+                        {
+                          type: "Token de larga duración",
+                          dur: "60 días",
+                          ok: false,
+                          desc: "Hay que renovarlo manualmente cada 2 meses.",
+                        },
+                        {
+                          type: "System User Token",
+                          dur: "No vence",
+                          ok: true,
+                          desc: "Recomendado para producción.",
+                        },
+                      ].map((t) => (
+                        <div
+                          key={t.type}
+                          className={`rounded-lg border p-2.5 ${t.ok ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10" : "border-muted bg-muted/30"}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold">{t.type}</span>
+                            <span className="text-muted-foreground">
+                              {t.dur}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground mt-0.5">
+                            {t.desc}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <InfoSection title="Cómo obtener el System User Token">
+                      <div className="flex flex-col gap-2 mt-1">
+                        <InfoStep n={1}>
+                          Entrá a <strong>business.facebook.com</strong> →
+                          Configuración del negocio.
+                        </InfoStep>
+                        <InfoStep n={2}>
+                          En el menú izquierdo:{" "}
+                          <strong>Usuarios → Usuarios del sistema</strong>. Creá
+                          un usuario del sistema con rol{" "}
+                          <InfoCode>Admin</InfoCode>.
+                        </InfoStep>
+                        <InfoStep n={3}>
+                          Hacé click en <strong>Generar token</strong>,
+                          seleccioná tu app y activá los permisos:{" "}
+                          <InfoCode>whatsapp_business_messaging</InfoCode>,{" "}
+                          <InfoCode>whatsapp_business_management</InfoCode> y{" "}
+                          <InfoCode>ads_read</InfoCode>.
+                        </InfoStep>
+                        <InfoStep n={4}>
+                          Copiá el token generado y pegálo acá.{" "}
+                          <strong>No vence.</strong>
+                        </InfoStep>
+                      </div>
+                    </InfoSection>
+                    <InfoAlert>
+                      Sin <InfoCode>whatsapp_business_messaging</InfoCode> el
+                      bot no puede enviar mensajes ni descargar imágenes de
+                      comprobantes.
+                    </InfoAlert>
+                  </InfoModal>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type={showToken ? "text" : "password"}
+                    value={metaToken}
+                    onChange={(e) => setMetaToken(e.target.value)}
+                    placeholder="EAAP…"
+                    className="flex-1 font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowToken((v) => !v)}
+                    className="rounded-md border bg-background px-2 text-muted-foreground hover:bg-muted"
+                  >
+                    {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Token permanente de Meta. Lo encontrás en Meta for Developers
+                  → tu app → WhatsApp → API Setup.
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Configuración de pagos */}
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Configuración de pagos
+              </p>
               <Field
-                label="Meta App ID"
-                hint="ID de tu app en Meta for Developers."
-                optional
+                label="Moneda"
+                hint="Divisa que usan los pagos recibidos en este número. Se usa para interpretar los comprobantes correctamente."
               >
-                <Input
-                  value={metaAppId}
-                  onChange={(e) => setMetaAppId(e.target.value)}
-                  placeholder="987654321"
-                />
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar moneda" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COP">COP — Peso colombiano</SelectItem>
+                    <SelectItem value="USD">
+                      USD — Dólar estadounidense
+                    </SelectItem>
+                    <SelectItem value="EUR">EUR — Euro</SelectItem>
+                    <SelectItem value="MXN">MXN — Peso mexicano</SelectItem>
+                    <SelectItem value="BRL">BRL — Real brasileño</SelectItem>
+                    <SelectItem value="ARS">ARS — Peso argentino</SelectItem>
+                    <SelectItem value="CLP">CLP — Peso chileno</SelectItem>
+                    <SelectItem value="PEN">PEN — Sol peruano</SelectItem>
+                    <SelectItem value="VES">
+                      VES — Bolívar venezolano
+                    </SelectItem>
+                    <SelectItem value="GTQ">
+                      GTQ — Quetzal guatemalteco
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </Field>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          {/* Sección: Moneda y Flow */}
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Configuración de pagos
-            </p>
-            <Field
-              label="Moneda"
-              hint="Divisa que usan los pagos recibidos en este número. Se usa para interpretar los comprobantes correctamente."
-            >
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar moneda" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="COP">COP — Peso colombiano</SelectItem>
-                  <SelectItem value="USD">
-                    USD — Dólar estadounidense
-                  </SelectItem>
-                  <SelectItem value="EUR">EUR — Euro</SelectItem>
-                  <SelectItem value="MXN">MXN — Peso mexicano</SelectItem>
-                  <SelectItem value="BRL">BRL — Real brasileño</SelectItem>
-                  <SelectItem value="ARS">ARS — Peso argentino</SelectItem>
-                  <SelectItem value="CLP">CLP — Peso chileno</SelectItem>
-                  <SelectItem value="PEN">PEN — Sol peruano</SelectItem>
-                  <SelectItem value="VES">VES — Bolívar venezolano</SelectItem>
-                  <SelectItem value="GTQ">
-                    GTQ — Quetzal guatemalteco
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-
-          <Separator />
-
-          {/* Sección: Flow activo */}
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Flow activo
-            </p>
-            <Field
-              label="Flow asignado"
-              hint="El flow que va a usar este número para responder automáticamente a los clientes."
-            >
-              <Select value={selectedFlow} onValueChange={setSelectedFlow}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sin flow asignado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_FLOW_VALUE}>
-                    <span className="text-muted-foreground">
-                      Sin flow — el bot no responde
-                    </span>
-                  </SelectItem>
-                  {activeFlows.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      <span className="flex items-center gap-2">
-                        <CircleDot size={11} className="text-emerald-500" />
-                        {f.name}
+            {/* Flow activo */}
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Flow activo
+              </p>
+              <Field
+                label="Flow asignado"
+                hint="El flow que va a usar este número para responder automáticamente a los clientes."
+              >
+                <Select value={selectedFlow} onValueChange={setSelectedFlow}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin flow asignado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_FLOW_VALUE}>
+                      <span className="text-muted-foreground">
+                        Sin flow — el bot no responde
                       </span>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 pt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              loading={testHealth.isPending}
-              loadingText="Verificando…"
-              onClick={() =>
-                testHealth.mutate(instance.id, {
-                  onSuccess: (res) => {
-                    if (res.status === "connected")
-                      toast.success("Token vigente — conexión OK.");
-                    else toast.error(getInstanceHealthMessage(res));
-                  },
-                  onError: (e) => toast.error(`Error: ${(e as Error).message}`),
-                })
-              }
-            >
-              Verificar conexión
-            </Button>
-            <div className="ml-auto flex gap-2">
-              <Button variant="outline" onClick={onClose} disabled={isSaving}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={save}
-                loading={isSaving}
-                loadingText="Guardando…"
-              >
-                Guardar cambios
-              </Button>
+                    {activeFlows.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        <span className="flex items-center gap-2">
+                          <CircleDot size={11} className="text-emerald-500" />
+                          {f.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
             </div>
+          </div>
+        </div>
+
+        {/* ── Footer fijo con acciones ──────────────────────────── */}
+        <div className="shrink-0 flex items-center gap-2 border-t bg-muted/30 px-6 py-4">
+          <Button
+            variant="outline"
+            size="sm"
+            loading={testHealth.isPending}
+            loadingText="Verificando…"
+            onClick={() =>
+              testHealth.mutate(instance.id, {
+                onSuccess: (res) => {
+                  if (res.status === "connected")
+                    toast.success("Token vigente — conexión OK.");
+                  else toast.error(getInstanceHealthMessage(res));
+                },
+                onError: (e) => toast.error(`Error: ${(e as Error).message}`),
+              })
+            }
+          >
+            Verificar conexión
+          </Button>
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" onClick={onClose} disabled={isSaving}>
+              Cancelar
+            </Button>
+            <Button onClick={save} loading={isSaving} loadingText="Guardando…">
+              Guardar cambios
+            </Button>
           </div>
         </div>
       </DialogContent>

@@ -803,6 +803,25 @@ const WebhookConfigSchema = z.object({
   verifyToken: z.string(),
 });
 
+// ── Meta token discovery ──────────────────────────────────────────────────
+
+const DiscoveredPhoneNumberSchema = z.object({
+  id: z.string(),
+  displayPhoneNumber: z.string(),
+  verifiedName: z.string(),
+  wabaId: z.string(),
+});
+
+const DiscoverInstancesResponseSchema = z.object({
+  phoneNumbers: z.array(DiscoveredPhoneNumberSchema),
+  /** "user" = token personal (vence), "system_user" = permanente, "unknown" = no se pudo determinar */
+  tokenType: z.enum(["user", "system_user", "unknown"]),
+  /** Unix timestamp de vencimiento. 0 = no vence. */
+  expiresAt: z.number(),
+  /** Permisos requeridos que le faltan al token. */
+  missingPermissions: z.array(z.string()),
+});
+
 const ProductReferralSchema = z.object({
   id: z.string(),
   organization_id: z.string(),
@@ -953,6 +972,305 @@ dashboardApi.openapi(
       .maybeSingle();
     if (error) return c.json({ error: error.message }, 500);
     return c.json(data!, 200);
+  },
+);
+
+// ── POST /instances/discover ──────────────────────────────────────────────
+// Recibe un token de Meta y auto-descubre los números de WhatsApp disponibles.
+// También detecta el tipo de token (permanente vs temporal) y permisos faltantes.
+// El token se usa solo en esta llamada y NO se almacena.
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/instances/discover",
+    request: {
+      headers: AuthHeaderSchema,
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              metaToken: z.string().min(10),
+              wabaId: z.string().optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Números de WhatsApp descubiertos",
+        content: {
+          "application/json": { schema: DiscoverInstancesResponseSchema },
+        },
+      },
+      400: {
+        description: "Token inválido o sin permisos suficientes",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    const { metaToken, wabaId: manualWabaId } = c.req.valid("json");
+
+    const REQUIRED_PERMS = [
+      "whatsapp_business_messaging",
+      "whatsapp_business_management",
+      "ads_read",
+    ];
+
+    console.log("[discover] Iniciando descubrimiento de números...");
+
+    // ── 1. Inspeccionar el token via debug_token (auto-inspección) ────────
+    const debugUrl = `https://graph.facebook.com/v19.0/debug_token?input_token=${encodeURIComponent(metaToken)}&access_token=${encodeURIComponent(metaToken)}`;
+    console.log("[discover] Llamando debug_token...");
+    const debugRes = await fetch(debugUrl).catch((e) => {
+      console.error("[discover] debug_token fetch error:", e);
+      return null;
+    });
+
+    let tokenType: "user" | "system_user" | "unknown" = "unknown";
+    let expiresAt = 0;
+    let missingPermissions: string[] = [];
+    let granularWabaIds: string[] = [];
+    let userId: string | undefined;
+
+    if (debugRes?.ok) {
+      const body = (await debugRes.json()) as {
+        data?: {
+          type?: string;
+          expires_at?: number;
+          is_valid?: boolean;
+          user_id?: string;
+          error?: { message?: string; code?: number };
+          scopes?: string[];
+          granular_scopes?: { scope: string; target_ids?: string[] }[];
+        };
+        error?: { message?: string };
+      };
+
+      console.log("[discover] debug_token response:", JSON.stringify(body, null, 2));
+
+      if (body.error || body.data?.is_valid === false) {
+        const msg =
+          body.error?.message ??
+          body.data?.error?.message ??
+          "Token inválido o sin permisos suficientes.";
+        console.log("[discover] Token inválido:", msg);
+        return c.json({ error: msg }, 400);
+      }
+
+      const d = body.data!;
+
+      if (d.type === "SYSTEM_USER") tokenType = "system_user";
+      else if (d.type === "USER") tokenType = "user";
+
+      expiresAt = d.expires_at ?? 0;
+      userId = d.user_id;
+      const scopes = d.scopes ?? [];
+      missingPermissions = REQUIRED_PERMS.filter((p) => !scopes.includes(p));
+
+      console.log("[discover] tokenType:", tokenType, "| expiresAt:", expiresAt);
+      console.log("[discover] scopes:", scopes);
+      console.log("[discover] missingPermissions:", missingPermissions);
+
+      // granular_scopes trae los WABA IDs cuando la auto-inspección los retorna
+      const granular = d.granular_scopes ?? [];
+      console.log("[discover] granular_scopes:", JSON.stringify(granular));
+      const wbmScope = granular.find(
+        (s) => s.scope === "whatsapp_business_management",
+      );
+      granularWabaIds = wbmScope?.target_ids ?? [];
+      console.log("[discover] WABA IDs desde granular_scopes:", granularWabaIds);
+    } else {
+      console.log("[discover] debug_token HTTP status:", debugRes?.status, "— fallback a /me");
+      const meRes = await fetch(
+        "https://graph.facebook.com/v19.0/me?fields=id",
+        { headers: { Authorization: `Bearer ${metaToken}` } },
+      ).catch(() => null);
+
+      if (!meRes?.ok) {
+        const raw = await meRes?.json().catch(() => null) as { error?: { message?: string } } | null;
+        console.log("[discover] /me también falló:", raw);
+        const message = raw?.error?.message ?? "Token inválido o sin permisos suficientes.";
+        return c.json({ error: message }, 400);
+      }
+      console.log("[discover] /me OK, continuando sin datos de debug_token");
+    }
+
+    // ── 2. Descubrir números de teléfono ─────────────────────────────────
+
+    const phoneNumbers: {
+      id: string;
+      displayPhoneNumber: string;
+      verifiedName: string;
+      wabaId: string;
+    }[] = [];
+
+    /** Obtiene los números de un WABA y los agrega al array. */
+    const fetchPhoneNumbers = async (wabaId: string) => {
+      const url = `https://graph.facebook.com/v19.0/${wabaId}/phone_numbers?fields=id,display_phone_number,verified_name`;
+      console.log(`[discover] Obteniendo números para WABA ${wabaId}:`, url);
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${metaToken}` },
+      }).catch((e) => {
+        console.error(`[discover] Error fetch phone_numbers WABA ${wabaId}:`, e);
+        return null;
+      });
+      if (!res?.ok) {
+        const errBody = await res?.json().catch(() => null);
+        console.log(`[discover] phone_numbers HTTP ${res?.status} para WABA ${wabaId}:`, errBody);
+        return;
+      }
+      const data = (await res.json()) as {
+        data?: {
+          id: string;
+          display_phone_number?: string;
+          verified_name?: string;
+        }[];
+      };
+      console.log(`[discover] Números encontrados en WABA ${wabaId}:`, JSON.stringify(data.data));
+      for (const pn of data.data ?? []) {
+        phoneNumbers.push({
+          id: pn.id,
+          displayPhoneNumber: pn.display_phone_number ?? pn.id,
+          verifiedName: pn.verified_name ?? "",
+          wabaId,
+        });
+      }
+    };
+
+    /** Intenta obtener WABAs de una lista de negocios y busca números en cada uno. */
+    const fetchWabasFromBusinesses = async (bizIds: string[]) => {
+      for (const bizId of bizIds) {
+        const wabaUrl = `https://graph.facebook.com/v19.0/${bizId}/owned_whatsapp_business_accounts?fields=id,name`;
+        console.log(`[discover] GET owned_waba para negocio ${bizId}:`, wabaUrl);
+        const wabaRes = await fetch(wabaUrl, {
+          headers: { Authorization: `Bearer ${metaToken}` },
+        }).catch(() => null);
+        if (!wabaRes?.ok) {
+          const e = await wabaRes?.json().catch(() => null);
+          console.log(`[discover] owned_waba HTTP ${wabaRes?.status} negocio ${bizId}:`, e);
+          continue;
+        }
+        const wabaData = (await wabaRes.json()) as { data?: { id: string; name?: string }[] };
+        console.log(`[discover] WABAs para negocio ${bizId}:`, JSON.stringify(wabaData.data));
+        await Promise.all((wabaData.data ?? []).map((w) => fetchPhoneNumbers(w.id)));
+      }
+    };
+
+    if (manualWabaId) {
+      // ── Ruta 0: WABA ID ingresado manualmente por el usuario ───────────
+      // Cuando el auto-discovery no puede traversar la jerarquía de businesses
+      // (System Users con configuración específica), el usuario provee el WABA ID
+      // directamente desde Meta Business Suite.
+      console.log("[discover] Ruta 0: WABA ID manual:", manualWabaId);
+      await fetchPhoneNumbers(manualWabaId);
+
+    } else if (granularWabaIds.length > 0) {
+      // ── Ruta A: WABA IDs desde granular_scopes ─────────────────────────
+      // Disponible cuando debug_token se llama con App Access Token.
+      // En auto-inspección Meta no suele retornar target_ids, pero si los hay los usamos.
+      console.log("[discover] Ruta A: usando WABA IDs de granular_scopes");
+      await Promise.all(granularWabaIds.map(fetchPhoneNumbers));
+
+    } else {
+      // ── Ruta B: /me/businesses → owned_waba → phone_numbers ────────────
+      // Funciona para User Tokens con acceso a negocios.
+      console.log("[discover] Ruta B: GET /me/businesses");
+      const bizRes = await fetch(
+        "https://graph.facebook.com/v19.0/me/businesses?fields=id,name",
+        { headers: { Authorization: `Bearer ${metaToken}` } },
+      ).catch(() => null);
+
+      const bizData = bizRes?.ok
+        ? ((await bizRes.json()) as { data?: { id: string; name?: string }[] })
+        : null;
+      console.log(`[discover] /me/businesses HTTP ${bizRes?.status}:`, JSON.stringify(bizData?.data));
+
+      const bizIds = bizData?.data?.map((b) => b.id) ?? [];
+      if (bizIds.length > 0) {
+        await fetchWabasFromBusinesses(bizIds);
+      }
+
+      // ── Ruta C: /{userId}/businesses (System Users) ────────────────────
+      // System Users no aparecen en /me/businesses pero sí en /{userId}/businesses.
+      if (phoneNumbers.length === 0 && userId) {
+        console.log(`[discover] Ruta C: GET /${userId}/businesses`);
+        const userBizRes = await fetch(
+          `https://graph.facebook.com/v19.0/${userId}/businesses?fields=id,name`,
+          { headers: { Authorization: `Bearer ${metaToken}` } },
+        ).catch(() => null);
+        const userBizData = userBizRes?.ok
+          ? ((await userBizRes.json()) as { data?: { id: string; name?: string }[] })
+          : null;
+        console.log(`[discover] /${userId}/businesses HTTP ${userBizRes?.status}:`, JSON.stringify(userBizData?.data));
+        const userBizIds = userBizData?.data?.map((b) => b.id) ?? [];
+        if (userBizIds.length > 0) await fetchWabasFromBusinesses(userBizIds);
+      }
+
+      // ── Ruta D: /{userId}/assigned_whatsapp_business_accounts ─────────
+      // System Users con WABAs asignados directamente (sin pasar por businesses).
+      // Esta es la ruta principal para System Users de producción.
+      if (phoneNumbers.length === 0 && userId) {
+        console.log(`[discover] Ruta D: GET /${userId}/assigned_whatsapp_business_accounts`);
+        const assignedRes = await fetch(
+          `https://graph.facebook.com/v19.0/${userId}/assigned_whatsapp_business_accounts?fields=id,name`,
+          { headers: { Authorization: `Bearer ${metaToken}` } },
+        ).catch(() => null);
+        const assignedData = assignedRes?.ok
+          ? ((await assignedRes.json()) as { data?: { id: string; name?: string }[] })
+          : null;
+        console.log(`[discover] /${userId}/assigned_whatsapp_business_accounts HTTP ${assignedRes?.status}:`, JSON.stringify(assignedData?.data));
+        await Promise.all((assignedData?.data ?? []).map((w) => fetchPhoneNumbers(w.id)));
+      }
+
+      // ── Ruta E: /me/whatsapp_business_accounts ─────────────────────────
+      // Fallback: algunos tokens tienen acceso directo via /me.
+      if (phoneNumbers.length === 0) {
+        console.log("[discover] Ruta E: GET /me/whatsapp_business_accounts");
+        const directRes = await fetch(
+          "https://graph.facebook.com/v19.0/me/whatsapp_business_accounts?fields=id,name",
+          { headers: { Authorization: `Bearer ${metaToken}` } },
+        ).catch(() => null);
+        const directData = directRes?.ok
+          ? ((await directRes.json()) as { data?: { id: string }[] })
+          : null;
+        console.log(`[discover] /me/whatsapp_business_accounts HTTP ${directRes?.status}:`, JSON.stringify(directData?.data));
+        await Promise.all((directData?.data ?? []).map((w) => fetchPhoneNumbers(w.id)));
+      }
+
+      // ── Ruta F: query anidada /me?fields=businesses{waba{phone_numbers}} ─
+      // Último recurso: query GraphQL anidada que traversa todo en una sola llamada.
+      if (phoneNumbers.length === 0) {
+        console.log("[discover] Ruta F: query anidada /me?fields=businesses{...}");
+        const nestedUrl =
+          "https://graph.facebook.com/v19.0/me?fields=businesses{id,name,owned_whatsapp_business_accounts{id,name}}";
+        const nestedRes = await fetch(nestedUrl, {
+          headers: { Authorization: `Bearer ${metaToken}` },
+        }).catch(() => null);
+        const nestedData = nestedRes?.ok ? ((await nestedRes.json()) as {
+          businesses?: {
+            data?: {
+              id: string;
+              owned_whatsapp_business_accounts?: { data?: { id: string }[] };
+            }[];
+          };
+        }) : null;
+        console.log(`[discover] Ruta F - query anidada HTTP ${nestedRes?.status}:`, JSON.stringify(nestedData));
+        for (const biz of nestedData?.businesses?.data ?? []) {
+          await Promise.all(
+            (biz.owned_whatsapp_business_accounts?.data ?? []).map((w) =>
+              fetchPhoneNumbers(w.id),
+            ),
+          );
+        }
+      }
+    }
+
+    console.log("[discover] Resultado final — phoneNumbers:", phoneNumbers.length, "| tokenType:", tokenType);
+    return c.json({ phoneNumbers, tokenType, expiresAt, missingPermissions }, 200);
   },
 );
 

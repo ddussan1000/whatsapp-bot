@@ -1429,6 +1429,73 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/instances/discover": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            metaToken: string;
+            wabaId?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Números de WhatsApp descubiertos */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              phoneNumbers: {
+                id: string;
+                displayPhoneNumber: string;
+                verifiedName: string;
+                wabaId: string;
+              }[];
+              /** @enum {string} */
+              tokenType: "user" | "system_user" | "unknown";
+              expiresAt: number;
+              missingPermissions: string[];
+            };
+          };
+        };
+        /** @description Token inválido o sin permisos suficientes */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/instances/webhook-config": {
     parameters: {
       query?: never;
@@ -3282,6 +3349,10 @@ export interface paths {
                   adset_name: string | null;
                   created_at: string | null;
                 } | null;
+                last_message_text?: string | null;
+                /** @enum {string|null} */
+                last_message_direction?: "inbound" | "outbound" | null;
+                unread_count?: number;
               }[];
               page: number;
               pageSize: number;
@@ -3355,6 +3426,10 @@ export interface paths {
                 adset_name: string | null;
                 created_at: string | null;
               } | null;
+              last_message_text?: string | null;
+              /** @enum {string|null} */
+              last_message_direction?: "inbound" | "outbound" | null;
+              unread_count?: number;
             };
           };
         };
@@ -3698,6 +3773,80 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/conversations/{id}/send-media": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: uri */
+            url: string;
+            filename: string;
+            mimeType: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Media enviada */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              messageId?: string | null;
+            };
+          };
+        };
+        /** @description Conversación no encontrada */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/payments": {
     parameters: {
       query?: never;
@@ -3717,6 +3866,7 @@ export interface paths {
           instanceId?: string;
           from?: string;
           to?: string;
+          phone?: string;
         };
         header: {
           authorization: string;
@@ -3772,6 +3922,77 @@ export interface paths {
       };
     };
     put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/payments/{id}/state": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            state: "pending_manual_review" | "validated" | "rejected";
+          };
+        };
+      };
+      responses: {
+        /** @description Estado actualizado */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description No encontrado */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
     post?: never;
     delete?: never;
     options?: never;

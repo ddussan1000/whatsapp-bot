@@ -355,6 +355,32 @@ export type UpdateInstanceBody = Partial<CreateInstanceBody> & {
   appSecret?: string | null;
   currency?: string | null;
 };
+
+// ── Meta token discovery ──────────────────────────────────────────────────
+
+/** Un número de WhatsApp descubierto automáticamente desde el token de Meta. */
+export type DiscoveredPhoneNumber = {
+  id: string; // phone_number_id de Meta
+  displayPhoneNumber: string; // Ej: "+57 300 123 4567"
+  verifiedName: string; // Nombre verificado del negocio
+  wabaId: string; // ID de la cuenta de WhatsApp Business
+};
+
+export type DiscoverInstancesResponse = {
+  phoneNumbers: DiscoveredPhoneNumber[];
+  /** "user" = token personal (vence), "system_user" = permanente, "unknown" = no determinado */
+  tokenType: "user" | "system_user" | "unknown";
+  /** Unix timestamp de vencimiento. 0 = nunca vence. */
+  expiresAt: number;
+  /** Permisos requeridos que le faltan al token. */
+  missingPermissions: string[];
+};
+
+export type DiscoverInstancesBody = {
+  metaToken: string;
+  /** WABA ID manual (fallback cuando el auto-discovery no encuentra números). */
+  wabaId?: string;
+};
 export type CreateProductReferralBody = {
   productId: string;
   ctwaClid: string;

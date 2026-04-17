@@ -27,16 +27,18 @@ export function PrivacyPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Shield size={20} />
             </div>
-            <span className="text-sm font-medium text-muted-foreground">Legal</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Legal
+            </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Política de Privacidad
           </h1>
           <p className="text-muted-foreground">
-            En DSS Bot nos tomamos en serio la privacidad de quienes usan nuestra
-            plataforma. Esta política explica qué información recopilamos, cómo la
-            usamos y cómo la protegemos cuando utilizas nuestro servicio de
-            automatización de WhatsApp.
+            En DSS Bot nos tomamos en serio la privacidad de quienes usan
+            nuestra plataforma. Esta política explica qué información
+            recopilamos, cómo la usamos y cómo la protegemos cuando utilizas
+            nuestro servicio de automatización de WhatsApp.
           </p>
           <p className="text-xs text-muted-foreground/60">
             Última actualización: abril de 2026
@@ -46,11 +48,11 @@ export function PrivacyPage() {
         <div className="space-y-8">
           <Section number="1" title="Qué es DSS Bot">
             <p className="mt-3 text-muted-foreground">
-              DSS Bot es una plataforma B2B de automatización de WhatsApp. Permite a
-              empresas (organizaciones) crear flujos conversacionales, gestionar
-              conversaciones con sus clientes, validar comprobantes de pago mediante
-              inteligencia artificial y visualizar reportes de actividad. El acceso se
-              gestiona desde un dashboard web en{" "}
+              DSS Bot es una plataforma B2B de automatización de WhatsApp.
+              Permite a empresas (organizaciones) crear flujos conversacionales,
+              gestionar conversaciones con sus clientes, validar comprobantes de
+              pago mediante inteligencia artificial y visualizar reportes de
+              actividad. El acceso se gestiona desde un dashboard web en{" "}
               <span className="font-medium text-foreground">dssbot.site</span>.
             </p>
           </Section>
@@ -75,7 +77,8 @@ export function PrivacyPage() {
               ))}
             </ul>
             <p className="mt-4 text-sm font-medium text-foreground">
-              Información procesada en nombre de la organización (conversaciones de WhatsApp):
+              Información procesada en nombre de la organización (conversaciones
+              de WhatsApp):
             </p>
             <ul className="mt-2 space-y-2 text-muted-foreground">
               {[
@@ -117,16 +120,17 @@ export function PrivacyPage() {
               <p>
                 Los datos se almacenan en servidores seguros de{" "}
                 <span className="font-medium text-foreground">Supabase</span>{" "}
-                (PostgreSQL). Los comprobantes de pago se almacenan temporalmente y
-                se eliminan de forma automática a los{" "}
-                <span className="font-medium text-foreground">7 días</span> de su
-                recepción.
+                (PostgreSQL). Los comprobantes de pago se almacenan
+                temporalmente y se eliminan de forma automática a los{" "}
+                <span className="font-medium text-foreground">7 días</span> de
+                su recepción.
               </p>
               <p>
-                El estado de las conversaciones activas se guarda en caché temporal
-                (Redis) con una vigencia máxima de{" "}
-                <span className="font-medium text-foreground">72 horas</span>. Una
-                vez que la sesión expira, el estado se elimina automáticamente.
+                El estado de las conversaciones activas se guarda en caché
+                temporal (Redis) con una vigencia máxima de{" "}
+                <span className="font-medium text-foreground">72 horas</span>.
+                Una vez que la sesión expira, el estado se elimina
+                automáticamente.
               </p>
             </div>
           </Section>
@@ -178,10 +182,10 @@ export function PrivacyPage() {
             <p className="mt-4 text-sm text-muted-foreground">
               Algunas organizaciones pueden configurar su propio proveedor de IA
               (OpenAI, Anthropic, Groq, Gemini) para respuestas conversacionales
-              post-flujo. En ese caso, los mensajes de los contactos se envían al
-              proveedor elegido por la organización usando su propia API key. DSS Bot
-              no almacena ni accede a dichas claves en texto plano; se guardan
-              cifradas con AES-256-GCM.
+              post-flujo. En ese caso, los mensajes de los contactos se envían
+              al proveedor elegido por la organización usando su propia API key.
+              DSS Bot no almacena ni accede a dichas claves en texto plano; se
+              guardan cifradas con AES-256-GCM.
             </p>
           </Section>
 
@@ -204,26 +208,27 @@ export function PrivacyPage() {
 
           <Section number="7" title="Tus derechos">
             <p className="mt-3 text-muted-foreground">
-              Como usuario del dashboard puedes solicitar el acceso, rectificación o
-              eliminación de tu información personal escribiéndonos a{" "}
+              Como usuario del dashboard puedes solicitar el acceso,
+              rectificación o eliminación de tu información personal
+              escribiéndonos a{" "}
               <a
                 href="mailto:soporte@dssbot.site"
                 className="text-primary hover:underline"
               >
                 soporte@dssbot.site
               </a>
-              . Las organizaciones son responsables de gestionar los datos de sus
-              propios contactos de WhatsApp conforme a la legislación aplicable en su
-              país.
+              . Las organizaciones son responsables de gestionar los datos de
+              sus propios contactos de WhatsApp conforme a la legislación
+              aplicable en su país.
             </p>
           </Section>
 
           <Section number="8" title="Cambios en esta política">
             <p className="mt-3 text-muted-foreground">
-              Podemos actualizar esta política cuando sea necesario. Publicaremos la
-              versión actualizada en esta misma página con la fecha de revisión. El
-              uso continuado del servicio tras una actualización implica la aceptación
-              de los cambios.
+              Podemos actualizar esta política cuando sea necesario.
+              Publicaremos la versión actualizada en esta misma página con la
+              fecha de revisión. El uso continuado del servicio tras una
+              actualización implica la aceptación de los cambios.
             </p>
           </Section>
         </div>

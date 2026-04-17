@@ -20,6 +20,7 @@ import type {
   UpdateProductBody,
   CreateInstanceBody,
   UpdateInstanceBody,
+  DiscoverInstancesBody,
   CreateProductReferralBody,
   ReportsQueryParams,
   UpsertFlowBody,
@@ -451,6 +452,15 @@ export function useAssignFlowMutation() {
 export function useTestInstanceHealthMutation() {
   return useMutation({
     mutationFn: (id: string) => api.testInstanceHealth(id),
+  });
+}
+
+/** Descubre los números de WhatsApp disponibles para un token de Meta.
+ *  El resultado es efímero (no se cachea) — solo se usa durante el wizard de creación. */
+export function useDiscoverInstancesMutation() {
+  return useMutation({
+    mutationFn: (payload: DiscoverInstancesBody) =>
+      api.discoverInstances(payload),
   });
 }
 
