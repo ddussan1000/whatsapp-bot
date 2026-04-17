@@ -591,6 +591,13 @@ export const api = {
     request<WebhookConfig>("/api/instances/webhook-config"),
   testInstanceHealth: (id: string) =>
     request<InstanceHealth>(`/api/instances/${id}/health`),
+  deleteInstance: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/instances/${id}`, { method: "DELETE", headers }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
   /** Descubre números de WhatsApp disponibles a partir de un token de Meta.
    *  El token se usa solo para consultar la API de Meta y NO se almacena aquí. */
   discoverInstances: (payload: DiscoverInstancesBody) =>

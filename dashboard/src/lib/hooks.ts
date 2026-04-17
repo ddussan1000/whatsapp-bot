@@ -454,6 +454,13 @@ export function useTestInstanceHealthMutation() {
     mutationFn: (id: string) => api.testInstanceHealth(id),
   });
 }
+export function useDeleteInstanceMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteInstance(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["instances"] }),
+  });
+}
 
 /** Descubre los números de WhatsApp disponibles para un token de Meta.
  *  El resultado es efímero (no se cachea) — solo se usa durante el wizard de creación. */

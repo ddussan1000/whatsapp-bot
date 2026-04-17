@@ -1666,6 +1666,68 @@ dashboardApi.openapi(
   },
 );
 
+// ── DELETE /instances/{id} ────────────────────────────────────────────────
+// Elimina una instancia. Rechaza si tiene un flow activo asignado para evitar
+// dejar conversaciones huérfanas.
+
+dashboardApi.openapi(
+  createRoute({
+    method: "delete",
+    path: "/instances/{id}",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "Instance deleted",
+        content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+      },
+      409: {
+        description: "La instancia tiene un flow activo asignado",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const org = orgId(c);
+
+    // Verificar que pertenece a la org y obtener flow_id
+    const { data: instance, error: fetchError } = await supabase
+      .from("whatsapp_instances")
+      .select("id, flow_id")
+      .eq("id", id)
+      .eq("organization_id", org)
+      .maybeSingle();
+
+    if (fetchError) return c.json({ error: fetchError.message }, 500);
+    if (!instance) return c.json({ error: "Instancia no encontrada" }, 500);
+
+    // Bloquear si tiene un flow asignado
+    if (instance.flow_id) {
+      return c.json(
+        { error: "Esta instancia tiene un flow activo asignado. Desasignalo antes de eliminarla." },
+        409,
+      );
+    }
+
+    const { error: deleteError } = await supabase
+      .from("whatsapp_instances")
+      .delete()
+      .eq("id", id)
+      .eq("organization_id", org);
+
+    if (deleteError) return c.json({ error: deleteError.message }, 500);
+    return c.json({ ok: true }, 200);
+  },
+);
+
 dashboardApi.openapi(
   createRoute({
     method: "get",

@@ -12,6 +12,8 @@ import {
   Eye,
   EyeOff,
   CircleDot,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import {
   InfoModal,
@@ -26,6 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -52,6 +55,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { WhatsAppInstance } from "@/types/api";
 import {
   useAssignFlowMutation,
+  useDeleteInstanceMutation,
   useFlowsV2Query,
   useInstancesQuery,
   useTestInstanceHealthMutation,
@@ -567,6 +571,89 @@ function EditDialog({
   );
 }
 
+// ── Delete confirmation dialog ────────────────────────────────────────────
+
+function DeleteDialog({
+  instance,
+  onClose,
+}: {
+  instance: WhatsAppInstance;
+  onClose: () => void;
+}) {
+  const deleteInstance = useDeleteInstanceMutation();
+  const hasFlow = Boolean(instance.flow_id);
+
+  const handleDelete = () => {
+    deleteInstance.mutate(instance.id, {
+      onSuccess: () => {
+        toast.success("Instancia eliminada.");
+        onClose();
+      },
+      onError: (e) => toast.error((e as Error).message),
+    });
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Eliminar número de WhatsApp</DialogTitle>
+          <DialogDescription>
+            Estás por eliminar{" "}
+            <span className="font-semibold text-foreground">
+              {instance.display_phone_number ?? instance.label}
+            </span>
+            . Esta acción no se puede deshacer.
+          </DialogDescription>
+        </DialogHeader>
+
+        {hasFlow ? (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+            <AlertTriangle
+              size={16}
+              className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
+            />
+            <div className="text-sm">
+              <p className="font-semibold text-amber-800 dark:text-amber-300">
+                Tiene un flow activo asignado
+              </p>
+              <p className="mt-0.5 text-amber-700 dark:text-amber-400">
+                Para eliminar esta instancia primero desasignale el flow desde
+                "Editar". Si la borrás con un flow activo, los clientes que
+                estén en conversación dejarán de recibir respuestas.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3 rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+            <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+            <span>
+              Se eliminará la instancia y sus credenciales de Meta. Las
+              conversaciones y pagos existentes no se borran.
+            </span>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={deleteInstance.isPending}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={hasFlow || deleteInstance.isPending}
+            loading={deleteInstance.isPending}
+            loadingText="Eliminando…"
+          >
+            <Trash2 size={14} className="mr-1.5" />
+            Eliminar instancia
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── InstancesPage ─────────────────────────────────────────────────────────
 
 export function InstancesPage() {
@@ -574,6 +661,7 @@ export function InstancesPage() {
   const instances = useInstancesQuery();
   const flows = useFlowsV2Query();
   const [editing, setEditing] = useState<WhatsAppInstance | null>(null);
+  const [deleting, setDeleting] = useState<WhatsAppInstance | null>(null);
 
   const flowMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -687,13 +775,23 @@ export function InstancesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditing(instance)}
-                        >
-                          Editar
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditing(instance)}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => setDeleting(instance)}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -710,6 +808,14 @@ export function InstancesPage() {
           instance={editing}
           flows={flows.data ?? []}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {/* Delete dialog */}
+      {deleting && (
+        <DeleteDialog
+          instance={deleting}
+          onClose={() => setDeleting(null)}
         />
       )}
     </div>
