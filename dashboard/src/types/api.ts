@@ -277,7 +277,7 @@ export type OrgMedia = {
   organization_id: string;
   filename: string;
   original_name: string;
-  media_type: "image" | "video" | "document";
+  media_type: "image" | "video" | "document" | "audio";
   mime_type: string;
   size_bytes?: number | null;
   storage_path: string;

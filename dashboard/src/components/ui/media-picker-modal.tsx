@@ -3,6 +3,7 @@ import {
   Image as ImageIcon,
   FileText,
   Video,
+  Music,
   Upload,
   Search,
   X,
@@ -30,13 +31,14 @@ function formatBytes(bytes?: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-type MediaTypeFilter = "all" | "image" | "video" | "document";
+type MediaTypeFilter = "all" | "image" | "video" | "document" | "audio";
 
 const TYPE_LABELS: Record<MediaTypeFilter, string> = {
   all: "Todo",
   image: "Imágenes",
   video: "Videos",
   document: "Documentos",
+  audio: "Audios",
 };
 
 function MediaIcon({
@@ -48,6 +50,7 @@ function MediaIcon({
 }) {
   if (type === "image") return <ImageIcon size={20} className={className} />;
   if (type === "video") return <Video size={20} className={className} />;
+  if (type === "audio") return <Music size={20} className={className} />;
   return <FileText size={20} className={className} />;
 }
 
@@ -88,7 +91,9 @@ function MediaCard({
               className={
                 item.media_type === "video"
                   ? "text-violet-500"
-                  : "text-blue-500"
+                  : item.media_type === "audio"
+                    ? "text-orange-500"
+                    : "text-blue-500"
               }
             />
           </div>
@@ -130,7 +135,7 @@ type Props = {
   onClose: () => void;
   onSelect: (result: MediaPickerResult) => void;
   /** If set, only shows media of this type */
-  allowedType?: "image" | "video" | "document";
+  allowedType?: "image" | "video" | "document" | "audio";
   title?: string;
 };
 
@@ -193,9 +198,11 @@ export function MediaPickerModal({
       ? "image/*"
       : allowedType === "video"
         ? "video/*"
-        : allowedType === "document"
-          ? ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"
-          : "image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip";
+        : allowedType === "audio"
+          ? "audio/*"
+          : allowedType === "document"
+            ? ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"
+            : "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip";
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -212,22 +219,28 @@ export function MediaPickerModal({
           {/* Type filter tabs — hidden if allowedType is forced */}
           {!allowedType && (
             <div className="flex gap-1">
-              {(["all", "image", "video", "document"] as MediaTypeFilter[]).map(
-                (t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTypeFilter(t)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      typeFilter === t
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
-                  >
-                    {TYPE_LABELS[t]}
-                  </button>
-                )
-              )}
+              {(
+                [
+                  "all",
+                  "image",
+                  "video",
+                  "audio",
+                  "document",
+                ] as MediaTypeFilter[]
+              ).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTypeFilter(t)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    typeFilter === t
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {TYPE_LABELS[t]}
+                </button>
+              ))}
             </div>
           )}
 

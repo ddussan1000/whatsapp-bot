@@ -545,7 +545,8 @@ function MetaStatusModal({
 }) {
   const { data, isLoading, isError } = useInstanceMetaStatusQuery(instance.id);
   const reconfigure = useReconfigureMetaMutation();
-  const [reconfResult, setReconfResult] = useState<ReconfigureMetaResult | null>(null);
+  const [reconfResult, setReconfResult] =
+    useState<ReconfigureMetaResult | null>(null);
 
   const PERM_LABELS: Record<string, string> = {
     whatsapp_business_messaging: "Enviar y recibir mensajes",
@@ -585,12 +586,22 @@ function MetaStatusModal({
     );
   };
 
-  function ConfigStatus({ value, label, nullNote }: { value: boolean | null; label: string; nullNote?: string }) {
+  function ConfigStatus({
+    value,
+    label,
+    nullNote,
+  }: {
+    value: boolean | null;
+    label: string;
+    nullNote?: string;
+  }) {
     return (
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{label}</span>
         {value === null ? (
-          <span className="text-muted-foreground text-xs">{nullNote ?? "—"}</span>
+          <span className="text-muted-foreground text-xs">
+            {nullNote ?? "—"}
+          </span>
         ) : value ? (
           <span className="text-emerald-600 dark:text-emerald-400">✅</span>
         ) : (
@@ -648,7 +659,9 @@ function MetaStatusModal({
                       className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${perm.granted ? "bg-emerald-500" : "bg-amber-500"}`}
                     />
                     <div>
-                      <code className="font-mono font-semibold">{perm.name}</code>
+                      <code className="font-mono font-semibold">
+                        {perm.name}
+                      </code>
                       <p className="mt-0.5 text-muted-foreground">
                         {PERM_LABELS[perm.name] ?? ""}
                       </p>
@@ -684,12 +697,15 @@ function MetaStatusModal({
               </div>
               {data.webhookConfigured === null && (
                 <p className="text-xs text-muted-foreground">
-                  Configurá el App Secret para verificar el webhook automáticamente.
+                  Configurá el App Secret para verificar el webhook
+                  automáticamente.
                 </p>
               )}
               {data.webhookUrl && (
                 <div className="flex flex-col gap-1">
-                  <p className="text-xs text-muted-foreground">URL configurada en Meta:</p>
+                  <p className="text-xs text-muted-foreground">
+                    URL configurada en Meta:
+                  </p>
                   <code className="break-all rounded bg-muted px-2 py-1 text-xs">
                     {data.webhookUrl}
                   </code>
@@ -702,13 +718,18 @@ function MetaStatusModal({
         {/* Resultado de re-configuración */}
         {reconfResult && (
           <div className="flex flex-col gap-2 rounded-xl border bg-muted/40 p-4 text-sm">
-            <p className="font-semibold text-foreground">Resultado de la configuración</p>
+            <p className="font-semibold text-foreground">
+              Resultado de la configuración
+            </p>
 
             {/* Errores */}
             {reconfResult.errors.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 {reconfResult.errors.map((e, i) => (
-                  <div key={i} className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  <div
+                    key={i}
+                    className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                  >
                     <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                     {e}
                   </div>
@@ -720,7 +741,10 @@ function MetaStatusModal({
             {reconfResult.skipped.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 {reconfResult.skipped.map((s, i) => (
-                  <div key={i} className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                  <div
+                    key={i}
+                    className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+                  >
                     <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                     {s}
                   </div>
@@ -733,14 +757,22 @@ function MetaStatusModal({
               {[
                 { label: "WABA suscripta", value: reconfResult.wabaSubscribed },
                 { label: "Webhook URL", value: reconfResult.webhookConfigured },
-                { label: "Campo messages", value: reconfResult.messagesSubscribed },
+                {
+                  label: "Campo messages",
+                  value: reconfResult.messagesSubscribed,
+                },
               ].map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between text-xs">
+                <div
+                  key={label}
+                  className="flex items-center justify-between text-xs"
+                >
                   <span className="text-muted-foreground">{label}</span>
                   {value === null ? (
                     <span className="text-muted-foreground">—</span>
                   ) : value ? (
-                    <span className="font-medium text-emerald-600 dark:text-emerald-400">Configurado</span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      Configurado
+                    </span>
                   ) : (
                     <span className="font-medium text-destructive">Falló</span>
                   )}
@@ -748,11 +780,12 @@ function MetaStatusModal({
               ))}
             </div>
 
-            {reconfResult.errors.length === 0 && reconfResult.skipped.length === 0 && (
-              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                Todo configurado correctamente.
-              </p>
-            )}
+            {reconfResult.errors.length === 0 &&
+              reconfResult.skipped.length === 0 && (
+                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  Todo configurado correctamente.
+                </p>
+              )}
           </div>
         )}
 
@@ -843,7 +876,11 @@ function DeleteDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={deleteInstance.isPending}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={deleteInstance.isPending}
+          >
             Cancelar
           </Button>
           <Button
@@ -870,7 +907,9 @@ export function InstancesPage() {
   const flows = useFlowsV2Query();
   const [editing, setEditing] = useState<WhatsAppInstance | null>(null);
   const [deleting, setDeleting] = useState<WhatsAppInstance | null>(null);
-  const [viewingStatus, setViewingStatus] = useState<WhatsAppInstance | null>(null);
+  const [viewingStatus, setViewingStatus] = useState<WhatsAppInstance | null>(
+    null
+  );
 
   const flowMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -1030,10 +1069,7 @@ export function InstancesPage() {
 
       {/* Delete dialog */}
       {deleting && (
-        <DeleteDialog
-          instance={deleting}
-          onClose={() => setDeleting(null)}
-        />
+        <DeleteDialog instance={deleting} onClose={() => setDeleting(null)} />
       )}
 
       {/* Meta status modal */}

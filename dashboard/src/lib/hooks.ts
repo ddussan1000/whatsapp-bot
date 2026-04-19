@@ -125,7 +125,7 @@ export function useUploadAndSendFileMutation(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: {
-      kind: "image" | "document";
+      kind: "image" | "document" | "audio";
       caption?: string;
       file: File;
     }) => api.uploadAndSendFile(id, payload),
@@ -651,7 +651,7 @@ export function useDeleteFlowStepMessageMutation() {
 // ── Media library ──────────────────────────────────────────────────────────
 
 export function useOrgMediaQuery(params?: {
-  mediaType?: "image" | "video" | "document";
+  mediaType?: "image" | "video" | "document" | "audio";
   page?: number;
   pageSize?: number;
 }) {

@@ -1703,32 +1703,41 @@ export interface paths {
             isActive?: boolean;
             /** @default COP */
             currency?: string;
+            flowId?: string;
           };
         };
       };
       responses: {
-        /** @description Instance created */
+        /** @description Instance created with Meta auto-configuration results */
         200: {
           headers: {
             [name: string]: unknown;
           };
           content: {
             "application/json": {
-              id: string;
-              organization_id: string;
-              /** @enum {string} */
-              provider: "meta";
-              label: string;
-              waba_id?: string | null;
-              meta_app_id?: string | null;
-              phone_number_id: string;
-              display_phone_number?: string | null;
-              meta_token?: string | null;
-              flow_id?: string | null;
-              is_active: boolean;
-              /** @default COP */
-              currency: string;
-              updated_at?: string | null;
+              instance: {
+                id: string;
+                organization_id: string;
+                /** @enum {string} */
+                provider: "meta";
+                label: string;
+                waba_id?: string | null;
+                meta_app_id?: string | null;
+                phone_number_id: string;
+                display_phone_number?: string | null;
+                meta_token?: string | null;
+                flow_id?: string | null;
+                is_active: boolean;
+                /** @default COP */
+                currency: string;
+                updated_at?: string | null;
+              };
+              autoConfig: {
+                wabaSubscribed: boolean;
+                webhookConfigured: boolean;
+                messagesSubscribed: boolean;
+                errors: string[];
+              };
             };
           };
         };
@@ -1825,6 +1834,176 @@ export interface paths {
       };
     };
     post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Instance deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+            };
+          };
+        };
+        /** @description La instancia tiene un flow activo asignado */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/instances/{id}/meta-status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Meta status for this instance */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              tokenType: "user" | "system_user" | "unknown";
+              expiresAt: number;
+              permissions: {
+                name: string;
+                granted: boolean;
+              }[];
+              wabaSubscribed: boolean | null;
+              webhookConfigured: boolean | null;
+              messagesSubscribed: boolean | null;
+              webhookUrl: string | null;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/instances/{id}/reconfigure-meta": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Resultado de la re-configuración */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              tokenValid: boolean;
+              missingPermissions: string[];
+              wabaSubscribed: boolean | null;
+              webhookConfigured: boolean | null;
+              messagesSubscribed: boolean | null;
+              skipped: string[];
+              errors: string[];
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;
@@ -3620,7 +3799,7 @@ export interface paths {
         content: {
           "application/json": {
             /** @enum {string} */
-            type: "text" | "image" | "document";
+            type: "text" | "image" | "document" | "audio";
             text?: string;
             mediaUrl?: string;
             caption?: string;
@@ -3697,7 +3876,7 @@ export interface paths {
              * @default document
              * @enum {string}
              */
-            kind?: "image" | "document";
+            kind?: "image" | "document" | "audio";
             caption?: string;
             /** Format: binary */
             file?: string;
@@ -4822,7 +5001,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          mediaType?: "image" | "video" | "document";
+          mediaType?: "image" | "video" | "document" | "audio";
           page?: number | null;
           pageSize?: number | null;
         };

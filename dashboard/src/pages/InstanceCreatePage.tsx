@@ -238,7 +238,10 @@ function TokenStep({
           <Input
             type={showToken ? "text" : "password"}
             value={token}
-            onChange={(e) => { setToken(e.target.value); setShowWabaFallback(false); }}
+            onChange={(e) => {
+              setToken(e.target.value);
+              setShowWabaFallback(false);
+            }}
             onKeyDown={(e) =>
               e.key === "Enter" && token.trim() && handleDiscover()
             }
@@ -282,8 +285,9 @@ function TokenStep({
               </p>
               <p className="mt-0.5 text-sm text-muted-foreground">
                 Tu token es válido y tiene todos los permisos. La API de Meta no
-                expone los números directamente para algunos System Users; es normal
-                y se resuelve ingresando el ID de tu cuenta de WhatsApp Business.
+                expone los números directamente para algunos System Users; es
+                normal y se resuelve ingresando el ID de tu cuenta de WhatsApp
+                Business.
               </p>
             </div>
           </div>
@@ -330,7 +334,10 @@ function TokenStep({
                   ).
                 </>,
               ].map((step, i) => (
-                <li key={i} className="flex gap-2.5 text-sm text-muted-foreground">
+                <li
+                  key={i}
+                  className="flex gap-2.5 text-sm text-muted-foreground"
+                >
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-foreground">
                     {i + 1}
                   </span>
@@ -376,7 +383,10 @@ function TokenStep({
           {/* Link para volver */}
           <button
             type="button"
-            onClick={() => { setShowWabaFallback(false); discover.reset(); }}
+            onClick={() => {
+              setShowWabaFallback(false);
+              discover.reset();
+            }}
             className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
           >
             Probar con otro token
@@ -717,7 +727,12 @@ function DetailsStep({
     if (!appSecret.trim()) {
       setShowConfirm(true);
     } else {
-      onConfirm({ label: label.trim(), currency, flowId: flowId === NO_FLOW_VALUE ? null : flowId, appSecret: appSecret.trim() });
+      onConfirm({
+        label: label.trim(),
+        currency,
+        flowId: flowId === NO_FLOW_VALUE ? null : flowId,
+        appSecret: appSecret.trim(),
+      });
     }
   };
   const activeFlows = (flows.data ?? []).filter((f) => f.is_active);
@@ -833,24 +848,32 @@ function DetailsStep({
           </button>
         </div>
         <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">Meta for Developers → tu app → App Settings → Basic → App Secret.</span>{" "}
-          Necesario para configurar el webhook automáticamente y verificar que cada
-          mensaje realmente viene de Meta.
+          <span className="font-medium text-foreground">
+            Meta for Developers → tu app → App Settings → Basic → App Secret.
+          </span>{" "}
+          Necesario para configurar el webhook automáticamente y verificar que
+          cada mensaje realmente viene de Meta.
         </p>
       </div>
 
       {/* Webhook — automático si hay App Secret, manual si no */}
       {appSecret.trim() ? (
         <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-900/20">
-          <Zap size={15} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <Zap
+            size={15}
+            className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+          />
           <div className="text-sm">
             <p className="font-semibold text-emerald-800 dark:text-emerald-300">
               Webhook se configurará automáticamente
             </p>
             <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-400">
-              Al crear la instancia registraremos la URL del webhook, el verify token
-              y el campo <code className="rounded bg-emerald-100 px-1 dark:bg-emerald-900/40">messages</code> en
-              Meta por vos.
+              Al crear la instancia registraremos la URL del webhook, el verify
+              token y el campo{" "}
+              <code className="rounded bg-emerald-100 px-1 dark:bg-emerald-900/40">
+                messages
+              </code>{" "}
+              en Meta por vos.
             </p>
           </div>
         </div>
@@ -876,7 +899,8 @@ function DetailsStep({
               <p className="mb-3 text-xs text-muted-foreground">
                 Sin App Secret el webhook hay que configurarlo a mano en{" "}
                 <span className="font-medium text-foreground">
-                  Meta for Developers → tu app → WhatsApp → Configuration → Webhooks
+                  Meta for Developers → tu app → WhatsApp → Configuration →
+                  Webhooks
                 </span>
                 .
               </p>
@@ -896,7 +920,9 @@ function DetailsStep({
                       <code className="flex-1 break-all text-xs">
                         {webhookConfig.data?.webhookUrl ?? "—"}
                       </code>
-                      <CopyButton value={webhookConfig.data?.webhookUrl ?? ""} />
+                      <CopyButton
+                        value={webhookConfig.data?.webhookUrl ?? ""}
+                      />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
@@ -908,21 +934,35 @@ function DetailsStep({
                       <code className="flex-1 text-xs">
                         {showVerifyToken
                           ? (webhookConfig.data?.verifyToken ?? "—")
-                          : "•".repeat(Math.min(webhookConfig.data?.verifyToken?.length ?? 8, 20))}
+                          : "•".repeat(
+                              Math.min(
+                                webhookConfig.data?.verifyToken?.length ?? 8,
+                                20
+                              )
+                            )}
                       </code>
                       <button
                         type="button"
                         onClick={() => setShowVerifyToken((v) => !v)}
                         className="rounded p-1 text-muted-foreground hover:bg-muted"
                       >
-                        {showVerifyToken ? <EyeOff size={13} /> : <Eye size={13} />}
+                        {showVerifyToken ? (
+                          <EyeOff size={13} />
+                        ) : (
+                          <Eye size={13} />
+                        )}
                       </button>
-                      <CopyButton value={webhookConfig.data?.verifyToken ?? ""} />
+                      <CopyButton
+                        value={webhookConfig.data?.verifyToken ?? ""}
+                      />
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Después de pegar, suscribite al evento{" "}
-                    <code className="rounded bg-background px-1.5 py-0.5">messages</code>.
+                    <code className="rounded bg-background px-1.5 py-0.5">
+                      messages
+                    </code>
+                    .
                   </p>
                 </div>
               )}
@@ -943,7 +983,10 @@ function DetailsStep({
       </div>
 
       {/* Confirmación sin App Secret */}
-      <Dialog open={showConfirm} onOpenChange={(o) => !o && setShowConfirm(false)}>
+      <Dialog
+        open={showConfirm}
+        onOpenChange={(o) => !o && setShowConfirm(false)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>¿Continuar sin App Secret?</DialogTitle>
@@ -957,26 +1000,34 @@ function DetailsStep({
             <div className="flex items-start gap-2.5 rounded-lg border bg-muted/40 px-3.5 py-3 text-sm">
               <Check size={14} className="mt-0.5 shrink-0 text-emerald-500" />
               <span className="text-muted-foreground">
-                <span className="font-medium text-foreground">WABA</span> — se suscribirá
-                automáticamente al crear.
+                <span className="font-medium text-foreground">WABA</span> — se
+                suscribirá automáticamente al crear.
               </span>
             </div>
             <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm dark:border-amber-800 dark:bg-amber-900/20">
-              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-500" />
+              <AlertTriangle
+                size={14}
+                className="mt-0.5 shrink-0 text-amber-500"
+              />
               <span className="text-amber-800 dark:text-amber-300">
-                <span className="font-medium">Webhook</span> — deberás configurarlo
-                manualmente en{" "}
+                <span className="font-medium">Webhook</span> — deberás
+                configurarlo manualmente en{" "}
                 <span className="font-medium">
-                  Meta for Developers → tu app → WhatsApp → Configuration → Webhooks
+                  Meta for Developers → tu app → WhatsApp → Configuration →
+                  Webhooks
                 </span>
                 .
               </span>
             </div>
             <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm dark:border-amber-800 dark:bg-amber-900/20">
-              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-500" />
+              <AlertTriangle
+                size={14}
+                className="mt-0.5 shrink-0 text-amber-500"
+              />
               <span className="text-amber-800 dark:text-amber-300">
-                <span className="font-medium">Verificación de firma</span> — los mensajes
-                entrantes no se verificarán criptográficamente (menor seguridad).
+                <span className="font-medium">Verificación de firma</span> — los
+                mensajes entrantes no se verificarán criptográficamente (menor
+                seguridad).
               </span>
             </div>
           </div>
@@ -1008,7 +1059,11 @@ function DetailsStep({
 
 // ── Paso 4: Confirmación ──────────────────────────────────────────────────
 
-function AutoConfigChecklist({ autoConfig }: { autoConfig: AutoConfigResult | null }) {
+function AutoConfigChecklist({
+  autoConfig,
+}: {
+  autoConfig: AutoConfigResult | null;
+}) {
   const webhookConfig = useWebhookConfigQuery();
   const [showManual, setShowManual] = useState(false);
   const [showVerifyToken, setShowVerifyToken] = useState(false);
@@ -1021,12 +1076,17 @@ function AutoConfigChecklist({ autoConfig }: { autoConfig: AutoConfigResult | nu
     );
   }
 
-  const allOk = autoConfig.wabaSubscribed && autoConfig.webhookConfigured && autoConfig.messagesSubscribed;
-  const webhookFailed = !autoConfig.webhookConfigured || !autoConfig.messagesSubscribed;
+  const allOk =
+    autoConfig.wabaSubscribed &&
+    autoConfig.webhookConfigured &&
+    autoConfig.messagesSubscribed;
+  const webhookFailed =
+    !autoConfig.webhookConfigured || !autoConfig.messagesSubscribed;
 
   function StatusIcon({ value }: { value: boolean | null }) {
     if (value === null) return <span className="text-muted-foreground">—</span>;
-    if (value) return <span className="text-emerald-600 dark:text-emerald-400">✅</span>;
+    if (value)
+      return <span className="text-emerald-600 dark:text-emerald-400">✅</span>;
     return <span className="text-destructive">❌</span>;
   }
 
@@ -1042,7 +1102,10 @@ function AutoConfigChecklist({ autoConfig }: { autoConfig: AutoConfigResult | nu
 
       <div className="flex flex-col gap-2 rounded-xl border bg-card p-4">
         {items.map((item) => (
-          <div key={item.label} className="flex items-center justify-between text-sm">
+          <div
+            key={item.label}
+            className="flex items-center justify-between text-sm"
+          >
             <span className="text-muted-foreground">{item.label}</span>
             <StatusIcon value={item.value} />
           </div>
@@ -1052,7 +1115,9 @@ function AutoConfigChecklist({ autoConfig }: { autoConfig: AutoConfigResult | nu
       {autoConfig.errors.length > 0 && (
         <div className="flex flex-col gap-1">
           {autoConfig.errors.map((err, i) => (
-            <p key={i} className="text-xs text-destructive">{err}</p>
+            <p key={i} className="text-xs text-destructive">
+              {err}
+            </p>
           ))}
         </div>
       )}
@@ -1067,7 +1132,8 @@ function AutoConfigChecklist({ autoConfig }: { autoConfig: AutoConfigResult | nu
       {!allOk && webhookFailed && (
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
-            El webhook requiere el App Secret. Podés configurarlo manualmente en Meta for Developers.
+            El webhook requiere el App Secret. Podés configurarlo manualmente en
+            Meta for Developers.
           </p>
           <button
             type="button"
@@ -1104,8 +1170,8 @@ function AutoConfigChecklist({ autoConfig }: { autoConfig: AutoConfigResult | nu
                     </>,
                     <>
                       Hacé click en{" "}
-                      <span className="font-medium text-foreground">Edit</span> y
-                      pegá la{" "}
+                      <span className="font-medium text-foreground">Edit</span>{" "}
+                      y pegá la{" "}
                       <span className="font-medium text-foreground">
                         Callback URL
                       </span>
@@ -1162,7 +1228,9 @@ function AutoConfigChecklist({ autoConfig }: { autoConfig: AutoConfigResult | nu
                         messages
                       </code>
                       . Hacé click en{" "}
-                      <span className="font-medium text-foreground">Subscribe</span>
+                      <span className="font-medium text-foreground">
+                        Subscribe
+                      </span>
                       .
                     </>,
                   ].map((step, i) => (
@@ -1310,7 +1378,14 @@ export function InstanceCreatePage() {
       },
       {
         onSuccess: (res) => {
-          setWizardData((d) => ({ ...d, label, currency, flowId, appSecret, autoConfig: res.autoConfig }));
+          setWizardData((d) => ({
+            ...d,
+            label,
+            currency,
+            flowId,
+            appSecret,
+            autoConfig: res.autoConfig,
+          }));
           setStep(4);
         },
         onError: (e) => toast.error(`Error al crear: ${(e as Error).message}`),

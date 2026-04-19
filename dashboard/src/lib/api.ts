@@ -270,7 +270,11 @@ export const api = {
     ),
   uploadAndSendFile: async (
     id: string,
-    payload: { kind: "image" | "document"; caption?: string; file: File }
+    payload: {
+      kind: "image" | "document" | "audio";
+      caption?: string;
+      file: File;
+    }
   ) => {
     const form = new FormData();
     form.append("kind", payload.kind);
@@ -596,17 +600,22 @@ export const api = {
     request<InstanceHealth>(`/api/instances/${id}/health`),
   deleteInstance: (id: string) =>
     buildHeaders(true).then((headers) =>
-      fetch(`${API_URL}/api/instances/${id}`, { method: "DELETE", headers }).then((r) => {
+      fetch(`${API_URL}/api/instances/${id}`, {
+        method: "DELETE",
+        headers,
+      }).then((r) => {
         if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
   getInstanceMetaStatus: (id: string) =>
     buildHeaders(true).then((headers) =>
-      fetch(`${API_URL}/api/instances/${id}/meta-status`, { headers }).then((r) => {
-        if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<MetaStatusResponse>;
-      })
+      fetch(`${API_URL}/api/instances/${id}/meta-status`, { headers }).then(
+        (r) => {
+          if (!r.ok) return throwApiError(r);
+          return r.json() as Promise<MetaStatusResponse>;
+        }
+      )
     ),
   reconfigureMeta: (id: string) =>
     buildHeaders(true).then((headers) =>
@@ -727,7 +736,7 @@ export const api = {
 
   // ── Media library ────────────────────────────────────────────────────────
   getOrgMedia: (params?: {
-    mediaType?: "image" | "video" | "document";
+    mediaType?: "image" | "video" | "document" | "audio";
     page?: number;
     pageSize?: number;
   }) => {

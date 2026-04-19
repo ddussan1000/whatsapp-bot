@@ -3,6 +3,7 @@ import {
   Image as ImageIcon,
   FileText,
   Video,
+  Music,
   Upload,
   Trash2,
   Search,
@@ -47,25 +48,28 @@ function formatDate(iso?: string | null) {
   });
 }
 
-type MediaTypeFilter = "all" | "image" | "video" | "document";
+type MediaTypeFilter = "all" | "image" | "video" | "document" | "audio";
 
 const TYPE_LABELS: Record<MediaTypeFilter, string> = {
   all: "Todo",
   image: "Imágenes",
   video: "Videos",
   document: "Documentos",
+  audio: "Audios",
 };
 
 const TYPE_COLORS: Record<OrgMedia["media_type"], string> = {
   image: "bg-emerald-500/10 text-emerald-600",
   video: "bg-violet-500/10 text-violet-600",
   document: "bg-blue-500/10 text-blue-600",
+  audio: "bg-orange-500/10 text-orange-600",
 };
 
 const TYPE_ICONS: Record<OrgMedia["media_type"], React.ElementType> = {
   image: ImageIcon,
   video: Video,
   document: FileText,
+  audio: Music,
 };
 
 // ── PreviewModal ──────────────────────────────────────────────────────────
@@ -100,6 +104,16 @@ function PreviewModal({
               controls
               className="max-h-[60vh] max-w-full rounded"
             />
+          )}
+          {item.media_type === "audio" && (
+            <div className="flex flex-col items-center gap-3 py-6 w-full">
+              <Music size={48} className="text-orange-500" />
+              <audio
+                src={item.public_url}
+                controls
+                className="w-full max-w-sm"
+              />
+            </div>
           )}
           {item.media_type === "document" && (
             <div className="flex flex-col items-center gap-3 py-6">
@@ -217,7 +231,9 @@ function MediaCard({
               className={
                 item.media_type === "video"
                   ? "text-violet-400"
-                  : "text-blue-400"
+                  : item.media_type === "audio"
+                    ? "text-orange-400"
+                    : "text-blue-400"
               }
             />
           </div>
@@ -251,7 +267,9 @@ function MediaCard({
               ? "img"
               : item.media_type === "video"
                 ? "vid"
-                : "doc"}
+                : item.media_type === "audio"
+                  ? "aud"
+                  : "doc"}
           </Badge>
           <button
             type="button"
@@ -340,7 +358,7 @@ export function MediaPage() {
             ref={fileInputRef}
             type="file"
             className="hidden"
-            accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"
             multiple
             onChange={(e) => {
               void handleUpload(e.target.files);
@@ -366,22 +384,22 @@ export function MediaPage() {
       <div className="flex flex-wrap items-center gap-3">
         {/* Type filter */}
         <div className="flex gap-1 rounded-lg border bg-muted p-1">
-          {(["all", "image", "video", "document"] as MediaTypeFilter[]).map(
-            (t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTypeFilter(t)}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                  typeFilter === t
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {TYPE_LABELS[t]}
-              </button>
-            )
-          )}
+          {(
+            ["all", "image", "video", "audio", "document"] as MediaTypeFilter[]
+          ).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTypeFilter(t)}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                typeFilter === t
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {TYPE_LABELS[t]}
+            </button>
+          ))}
         </div>
 
         {/* Search */}

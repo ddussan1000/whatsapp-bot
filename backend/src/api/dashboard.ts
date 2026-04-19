@@ -3758,7 +3758,7 @@ dashboardApi.openapi(
         content: {
           "application/json": {
             schema: z.object({
-              type: z.enum(["text", "image", "document"]),
+              type: z.enum(["text", "image", "document", "audio"]),
               text: z.string().optional(),
               mediaUrl: z.string().optional(),
               caption: z.string().optional(),
@@ -3823,6 +3823,12 @@ dashboardApi.openapi(
         },
         { metaPhoneNumberId, organizationId: orgId(c) },
       );
+    } else if (body.type === "audio") {
+      await sendMessage(
+        conversation.phone,
+        { type: "audio", audio: { link: body.mediaUrl } },
+        { metaPhoneNumberId, organizationId: orgId(c) },
+      );
     } else {
       await sendMessage(
         conversation.phone,
@@ -3853,7 +3859,7 @@ dashboardApi.openapi(
         content: {
           "multipart/form-data": {
             schema: z.object({
-              kind: z.enum(["image", "document"]).default("document"),
+              kind: z.enum(["image", "document", "audio"]).default("document"),
               caption: z.string().optional(),
               file: z.any().openapi({ type: "string", format: "binary" }),
             }),
@@ -3910,15 +3916,21 @@ dashboardApi.openapi(
 
     const form = await c.req.formData();
     const kind =
-      (form.get("kind")?.toString() as "image" | "document") ?? "document";
+      (form.get("kind")?.toString() as "image" | "document" | "audio") ?? "document";
     const caption = form.get("caption")?.toString() ?? "";
     const file = form.get("file");
     if (!(file instanceof File))
       return c.json({ error: "Archivo invalido" }, 400);
 
     const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+    const MAX_AUDIO_BYTES = 16 * 1024 * 1024; // 16 MB
     const MAX_DOC_BYTES = 50 * 1024 * 1024; // 50 MB
-    const maxBytes = kind === "image" ? MAX_IMAGE_BYTES : MAX_DOC_BYTES;
+    const maxBytes =
+      kind === "image"
+        ? MAX_IMAGE_BYTES
+        : kind === "audio"
+          ? MAX_AUDIO_BYTES
+          : MAX_DOC_BYTES;
     if (file.size > maxBytes) {
       const limitMb = maxBytes / (1024 * 1024);
       return c.json(
@@ -3929,7 +3941,11 @@ dashboardApi.openapi(
 
     const mimeType =
       file.type ||
-      (kind === "image" ? "image/jpeg" : "application/octet-stream");
+      (kind === "image"
+        ? "image/jpeg"
+        : kind === "audio"
+          ? "audio/mpeg"
+          : "application/octet-stream");
     const metaMediaId = await uploadMediaToMeta(file, mimeType, {
       metaPhoneNumberId,
       organizationId: orgId(c),
@@ -3942,6 +3958,12 @@ dashboardApi.openapi(
           type: "image",
           image: { id: metaMediaId, caption },
         },
+        { metaPhoneNumberId, organizationId: orgId(c) },
+      );
+    } else if (kind === "audio") {
+      await sendMessage(
+        conversation.phone,
+        { type: "audio", audio: { id: metaMediaId } },
         { metaPhoneNumberId, organizationId: orgId(c) },
       );
     } else {
@@ -5063,9 +5085,10 @@ const OrgMediaUploadResponseSchema = z.object({
   media: OrgMediaSchema,
 });
 
-function mimeToMediaType(mimeType: string): "image" | "video" | "document" {
+function mimeToMediaType(mimeType: string): "image" | "video" | "document" | "audio" {
   if (mimeType.startsWith("image/")) return "image";
   if (mimeType.startsWith("video/")) return "video";
+  if (mimeType.startsWith("audio/")) return "audio";
   return "document";
 }
 
@@ -5077,7 +5100,7 @@ dashboardApi.openapi(
     request: {
       headers: AuthHeaderSchema,
       query: z.object({
-        mediaType: z.enum(["image", "video", "document"]).optional(),
+        mediaType: z.enum(["image", "video", "document", "audio"]).optional(),
         page: z.coerce.number().default(1),
         pageSize: z.coerce.number().default(50),
       }),
