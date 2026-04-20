@@ -182,11 +182,45 @@ function DeliveryIcon({ status }: { status: string | null | undefined }) {
 
 // ── ChatBubble ─────────────────────────────────────────────────────────────
 
+function ImagePreviewModal({
+  src,
+  open,
+  onClose,
+}: {
+  src: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl p-0 overflow-hidden gap-0">
+        <div className="flex items-center justify-center bg-muted/40 p-4">
+          <img
+            src={src}
+            alt="Comprobante"
+            className="max-w-full max-h-[70vh] object-contain rounded-md"
+          />
+        </div>
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t">
+          <a href={src} download target="_blank" rel="noreferrer">
+            <Button size="sm" variant="outline">Descargar</Button>
+          </a>
+          <a href={src} target="_blank" rel="noreferrer">
+            <Button size="sm">Abrir original</Button>
+          </a>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ChatBubble({ m }: { m: ChatMessage }) {
   const isOut = m.direction === "outbound";
   const mainText = getMessageMainText(m);
   const attachment = getAttachmentInfo(m);
   const isFailed = m.delivery_status === "failed";
+  const [imgError, setImgError] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
     <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
@@ -197,21 +231,29 @@ function ChatBubble({ m }: { m: ChatMessage }) {
             : "rounded-bl-sm bg-card border"
         }`}
       >
+        {attachment && attachment.isImage && attachment.href && (
+          <ImagePreviewModal
+            src={attachment.href}
+            open={previewOpen}
+            onClose={() => setPreviewOpen(false)}
+          />
+        )}
         {attachment && (
           <div className="mb-1.5">
             {attachment.isImage ? (
-              attachment.href ? (
-                <a href={attachment.href} target="_blank" rel="noreferrer">
+              attachment.href && !imgError ? (
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(true)}
+                  className="block cursor-zoom-in"
+                >
                   <img
                     src={attachment.href}
                     alt={attachment.label}
-                    className="max-h-48 w-auto rounded-lg object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display =
-                        "none";
-                    }}
+                    className="max-h-64 w-auto rounded-lg object-cover hover:opacity-90 transition-opacity"
+                    onError={() => setImgError(true)}
                   />
-                </a>
+                </button>
               ) : (
                 <div
                   className={`flex items-center gap-1.5 text-xs ${
