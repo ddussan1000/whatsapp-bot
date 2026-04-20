@@ -682,7 +682,7 @@ export function FlowEditor({
         ...d.steps,
         {
           position: d.steps.length,
-          delaySeconds: d.steps.length === 0 ? 0 : 15,
+          delaySeconds: d.steps.length === 0 ? 0 : 5,
           label: "",
           messages: [],
         },
