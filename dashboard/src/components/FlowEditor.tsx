@@ -17,6 +17,23 @@ import {
   Receipt,
   RotateCcw,
 } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -159,6 +176,7 @@ function MessageRow({
   msg,
   index,
   uploadPending,
+  dragHandle,
   onTypeChange,
   onTextChange,
   onCaptionChange,
@@ -168,6 +186,7 @@ function MessageRow({
   msg: FlowEditorMessage;
   index: number;
   uploadPending: boolean;
+  dragHandle?: React.ReactNode;
   onTypeChange: (v: FlowMessageType) => void;
   onTextChange: (v: string) => void;
   onCaptionChange: (v: string) => void;
@@ -177,7 +196,7 @@ function MessageRow({
   return (
     <div className="group relative flex gap-3 rounded-lg border bg-background p-3">
       <div className="flex flex-col items-center gap-1 pt-0.5">
-        <GripVertical size={14} className="text-muted-foreground/40" />
+        {dragHandle ?? <GripVertical size={14} className="text-muted-foreground/40" />}
         <span className="text-[10px] font-bold text-muted-foreground/50">
           {index + 1}
         </span>
@@ -236,6 +255,52 @@ function MessageRow({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── SortableMessageRow ────────────────────────────────────────────────────
+
+type MessageRowBaseProps = Omit<React.ComponentProps<typeof MessageRow>, "dragHandle">;
+
+function SortableMessageRow({ id, ...props }: { id: string } & MessageRowBaseProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        position: "relative",
+        zIndex: isDragging ? 1 : undefined,
+      }}
+    >
+      <MessageRow
+        {...props}
+        dragHandle={
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            className="cursor-grab touch-none rounded p-0.5 text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing transition-colors"
+            tabIndex={-1}
+            aria-label="Arrastrar mensaje"
+          >
+            <GripVertical size={14} />
+          </button>
+        }
+      />
     </div>
   );
 }
@@ -335,6 +400,7 @@ function StepCard({
   step,
   stepIndex,
   uploadTarget,
+  dragHandle,
   onUpdate,
   onDelete,
   onAddMessage,
@@ -344,10 +410,12 @@ function StepCard({
   onMessageCaptionChange,
   onUploadClick,
   onDelayChange,
+  onReorderMessages,
 }: {
   step: FlowEditorStep;
   stepIndex: number;
   uploadTarget: { step: number; msg: number } | null;
+  dragHandle?: React.ReactNode;
   onUpdate: (step: FlowEditorStep) => void;
   onDelete: () => void;
   onAddMessage: () => void;
@@ -357,7 +425,23 @@ function StepCard({
   onMessageCaptionChange: (msgIdx: number, caption: string) => void;
   onUploadClick: (msgIdx: number) => void;
   onDelayChange: (seconds: number) => void;
+  onReorderMessages: (from: number, to: number) => void;
 }) {
+  const msgSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const msgIds = step.messages.map((m, j) => m.id ?? `msg-new-${stepIndex}-${j}`);
+
+  function handleMsgDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = msgIds.indexOf(String(active.id));
+    const to = msgIds.indexOf(String(over.id));
+    if (from !== -1 && to !== -1) onReorderMessages(from, to);
+  }
+
   return (
     <div className="flex flex-col">
       <StepConnector
@@ -367,8 +451,9 @@ function StepCard({
       />
 
       <div className="rounded-xl border bg-card shadow-sm">
-        <div className="flex items-center gap-3 border-b bg-muted/30 px-4 py-2.5 rounded-t-xl">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+        <div className="flex items-center gap-2 border-b bg-muted/30 px-3 py-2.5 rounded-t-xl">
+          {dragHandle}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
             {stepIndex + 1}
           </span>
           <Input
@@ -393,21 +478,32 @@ function StepCard({
               Sin mensajes — agrega uno abajo
             </p>
           ) : (
-            step.messages.map((msg, j) => (
-              <MessageRow
-                key={`${msg.id ?? "new"}-${j}`}
-                msg={msg}
-                index={j}
-                uploadPending={
-                  uploadTarget?.step === stepIndex && uploadTarget?.msg === j
-                }
-                onTypeChange={(v) => onMessageTypeChange(j, v)}
-                onTextChange={(v) => onMessageTextChange(j, v)}
-                onCaptionChange={(v) => onMessageCaptionChange(j, v)}
-                onUploadClick={() => onUploadClick(j)}
-                onDelete={() => onDeleteMessage(j)}
-              />
-            ))
+            <DndContext
+              sensors={msgSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleMsgDragEnd}
+            >
+              <SortableContext items={msgIds} strategy={verticalListSortingStrategy}>
+                <div className="flex flex-col gap-2">
+                  {step.messages.map((msg, j) => (
+                    <SortableMessageRow
+                      key={msgIds[j]}
+                      id={msgIds[j]}
+                      msg={msg}
+                      index={j}
+                      uploadPending={
+                        uploadTarget?.step === stepIndex && uploadTarget?.msg === j
+                      }
+                      onTypeChange={(v) => onMessageTypeChange(j, v)}
+                      onTextChange={(v) => onMessageTextChange(j, v)}
+                      onCaptionChange={(v) => onMessageCaptionChange(j, v)}
+                      onUploadClick={() => onUploadClick(j)}
+                      onDelete={() => onDeleteMessage(j)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
           <button
             type="button"
@@ -419,6 +515,52 @@ function StepCard({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── SortableStepCard ──────────────────────────────────────────────────────
+
+type StepCardBaseProps = Omit<React.ComponentProps<typeof StepCard>, "dragHandle">;
+
+function SortableStepCard({ id, ...props }: { id: string } & StepCardBaseProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        position: "relative",
+        zIndex: isDragging ? 1 : undefined,
+      }}
+    >
+      <StepCard
+        {...props}
+        dragHandle={
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            className="cursor-grab touch-none rounded p-1 text-muted-foreground/30 hover:text-muted-foreground active:cursor-grabbing transition-colors shrink-0"
+            tabIndex={-1}
+            aria-label="Arrastrar paso"
+          >
+            <GripVertical size={15} />
+          </button>
+        }
+      />
     </div>
   );
 }
@@ -675,6 +817,19 @@ export function FlowEditor({
       return { ...d, steps };
     });
 
+  const reorderSteps = (from: number, to: number) =>
+    setDraft((d) => ({ ...d, steps: arrayMove(d.steps, from, to) }));
+
+  const reorderMessages = (stepIdx: number, from: number, to: number) =>
+    setDraft((d) => {
+      const steps = [...d.steps];
+      steps[stepIdx] = {
+        ...steps[stepIdx],
+        messages: arrayMove(steps[stepIdx].messages, from, to),
+      };
+      return { ...d, steps };
+    });
+
   const addStep = () =>
     setDraft((d) => ({
       ...d,
@@ -732,6 +887,21 @@ export function FlowEditor({
     patch({ keywords: [...draft.keywords, kw] });
     setKeywordInput("");
   };
+
+  const stepSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const stepIds = draft.steps.map((s, i) => s.id ?? `step-new-${i}`);
+
+  function handleStepDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = stepIds.indexOf(String(active.id));
+    const to = stepIds.indexOf(String(over.id));
+    if (from !== -1 && to !== -1) reorderSteps(from, to);
+  }
 
   const triggerWord = extractTriggerWord(draft.triggerPhrase);
 
@@ -1053,40 +1223,50 @@ export function FlowEditor({
             </p>
           </div>
         ) : (
-          <div className="flex flex-col">
-            {draft.steps.map((step, i) => (
-              <StepCard
-                key={`${step.id ?? "new"}-${i}`}
-                step={step}
-                stepIndex={i}
-                uploadTarget={uploadTarget}
-                onUpdate={(s) => patchStep(i, s)}
-                onDelete={() => deleteStep(i)}
-                onAddMessage={() => addMessage(i)}
-                onDeleteMessage={(j) => deleteMessage(i, j)}
-                onMessageTypeChange={(j, type) =>
-                  patchMessage(i, j, {
-                    messageType: type,
-                    textContent: "",
-                    mediaUrl: "",
-                    filename: "",
-                    caption: "",
-                  })
-                }
-                onMessageTextChange={(j, text) =>
-                  patchMessage(i, j, { textContent: text })
-                }
-                onMessageCaptionChange={(j, caption) =>
-                  patchMessage(i, j, { caption })
-                }
-                onUploadClick={(j) => {
-                  setUploadTarget({ step: i, msg: j });
-                  setMediaPickerOpen(true);
-                }}
-                onDelayChange={(secs) => patchStep(i, { delaySeconds: secs })}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={stepSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleStepDragEnd}
+          >
+            <SortableContext items={stepIds} strategy={verticalListSortingStrategy}>
+              <div className="flex flex-col">
+                {draft.steps.map((step, i) => (
+                  <SortableStepCard
+                    key={stepIds[i]}
+                    id={stepIds[i]}
+                    step={step}
+                    stepIndex={i}
+                    uploadTarget={uploadTarget}
+                    onUpdate={(s) => patchStep(i, s)}
+                    onDelete={() => deleteStep(i)}
+                    onAddMessage={() => addMessage(i)}
+                    onDeleteMessage={(j) => deleteMessage(i, j)}
+                    onMessageTypeChange={(j, type) =>
+                      patchMessage(i, j, {
+                        messageType: type,
+                        textContent: "",
+                        mediaUrl: "",
+                        filename: "",
+                        caption: "",
+                      })
+                    }
+                    onMessageTextChange={(j, text) =>
+                      patchMessage(i, j, { textContent: text })
+                    }
+                    onMessageCaptionChange={(j, caption) =>
+                      patchMessage(i, j, { caption })
+                    }
+                    onUploadClick={(j) => {
+                      setUploadTarget({ step: i, msg: j });
+                      setMediaPickerOpen(true);
+                    }}
+                    onDelayChange={(secs) => patchStep(i, { delaySeconds: secs })}
+                    onReorderMessages={(from, to) => reorderMessages(i, from, to)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
 
         <button

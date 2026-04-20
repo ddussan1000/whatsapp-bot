@@ -42,21 +42,27 @@ function toDraft(flow?: FlowV2): FlowEditorDraft {
     receiptPendingMessage: overrides.receiptPendingMessage ?? "",
     receiptRejectedMessage: overrides.receiptRejectedMessage ?? "",
     receiptConfirmedMessage: overrides.receiptConfirmedMessage ?? "",
-    steps: (flow.steps ?? []).map((s) => ({
-      id: s.id,
-      position: s.position,
-      delaySeconds: s.delay_seconds,
-      label: s.label ?? "",
-      messages: (s.messages ?? []).map((m) => ({
-        id: m.id,
-        position: m.position,
-        messageType: m.message_type,
-        textContent: m.text_content ?? "",
-        mediaUrl: m.media_url ?? "",
-        filename: m.filename ?? "",
-        caption: m.caption ?? "",
+    steps: (flow.steps ?? [])
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map((s) => ({
+        id: s.id,
+        position: s.position,
+        delaySeconds: s.delay_seconds,
+        label: s.label ?? "",
+        messages: (s.messages ?? [])
+          .slice()
+          .sort((a, b) => a.position - b.position)
+          .map((m) => ({
+            id: m.id,
+            position: m.position,
+            messageType: m.message_type,
+            textContent: m.text_content ?? "",
+            mediaUrl: m.media_url ?? "",
+            filename: m.filename ?? "",
+            caption: m.caption ?? "",
+          })),
       })),
-    })),
   };
 }
 
@@ -307,12 +313,21 @@ export function FlowsPage() {
   };
 
   const handleSaveTemplate = (draft: FlowEditorDraft) => {
+    const templateDraft: FlowEditorDraft = {
+      ...draft,
+      id: undefined,
+      steps: draft.steps.map((s) => ({
+        ...s,
+        id: undefined,
+        messages: s.messages.map((m) => ({ ...m, id: undefined })),
+      })),
+    };
     createTemplate.mutate(
       {
         name: templateName.trim(),
         description: templateDescription.trim() || undefined,
         category: templateCategory,
-        draft,
+        draft: templateDraft,
       },
       {
         onSuccess: () => {

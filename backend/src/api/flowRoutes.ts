@@ -122,7 +122,16 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         .eq("organization_id", orgId(c))
         .order("updated_at", { ascending: false });
       if (error) return c.json({ error: error.message }, 500);
-      return c.json(data ?? [], 200);
+      const sorted = (data ?? []).map((f) => ({
+        ...f,
+        steps: (f.steps ?? [])
+          .sort((a: any, b: any) => a.position - b.position)
+          .map((s: any) => ({
+            ...s,
+            messages: (s.messages ?? []).sort((a: any, b: any) => a.position - b.position),
+          })),
+      }));
+      return c.json(sorted, 200);
     },
   );
 
@@ -153,7 +162,16 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         .maybeSingle();
       if (error) return c.json({ error: error.message }, 500);
       if (!data) return c.json({ error: "Flow no encontrado" }, 404);
-      return c.json(data, 200);
+      const sorted = {
+        ...data,
+        steps: (data.steps ?? [])
+          .sort((a: any, b: any) => a.position - b.position)
+          .map((s: any) => ({
+            ...s,
+            messages: (s.messages ?? []).sort((a: any, b: any) => a.position - b.position),
+          })),
+      };
+      return c.json(sorted, 200);
     },
   );
 
@@ -192,7 +210,16 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         .eq("organization_id", orgId(c))
         .single();
       if (error) return c.json({ error: error.message }, 500);
-      return c.json(data, 200);
+      const sortedFlow = {
+        ...data,
+        steps: (data.steps ?? [])
+          .sort((a: any, b: any) => a.position - b.position)
+          .map((s: any) => ({
+            ...s,
+            messages: (s.messages ?? []).sort((a: any, b: any) => a.position - b.position),
+          })),
+      };
+      return c.json(sortedFlow, 200);
     },
   );
 
