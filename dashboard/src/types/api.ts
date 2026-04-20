@@ -178,7 +178,12 @@ export type ProductReferral = {
   created_at?: string | null;
 };
 
-export type FlowMessageTypeV2 = "text" | "image" | "document" | "video";
+export type FlowMessageTypeV2 =
+  | "text"
+  | "image"
+  | "document"
+  | "video"
+  | "audio";
 export type FlowStepMessageV2 = {
   id: string;
   step_id: string;
@@ -429,7 +434,7 @@ export type OrgRole = SessionInfo["role"];
 
 // ── Flow engine types (not in generated OpenAPI yet) ──────────────────────
 
-export type FlowMessageType = "text" | "image" | "document" | "video";
+export type FlowMessageType = "text" | "image" | "document" | "video" | "audio";
 export type FlowDefinitionType = "keyword" | "sequential";
 
 export type FlowStepMessage = {

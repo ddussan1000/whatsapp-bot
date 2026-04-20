@@ -12,7 +12,7 @@ import type { ConversationState } from "../types";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-export type FlowMessageType = "text" | "image" | "document" | "video";
+export type FlowMessageType = "text" | "image" | "document" | "video" | "audio";
 
 export type FlowStepMessage = {
   id: string;
@@ -133,6 +133,12 @@ export async function sendStepMessages(
               ...(msg.caption ? { caption: msg.caption } : {}),
             },
           },
+          ctx,
+        );
+      } else if (msg.message_type === "audio" && msg.media_url) {
+        await sendMessage(
+          phone,
+          { type: "audio", audio: { link: msg.media_url } },
           ctx,
         );
       }

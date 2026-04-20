@@ -4,6 +4,7 @@ import {
   Image as ImageIcon,
   FileText,
   Video,
+  Music,
   Plus,
   Trash2,
   Library,
@@ -97,6 +98,7 @@ const MSG_TYPES: {
     color: "text-orange-500",
   },
   { type: "video", label: "Video", icon: Video, color: "text-purple-500" },
+  { type: "audio", label: "Audio", icon: Music, color: "text-orange-500" },
 ];
 
 function msgConfig(type: FlowMessageType) {
@@ -737,10 +739,16 @@ export function FlowEditor({
     uploadTarget !== null
       ? draft.steps[uploadTarget.step]?.messages[uploadTarget.msg]?.messageType
       : undefined;
-  const currentTargetType: "image" | "video" | "document" | undefined =
+  const currentTargetType:
+    | "image"
+    | "video"
+    | "document"
+    | "audio"
+    | undefined =
     _rawTargetType === "image" ||
     _rawTargetType === "video" ||
-    _rawTargetType === "document"
+    _rawTargetType === "document" ||
+    _rawTargetType === "audio"
       ? _rawTargetType
       : undefined;
 

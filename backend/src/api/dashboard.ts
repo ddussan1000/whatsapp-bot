@@ -3105,7 +3105,7 @@ dashboardApi.openapi(
 
 const FlowTemplateDraftMessageSchema = z.object({
   position: z.number(),
-  messageType: z.enum(["text", "image", "document", "video"]),
+  messageType: z.enum(["text", "image", "document", "video", "audio"]),
   textContent: z.string().nullable().optional(),
   mediaUrl: z.string().nullable().optional(),
   filename: z.string().nullable().optional(),
@@ -4578,7 +4578,7 @@ const FlowStepMessageSchema = z.object({
   step_id: z.string(),
   organization_id: z.string(),
   position: z.number(),
-  message_type: z.enum(["text", "image", "document", "video"]),
+  message_type: z.enum(["text", "image", "document", "video", "audio"]),
   text_content: z.string().nullable().optional(),
   media_url: z.string().nullable().optional(),
   filename: z.string().nullable().optional(),
@@ -4951,7 +4951,7 @@ dashboardApi.openapi(
               stepId: z.string(),
               position: z.number().default(0),
               messageType: z
-                .enum(["text", "image", "document", "video"])
+                .enum(["text", "image", "document", "video", "audio"])
                 .default("text"),
               textContent: z.string().nullable().optional(),
               mediaUrl: z.string().nullable().optional(),
@@ -5012,7 +5012,7 @@ dashboardApi.openapi(
             schema: z.object({
               position: z.number().optional(),
               messageType: z
-                .enum(["text", "image", "document", "video"])
+                .enum(["text", "image", "document", "video", "audio"])
                 .optional(),
               textContent: z.string().nullable().optional(),
               mediaUrl: z.string().nullable().optional(),

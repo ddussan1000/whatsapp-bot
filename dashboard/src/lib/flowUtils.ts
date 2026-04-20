@@ -1,7 +1,7 @@
 // Tipos y utilidades del FlowEditor — separados del componente para cumplir
 // con react-refresh/only-export-components (Fast Refresh).
 
-export type FlowMessageType = "text" | "image" | "document" | "video";
+export type FlowMessageType = "text" | "image" | "document" | "video" | "audio";
 
 export type FlowEditorMessage = {
   id?: string;

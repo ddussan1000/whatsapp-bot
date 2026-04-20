@@ -478,7 +478,12 @@ export interface paths {
                   organization_id: string;
                   position: number;
                   /** @enum {string} */
-                  message_type: "text" | "image" | "document" | "video";
+                  message_type:
+                    | "text"
+                    | "image"
+                    | "document"
+                    | "video"
+                    | "audio";
                   text_content?: string | null;
                   media_url?: string | null;
                   filename?: string | null;
@@ -567,7 +572,12 @@ export interface paths {
                   organization_id: string;
                   position: number;
                   /** @enum {string} */
-                  message_type: "text" | "image" | "document" | "video";
+                  message_type:
+                    | "text"
+                    | "image"
+                    | "document"
+                    | "video"
+                    | "audio";
                   text_content?: string | null;
                   media_url?: string | null;
                   filename?: string | null;
@@ -698,7 +708,7 @@ export interface paths {
                 id?: string;
                 position: number;
                 /** @enum {string} */
-                messageType: "text" | "image" | "document" | "video";
+                messageType: "text" | "image" | "document" | "video" | "audio";
                 textContent?: string | null;
                 mediaUrl?: string | null;
                 filename?: string | null;
@@ -746,7 +756,12 @@ export interface paths {
                   organization_id: string;
                   position: number;
                   /** @enum {string} */
-                  message_type: "text" | "image" | "document" | "video";
+                  message_type:
+                    | "text"
+                    | "image"
+                    | "document"
+                    | "video"
+                    | "audio";
                   text_content?: string | null;
                   media_url?: string | null;
                   filename?: string | null;
@@ -3186,7 +3201,12 @@ export interface paths {
                   messages: {
                     position: number;
                     /** @enum {string} */
-                    messageType: "text" | "image" | "document" | "video";
+                    messageType:
+                      | "text"
+                      | "image"
+                      | "document"
+                      | "video"
+                      | "audio";
                     textContent?: string | null;
                     mediaUrl?: string | null;
                     filename?: string | null;
@@ -3239,7 +3259,12 @@ export interface paths {
                 messages: {
                   position: number;
                   /** @enum {string} */
-                  messageType: "text" | "image" | "document" | "video";
+                  messageType:
+                    | "text"
+                    | "image"
+                    | "document"
+                    | "video"
+                    | "audio";
                   textContent?: string | null;
                   mediaUrl?: string | null;
                   filename?: string | null;
@@ -3282,7 +3307,12 @@ export interface paths {
                   messages: {
                     position: number;
                     /** @enum {string} */
-                    messageType: "text" | "image" | "document" | "video";
+                    messageType:
+                      | "text"
+                      | "image"
+                      | "document"
+                      | "video"
+                      | "audio";
                     textContent?: string | null;
                     mediaUrl?: string | null;
                     filename?: string | null;
@@ -4432,7 +4462,12 @@ export interface paths {
                   organization_id: string;
                   position: number;
                   /** @enum {string} */
-                  message_type: "text" | "image" | "document" | "video";
+                  message_type:
+                    | "text"
+                    | "image"
+                    | "document"
+                    | "video"
+                    | "audio";
                   text_content?: string | null;
                   media_url?: string | null;
                   filename?: string | null;
@@ -4830,7 +4865,7 @@ export interface paths {
              * @default text
              * @enum {string}
              */
-            messageType?: "text" | "image" | "document" | "video";
+            messageType?: "text" | "image" | "document" | "video" | "audio";
             textContent?: string | null;
             mediaUrl?: string | null;
             filename?: string | null;
@@ -4851,7 +4886,7 @@ export interface paths {
               organization_id: string;
               position: number;
               /** @enum {string} */
-              message_type: "text" | "image" | "document" | "video";
+              message_type: "text" | "image" | "document" | "video" | "audio";
               text_content?: string | null;
               media_url?: string | null;
               filename?: string | null;
@@ -4904,7 +4939,7 @@ export interface paths {
           "application/json": {
             position?: number;
             /** @enum {string} */
-            messageType?: "text" | "image" | "document" | "video";
+            messageType?: "text" | "image" | "document" | "video" | "audio";
             textContent?: string | null;
             mediaUrl?: string | null;
             filename?: string | null;
@@ -4925,7 +4960,7 @@ export interface paths {
               organization_id: string;
               position: number;
               /** @enum {string} */
-              message_type: "text" | "image" | "document" | "video";
+              message_type: "text" | "image" | "document" | "video" | "audio";
               text_content?: string | null;
               media_url?: string | null;
               filename?: string | null;

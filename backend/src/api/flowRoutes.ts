@@ -19,7 +19,7 @@ const FlowStepMessageSchema = z.object({
   step_id: z.string(),
   organization_id: z.string(),
   position: z.number(),
-  message_type: z.enum(["text", "image", "document", "video"]),
+  message_type: z.enum(["text", "image", "document", "video", "audio"]),
   text_content: z.string().nullable().optional(),
   media_url: z.string().nullable().optional(),
   filename: z.string().nullable().optional(),
@@ -85,7 +85,7 @@ const UpsertFlowBodySchema = z.object({
             z.object({
               id: z.string().optional(),
               position: z.number(),
-              messageType: z.enum(["text", "image", "document", "video"]),
+              messageType: z.enum(["text", "image", "document", "video", "audio"]),
               textContent: z.string().nullable().optional(),
               mediaUrl: z.string().nullable().optional(),
               filename: z.string().nullable().optional(),
