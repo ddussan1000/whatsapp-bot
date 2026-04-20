@@ -3,8 +3,13 @@ import path from "node:path";
 import { env } from "../config/env";
 import { supabase } from "../db/supabase";
 import { log } from "../logger";
+import { purgeOldReceiptsR2 } from "../storage/r2Storage";
 
 export async function purgeOldReceipts() {
+  if (env.STORAGE_MODE === "r2") {
+    await purgeOldReceiptsR2(env.R2_BUCKET_NAME, env.RECEIPT_RETENTION_DAYS);
+    return;
+  }
   if (env.STORAGE_MODE === "supabase") {
     if (!supabase) return;
     const bucket = env.SUPABASE_STORAGE_BUCKET_RECEIPTS;

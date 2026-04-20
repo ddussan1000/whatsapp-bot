@@ -14,6 +14,11 @@ import {
   uploadOrgMedia,
   deleteFromSupabaseStorage,
 } from "../storage/supabaseStorage";
+import {
+  uploadOrgFlowMediaR2,
+  uploadOrgMediaR2,
+  deleteFromR2,
+} from "../storage/r2Storage";
 import { sendEmail } from "../email/resend";
 import { buildInviteEmail } from "../email/templates/invite";
 import { encrypt, safeDecrypt } from "../crypto/encrypt";
@@ -323,13 +328,13 @@ dashboardApi.openapi(
     },
   }),
   async (c) => {
-    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
-    if (env.STORAGE_MODE !== "supabase") {
+    if (env.STORAGE_MODE !== "supabase" && env.STORAGE_MODE !== "r2") {
       return c.json(
-        { error: "Activa STORAGE_MODE=supabase para subir media de flows" },
+        { error: "Configura STORAGE_MODE=r2 o STORAGE_MODE=supabase para subir media de flows" },
         400,
       );
     }
+    if (env.STORAGE_MODE === "supabase" && !supabase) return c.json({ error: "Supabase no configurado" }, 500);
     const form = await c.req.formData();
     const file = form.get("file");
     if (!(file instanceof File))
@@ -339,21 +344,20 @@ dashboardApi.openapi(
     if (bytes.byteLength > MAX_FLOW_MEDIA_BYTES) {
       return c.json({ error: "El archivo supera el límite de 50 MB" }, 413);
     }
-    const uploaded = await uploadOrgFlowMedia({
-      organizationId: orgId(c),
-      bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA,
-      filename: file.name || "asset.bin",
-      buffer: Buffer.from(bytes),
-      contentType: file.type || "application/octet-stream",
-    });
+    const buffer = Buffer.from(bytes);
+    const filename = file.name || "asset.bin";
+    const contentType = file.type || "application/octet-stream";
+    const uploaded = env.STORAGE_MODE === "r2"
+      ? await uploadOrgFlowMediaR2({ organizationId: orgId(c), filename, buffer, contentType })
+      : await uploadOrgFlowMedia({ organizationId: orgId(c), bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA, filename, buffer, contentType });
     return c.json(
       {
         ok: true,
         url: uploaded.publicUrl,
-        path: uploaded.path,
-        bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA,
-        filename: file.name || "asset.bin",
-        mimeType: file.type || "application/octet-stream",
+        path: "key" in uploaded ? uploaded.key : uploaded.path,
+        bucket: env.STORAGE_MODE === "r2" ? env.R2_BUCKET_NAME : env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA,
+        filename,
+        mimeType: contentType,
       },
       200,
     );
@@ -5182,9 +5186,9 @@ dashboardApi.openapi(
   }),
   async (c) => {
     if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
-    if (env.STORAGE_MODE !== "supabase") {
+    if (env.STORAGE_MODE !== "supabase" && env.STORAGE_MODE !== "r2") {
       return c.json(
-        { error: "Activa STORAGE_MODE=supabase para subir media" },
+        { error: "Configura STORAGE_MODE=r2 o STORAGE_MODE=supabase para subir media" },
         400,
       );
     }
@@ -5195,23 +5199,22 @@ dashboardApi.openapi(
     const bytes = await file.arrayBuffer();
     const mimeType = file.type || "application/octet-stream";
     const mediaType = mimeToMediaType(mimeType);
-    const uploaded = await uploadOrgMedia({
-      organizationId: orgId(c),
-      bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA,
-      filename: file.name || "asset.bin",
-      buffer: Buffer.from(bytes),
-      contentType: mimeType,
-    });
+    const filename = file.name || "asset.bin";
+    const buffer = Buffer.from(bytes);
+    const uploaded = env.STORAGE_MODE === "r2"
+      ? await uploadOrgMediaR2({ organizationId: orgId(c), filename, buffer, contentType: mimeType })
+      : await uploadOrgMedia({ organizationId: orgId(c), bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA, filename, buffer, contentType: mimeType });
+    const storagePath = "key" in uploaded ? uploaded.key : uploaded.path;
     const { data, error } = await supabase
       .from("org_media")
       .insert({
         organization_id: orgId(c),
-        filename: uploaded.path.split("/").pop() ?? file.name,
-        original_name: file.name || "asset.bin",
+        filename: storagePath.split("/").pop() ?? filename,
+        original_name: filename,
         media_type: mediaType,
         mime_type: mimeType,
         size_bytes: bytes.byteLength,
-        storage_path: uploaded.path,
+        storage_path: storagePath,
         public_url: uploaded.publicUrl,
       })
       .select()
@@ -5260,10 +5263,11 @@ dashboardApi.openapi(
     if (!row) return c.json({ error: "No encontrado" }, 404);
     // Delete from storage (best effort — don't block DB delete on storage error)
     try {
-      await deleteFromSupabaseStorage({
-        bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA,
-        path: row.storage_path,
-      });
+      if (env.STORAGE_MODE === "r2") {
+        await deleteFromR2(row.storage_path);
+      } else {
+        await deleteFromSupabaseStorage({ bucket: env.SUPABASE_STORAGE_BUCKET_FLOW_MEDIA, path: row.storage_path });
+      }
     } catch (err) {
       log.warn({ err, storagePath: row.storage_path }, "dashboard: error borrando archivo de storage, continuando con eliminación de BD");
     }

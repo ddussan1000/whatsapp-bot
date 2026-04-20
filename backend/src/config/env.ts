@@ -25,9 +25,15 @@ const envSchema = z.object({
   RESEND_FROM_EMAIL: z.string().default("onboarding@resend.dev"),
   /** URL pública del dashboard frontend (ej. https://dashboard.tudominio.com) */
   DASHBOARD_PUBLIC_URL: z.string().default(""),
-  STORAGE_MODE: z.enum(["local", "supabase"]).default("local"),
+  STORAGE_MODE: z.enum(["local", "supabase", "r2"]).default("local"),
   SUPABASE_STORAGE_BUCKET_RECEIPTS: z.string().default("receipts"),
   SUPABASE_STORAGE_BUCKET_FLOW_MEDIA: z.string().default("flow-media"),
+  R2_ACCOUNT_ID: z.string().default(""),
+  R2_ACCESS_KEY_ID: z.string().default(""),
+  R2_SECRET_ACCESS_KEY: z.string().default(""),
+  R2_BUCKET_NAME: z.string().default(""),
+  /** URL pública del bucket R2 (ej. https://media.tudominio.com o https://pub-xxx.r2.dev) */
+  R2_PUBLIC_URL: z.string().default(""),
   RECEIPT_RETENTION_DAYS: z.coerce.number().default(7),
   /** OCR provider for receipt images. "auto" uses Gemini if GEMINI_API_KEY is set, else Tesseract. */
   OCR_PROVIDER: z.enum(["tesseract", "gemini", "auto"]).default("auto"),

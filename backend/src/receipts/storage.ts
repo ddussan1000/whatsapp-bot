@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { env } from "../config/env";
 import { uploadReceiptAsset } from "../storage/supabaseStorage";
+import { uploadReceiptAssetR2 } from "../storage/r2Storage";
 
 export async function saveReceipt(
   buffer: Buffer,
@@ -14,6 +15,18 @@ export async function saveReceipt(
     const filename = `${phone}_${Date.now()}.jpg`;
     await fs.writeFile(path.join(dir, filename), buffer);
     return { storageUri: `local://${filename}`, publicUrl: null };
+  }
+  if (env.STORAGE_MODE === "r2") {
+    const uploaded = await uploadReceiptAssetR2({
+      organizationId,
+      bucket: env.R2_BUCKET_NAME,
+      phone,
+      buffer,
+    });
+    return {
+      storageUri: `r2://${env.R2_BUCKET_NAME}/${uploaded.key}`,
+      publicUrl: uploaded.publicUrl,
+    };
   }
   const uploaded = await uploadReceiptAsset({
     organizationId,

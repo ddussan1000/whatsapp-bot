@@ -15,6 +15,7 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1033.0",
     "@google/genai": "^1.48.0",
     "@hono/node-server": "^1.19.11",
     "@hono/swagger-ui": "^0.6.1",
