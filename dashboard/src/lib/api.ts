@@ -98,7 +98,6 @@ async function throwApiError(res: Response): Promise<never> {
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
-const DASHBOARD_TOKEN = import.meta.env.VITE_DASHBOARD_TOKEN;
 
 /** Clave en localStorage para enviar X-Organization-Id (admins de plataforma y contexto multi-org). */
 export const ACTIVE_ORG_STORAGE_KEY = "active_organization_id";
@@ -146,11 +145,11 @@ async function buildHeaders(
         } | null
       )?.data?.session?.access_token ?? undefined;
   } catch {
-    // session timed out or errored — fall back to dashboard token
+    // session timed out or errored — proceed without token (backend returns 401)
   }
   const orgId = getActiveOrgId();
   return {
-    Authorization: `Bearer ${accessToken ?? DASHBOARD_TOKEN}`,
+    Authorization: `Bearer ${accessToken ?? ""}`,
     ...(contentType ? { "Content-Type": "application/json" } : {}),
     ...(orgId ? { "X-Organization-Id": orgId } : {}),
   };
