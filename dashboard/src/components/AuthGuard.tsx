@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { api } from "../lib/api";
+import { api, setActiveOrgId } from "../lib/api";
 import { queryClient } from "../lib/query-client";
 import { SessionLoader } from "./SessionLoader";
 
@@ -30,8 +30,12 @@ export function AuthGuard({ children }: { children: ReactElement }) {
       setLoading(false);
     });
     const { data: listener } =
-      supabase?.auth.onAuthStateChange(async (_event, session) => {
+      supabase?.auth.onAuthStateChange(async (event, session) => {
         setAuthenticated(Boolean(session));
+        if (event === "SIGNED_IN") {
+          setActiveOrgId(null);
+          queryClient.removeQueries({ queryKey: ["auth", "session"] });
+        }
         if (session) {
           try {
             await queryClient.prefetchQuery({
