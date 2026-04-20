@@ -565,7 +565,7 @@ dashboardApi.openapi(
 
     let clickQuery = supabase
       .from("ad_click_logs")
-      .select("source_id, headline, phone, flow_id, created_at")
+      .select("source_id, headline, ad_name, phone, flow_id, created_at")
       .eq("organization_id", organizationId)
       .gte("created_at", fromDate.toISOString())
       .lte("created_at", toDate.toISOString());
@@ -578,22 +578,26 @@ dashboardApi.openapi(
     const { data: clicks, error: clickErr } = await clickQuery;
     if (clickErr) return c.json({ error: clickErr.message }, 500);
 
-    let payQuery = supabase
-      .from("payments")
-      .select("phone, amount, flow_id, state")
-      .eq("organization_id", organizationId)
-      .gte("created_at", fromDate.toISOString())
-      .lte("created_at", toDate.toISOString())
-      .in("state", ["validated", "pending_manual_review"]);
-
-    if (flowIds.length > 0) {
-      payQuery = payQuery.in("flow_id", flowIds);
-    }
-
-    const { data: payments } = await payQuery;
-
     const adPhones = new Set((clicks ?? []).map((c) => c.phone));
-    const adPayments = (payments ?? []).filter((p) => adPhones.has(p.phone));
+    const phoneList = [...adPhones];
+
+    let adPayments: { phone: string; amount: unknown; flow_id: string | null; state: string }[] = [];
+    if (phoneList.length > 0) {
+      let payQuery = supabase
+        .from("payments")
+        .select("phone, amount, flow_id, state")
+        .eq("organization_id", organizationId)
+        .in("state", ["validated", "pending_manual_review"])
+        .in("phone", phoneList);
+
+      if (flowIds.length > 0) {
+        payQuery = payQuery.in("flow_id", flowIds);
+      }
+
+      const { data: payments, error: payErr } = await payQuery;
+      if (payErr) return c.json({ error: payErr.message }, 500);
+      adPayments = payments ?? [];
+    }
 
     type AdGroup = {
       sourceId: string | null;
@@ -609,7 +613,7 @@ dashboardApi.openapi(
       if (!group) {
         group = {
           sourceId: click.source_id,
-          headline: click.headline,
+          headline: (click.ad_name as string | null) ?? click.headline,
           phones: new Set(),
           clicks: 0,
         };
