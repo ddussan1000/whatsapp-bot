@@ -170,7 +170,7 @@ const UploadResponseSchema = z.object({
   ok: z.boolean(),
   metaMediaId: z.string().optional(),
   mimeType: z.string(),
-  kind: z.enum(["image", "document"]),
+  kind: z.enum(["image", "document", "audio"]),
   filename: z.string().optional(),
 });
 const FlowMediaUploadResponseSchema = z.object({

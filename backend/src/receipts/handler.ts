@@ -5,6 +5,7 @@ import { downloadFromMeta } from "./downloader";
 import { runOcrWithFallback } from "./ocr";
 import { saveReceipt } from "./storage";
 import { insertPayment } from "../db/payments";
+import { updateMessageMediaUrl } from "../db/messages";
 import { supabase } from "../db/supabase";
 import { log } from "../logger";
 
@@ -169,7 +170,11 @@ export async function classifyAndHandleImage(
     "classifyAndHandleImage: fields extracted",
   );
 
-  const receiptUrl = await saveReceipt(buffer, phone, state.organizationId);
+  const { storageUri: receiptUrl, publicUrl: receiptPublicUrl } = await saveReceipt(buffer, phone, state.organizationId);
+  const metaMessageId = (msg as unknown as { id?: string }).id ?? null;
+  if (receiptPublicUrl && metaMessageId) {
+    updateMessageMediaUrl(metaMessageId, receiptPublicUrl).catch(() => {});
+  }
   const { rejectedMessage, confirmedMessage } =
     await getReceiptMessages(state.organizationId, state.flowId);
 
@@ -218,7 +223,7 @@ export async function classifyAndHandleImage(
       receipt_date: null,
       conversation_id: state.id ?? null,
       state: "pending_manual_review",
-      meta_message_id: (msg as unknown as { id?: string }).id ?? null,
+      meta_message_id: metaMessageId,
     });
     await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
@@ -246,7 +251,7 @@ export async function classifyAndHandleImage(
     receipt_date: receiptDate ? receiptDate.toISOString() : null,
     conversation_id: state.id ?? null,
     state: "validated",
-    meta_message_id: (msg as unknown as { id?: string }).id ?? null,
+    meta_message_id: metaMessageId,
   });
   await cancelPending();
   await sendMessage(phone, textMessage(confirmedMessage), msgCtx(state));

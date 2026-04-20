@@ -78,6 +78,14 @@ export async function listMessagesByConversation(
   return { items: data ?? [], total: count ?? 0 };
 }
 
+export async function updateMessageMediaUrl(metaMessageId: string, mediaUrl: string) {
+  if (!supabase) return;
+  await supabase
+    .from("messages")
+    .update({ media_url: mediaUrl })
+    .eq("meta_message_id", metaMessageId);
+}
+
 export async function updateMessageDeliveryStatus(input: {
   organizationId?: string | null;
   metaMessageId: string;
