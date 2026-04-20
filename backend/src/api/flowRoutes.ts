@@ -1,7 +1,8 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { getSupabaseWithUserJwt } from "./authContext";
-import { extractFirstWord } from "../db/flows";
+import { extractFirstWord, invalidateFlowCache } from "../db/flows";
+import { invalidateInstanceCache } from "../db/instances";
 
 function db(c: Context) {
   return getSupabaseWithUserJwt(c);
@@ -199,6 +200,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       };
       const { data: flowId, error: rpcError } = await supabase.rpc("upsert_flow_tree", { payload });
       if (rpcError) return c.json({ error: rpcError.message }, 500);
+      if (flowId) await invalidateFlowCache(String(flowId));
       const { data, error } = await supabase
         .from("flows")
         .select(
@@ -239,6 +241,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       const { id } = c.req.valid("param");
       const { error } = await supabase.from("flows").delete().eq("id", id).eq("organization_id", orgId(c));
       if (error) return c.json({ error: error.message }, 500);
+      await invalidateFlowCache(id);
       return c.json({ ok: true }, 200);
     },
   );
@@ -265,12 +268,15 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
       const { id } = c.req.valid("param");
       const body = c.req.valid("json");
-      const { error } = await supabase
+      const { data: inst, error } = await supabase
         .from("whatsapp_instances")
         .update({ flow_id: body.flowId, updated_at: new Date().toISOString() })
         .eq("id", id)
-        .eq("organization_id", orgId(c));
+        .eq("organization_id", orgId(c))
+        .select("phone_number_id")
+        .maybeSingle();
       if (error) return c.json({ error: error.message }, 500);
+      if (inst?.phone_number_id) await invalidateInstanceCache(inst.phone_number_id);
       return c.json({ ok: true }, 200);
     },
   );

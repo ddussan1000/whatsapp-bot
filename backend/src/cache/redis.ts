@@ -79,6 +79,42 @@ export async function setState(phone: string, state: ConversationState, metaPhon
   await redis.setex(k, TTL_SECONDS, JSON.stringify(state));
 }
 
+// ── Generic cache helpers ─────────────────────────────────────────────────
+
+const genericCacheFallback = new LRUMap<string, unknown>(1_000);
+const CACHE_TTL = 600; // 10 minutes
+
+export async function getCached<T>(cacheKey: string): Promise<T | null> {
+  if (!redis) return (genericCacheFallback.get(cacheKey) as T | undefined) ?? null;
+  try {
+    const raw = await redis.get(cacheKey);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch (err) {
+    log.warn({ err, cacheKey }, "redis: getCached falló → bypass caché");
+    return null;
+  }
+}
+
+export async function setCached(cacheKey: string, value: unknown, ttlSeconds = CACHE_TTL): Promise<void> {
+  if (!redis) { genericCacheFallback.set(cacheKey, value); return; }
+  try {
+    await redis.setex(cacheKey, ttlSeconds, JSON.stringify(value));
+  } catch (err) {
+    log.warn({ err, cacheKey }, "redis: setCached falló → sin caché");
+  }
+}
+
+export async function deleteCached(cacheKey: string): Promise<void> {
+  if (!redis) return;
+  try {
+    await redis.del(cacheKey);
+  } catch (err) {
+    log.warn({ err, cacheKey }, "redis: deleteCached falló → caché puede quedar stale");
+  }
+}
+
+// ── Dedup ─────────────────────────────────────────────────────────────────
+
 const dedupMemory = new Map<string, number>(); // key -> expiry timestamp
 
 // Dedup helper: returns true if key already existed (duplicate), false if it's new

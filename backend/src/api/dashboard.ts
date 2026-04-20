@@ -19,6 +19,7 @@ import { buildInviteEmail } from "../email/templates/invite";
 import { encrypt, safeDecrypt } from "../crypto/encrypt";
 import { validateAiProvider } from "../ai/assistant";
 import { log } from "../logger";
+import { invalidateInstanceCache } from "../db/instances";
 
 function todayStartIso() {
   const d = new Date();
@@ -1767,6 +1768,7 @@ dashboardApi.openapi(
       )
       .single();
     if (error) return c.json({ error: error.message }, 500);
+    if (data?.phone_number_id) await invalidateInstanceCache(data.phone_number_id);
     const maskedUpdate = (data
       ? {
           ...data,

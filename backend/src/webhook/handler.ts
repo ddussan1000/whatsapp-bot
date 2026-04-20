@@ -344,14 +344,20 @@ export async function handleWebhook(c: Context) {
     }
 
     await setState(phone, nextState, metaPhoneNumberId || null);
-    await upsertConversation({
-      organizationId,
-      phone,
-      stage: nextState.stage,
-      flowId: nextState.flowId,
-      flowName: nextState.flowName,
-      whatsappInstanceId: nextState.whatsappInstanceId,
-    });
+    if (
+      nextState.stage !== state.stage ||
+      nextState.flowId !== state.flowId ||
+      nextState.flowName !== state.flowName
+    ) {
+      await upsertConversation({
+        organizationId,
+        phone,
+        stage: nextState.stage,
+        flowId: nextState.flowId,
+        flowName: nextState.flowName,
+        whatsappInstanceId: nextState.whatsappInstanceId,
+      });
+    }
     log.info({ phone, type, stage: nextState.stage }, "mensaje procesado");
     return c.text("ok");
   } catch (err) {

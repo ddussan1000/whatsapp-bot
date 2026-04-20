@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { safeDecrypt } from "../crypto/encrypt";
+import { getCached, setCached, deleteCached } from "../cache/redis";
 
 export type WhatsAppInstance = {
   id: string;
@@ -34,8 +35,12 @@ export async function getInstanceByPhoneNumberId(organizationId: string, phoneNu
   return decryptInstance(data ?? null);
 }
 
+const instanceKey = (phoneNumberId: string) => `instance:pn:${phoneNumberId}`;
+
 export async function getActiveInstanceByPhoneNumberId(phoneNumberId: string) {
   if (!supabase) return null;
+  const cached = await getCached<WhatsAppInstance>(instanceKey(phoneNumberId));
+  if (cached) return decryptInstance(cached);
   const { data } = await supabase
     .from("whatsapp_instances")
     .select(INSTANCE_SELECT)
@@ -44,5 +49,10 @@ export async function getActiveInstanceByPhoneNumberId(phoneNumberId: string) {
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle<WhatsAppInstance>();
+  if (data) await setCached(instanceKey(phoneNumberId), data);
   return decryptInstance(data ?? null);
+}
+
+export async function invalidateInstanceCache(phoneNumberId: string) {
+  await deleteCached(instanceKey(phoneNumberId));
 }

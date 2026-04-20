@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getCached, setCached, deleteCached } from "../cache/redis";
 
 export type Flow = {
   id: string;
@@ -36,14 +37,23 @@ export function matchesFlowTrigger(message: string, flow: Pick<Flow, "trigger_fi
   return (flow.keywords ?? []).some((kw) => kw && normalized.includes(normalize(kw)));
 }
 
+const flowKey = (flowId: string) => `flow:${flowId}`;
+
 export async function getFlowById(flowId: string) {
   if (!supabase) return null;
+  const cached = await getCached<Flow>(flowKey(flowId));
+  if (cached) return cached;
   const { data } = await supabase
     .from("flows")
     .select("id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, is_active, session_timeout_hours")
     .eq("id", flowId)
     .maybeSingle<Flow>();
+  if (data) await setCached(flowKey(flowId), data);
   return data ?? null;
+}
+
+export async function invalidateFlowCache(flowId: string) {
+  await deleteCached(flowKey(flowId));
 }
 
 export async function findFlowByCtwaClid(organizationId: string, ctwaClid: string) {
