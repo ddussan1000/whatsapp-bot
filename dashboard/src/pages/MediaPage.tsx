@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { OrgMedia } from "@/types/api";
+import type { OrgMedia, MediaTypeFilter } from "@/types/api";
 import {
   useOrgMediaQuery,
   useUploadOrgMediaMutation,
@@ -47,8 +47,6 @@ function formatDate(iso?: string | null) {
     year: "numeric",
   });
 }
-
-type MediaTypeFilter = "all" | "image" | "video" | "document" | "audio";
 
 const TYPE_LABELS: Record<MediaTypeFilter, string> = {
   all: "Todo",

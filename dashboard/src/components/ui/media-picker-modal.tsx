@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { OrgMedia } from "@/types/api";
+import type { OrgMedia, MediaTypeFilter } from "@/types/api";
 import { useOrgMediaQuery, useUploadOrgMediaMutation } from "@/lib/hooks";
 import { toast } from "sonner";
 
@@ -30,8 +30,6 @@ function formatBytes(bytes?: number | null) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
-
-type MediaTypeFilter = "all" | "image" | "video" | "document" | "audio";
 
 const TYPE_LABELS: Record<MediaTypeFilter, string> = {
   all: "Todo",

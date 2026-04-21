@@ -338,7 +338,11 @@ export function OrganizationPage() {
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-sm">
-                    {TIMEZONES.find((t) => t.value === (org.data?.organization.timezone ?? "America/Bogota"))?.label ??
+                    {TIMEZONES.find(
+                      (t) =>
+                        t.value ===
+                        (org.data?.organization.timezone ?? "America/Bogota")
+                    )?.label ??
                       org.data?.organization.timezone ??
                       "America/Bogota"}
                   </span>

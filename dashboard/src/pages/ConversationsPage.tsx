@@ -10,6 +10,10 @@ import {
   Workflow,
   CornerUpLeft,
   RefreshCw,
+  Mic,
+  ImageIcon,
+  Video,
+  FileText,
 } from "lucide-react";
 import {
   useConversationFiltersQuery,
@@ -34,6 +38,34 @@ function formatPhone(phone: string) {
   return phone.startsWith("57") && phone.length === 12
     ? `+57 ${phone.slice(2, 5)} ${phone.slice(5, 8)} ${phone.slice(8)}`
     : `+${phone}`;
+}
+
+const AVATAR_COLORS = [
+  "bg-blue-100 text-blue-700",
+  "bg-violet-100 text-violet-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-cyan-100 text-cyan-700",
+  "bg-orange-100 text-orange-700",
+  "bg-teal-100 text-teal-700",
+];
+
+function avatarColor(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++)
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function initials(name: string | null | undefined, phone: string) {
+  const trimmed = name?.trim();
+  if (trimmed) {
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    if (parts[0]?.length) return parts[0].slice(0, 2).toUpperCase();
+  }
+  return phone.slice(-4, -2) + phone.slice(-2);
 }
 
 function timeAgo(iso?: string | null) {
@@ -71,14 +103,10 @@ function ConversationRow({
   conv: Conversation;
   onClick: () => void;
 }) {
-  const unread =
-    (conv as Conversation & { unread_count?: number }).unread_count ?? 0;
-  const lastText =
-    (conv as Conversation & { last_message_text?: string | null })
-      .last_message_text ?? null;
-  const lastDir =
-    (conv as Conversation & { last_message_direction?: string | null })
-      .last_message_direction ?? null;
+  const unread = conv.unread_count ?? 0;
+  const lastText = conv.last_message_text ?? null;
+  const lastType = conv.last_message_type ?? null;
+  const lastDir = conv.last_message_direction ?? null;
   const hasAd = Boolean(conv.ad_source);
 
   return (
@@ -89,8 +117,10 @@ function ConversationRow({
     >
       {/* Avatar with unread badge */}
       <div className="relative shrink-0">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-          {conv.phone.slice(-2)}
+        <div
+          className={`flex h-11 w-11 items-center justify-center rounded-full font-semibold text-sm ${avatarColor(conv.phone)}`}
+        >
+          {initials(conv.contact_name, conv.phone)}
         </div>
         {unread > 0 && (
           <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-green-500 px-1 text-[10px] font-bold text-white">
@@ -128,10 +158,33 @@ function ConversationRow({
               className="shrink-0 text-muted-foreground/60"
             />
           )}
-          <span className="truncate">
-            {lastText ??
-              (conv.flow_name ? `Flujo: ${conv.flow_name}` : "Sin mensajes")}
-          </span>
+          {lastText ? (
+            <span className="truncate">{lastText}</span>
+          ) : lastType === "audio" ? (
+            <span className="flex items-center gap-1">
+              <Mic size={11} className="shrink-0" />
+              Nota de voz
+            </span>
+          ) : lastType === "image" ? (
+            <span className="flex items-center gap-1">
+              <ImageIcon size={11} className="shrink-0" />
+              Imagen
+            </span>
+          ) : lastType === "video" ? (
+            <span className="flex items-center gap-1">
+              <Video size={11} className="shrink-0" />
+              Video
+            </span>
+          ) : lastType === "document" ? (
+            <span className="flex items-center gap-1">
+              <FileText size={11} className="shrink-0" />
+              Documento
+            </span>
+          ) : (
+            <span className="truncate">
+              {conv.flow_name ? `Flujo: ${conv.flow_name}` : "Sin mensajes"}
+            </span>
+          )}
         </div>
 
         {/* Row 3: stage + flow + ad */}

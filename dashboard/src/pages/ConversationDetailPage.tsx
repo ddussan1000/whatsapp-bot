@@ -140,13 +140,25 @@ function getAttachmentInfo(m: ChatMessage): {
   if (m.message_type === "image") {
     const image = payload.image as { id?: string; link?: string } | undefined;
     const href = m.media_url ?? image?.link;
-    return { label: "Imagen adjunta", href, isImage: true, isVideo: false, isAudio: false };
+    return {
+      label: "Imagen adjunta",
+      href,
+      isImage: true,
+      isVideo: false,
+      isAudio: false,
+    };
   }
 
   if (m.message_type === "video") {
     const video = payload.video as { id?: string; link?: string } | undefined;
     const href = m.media_url ?? video?.link;
-    return { label: "Video adjunto", href, isImage: false, isVideo: true, isAudio: false };
+    return {
+      label: "Video adjunto",
+      href,
+      isImage: false,
+      isVideo: true,
+      isAudio: false,
+    };
   }
 
   if (m.message_type === "document") {
@@ -159,7 +171,9 @@ function getAttachmentInfo(m: ChatMessage): {
   }
 
   if (m.message_type === "audio") {
-    const audio = payload.audio as { id?: string; url?: string; voice?: boolean } | undefined;
+    const audio = payload.audio as
+      | { id?: string; url?: string; voice?: boolean }
+      | undefined;
     const href = m.media_url ?? audio?.url;
     const label = audio?.voice ? "Nota de voz" : "Audio";
     return { label, href, isImage: false, isVideo: false, isAudio: true };
@@ -212,7 +226,9 @@ function ImagePreviewModal({
         </div>
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t">
           <a href={src} download target="_blank" rel="noreferrer">
-            <Button size="sm" variant="outline">Descargar</Button>
+            <Button size="sm" variant="outline">
+              Descargar
+            </Button>
           </a>
           <a href={src} target="_blank" rel="noreferrer">
             <Button size="sm">Abrir original</Button>
@@ -316,7 +332,9 @@ function ChatBubble({ m }: { m: ChatMessage }) {
               <div className="flex flex-col gap-1.5">
                 <div
                   className={`flex items-center gap-1.5 text-xs ${
-                    isOut ? "text-primary-foreground/70" : "text-muted-foreground"
+                    isOut
+                      ? "text-primary-foreground/70"
+                      : "text-muted-foreground"
                   }`}
                 >
                   <Mic size={13} />
@@ -332,7 +350,9 @@ function ChatBubble({ m }: { m: ChatMessage }) {
                 ) : (
                   <span
                     className={`text-xs ${
-                      isOut ? "text-primary-foreground/50" : "text-muted-foreground/60"
+                      isOut
+                        ? "text-primary-foreground/50"
+                        : "text-muted-foreground/60"
                     }`}
                   >
                     (URL de audio expirada)

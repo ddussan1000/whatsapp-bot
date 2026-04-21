@@ -196,7 +196,9 @@ function MessageRow({
   return (
     <div className="group relative flex gap-3 rounded-lg border bg-background p-3">
       <div className="flex flex-col items-center gap-1 pt-0.5">
-        {dragHandle ?? <GripVertical size={14} className="text-muted-foreground/40" />}
+        {dragHandle ?? (
+          <GripVertical size={14} className="text-muted-foreground/40" />
+        )}
         <span className="text-[10px] font-bold text-muted-foreground/50">
           {index + 1}
         </span>
@@ -261,9 +263,15 @@ function MessageRow({
 
 // ── SortableMessageRow ────────────────────────────────────────────────────
 
-type MessageRowBaseProps = Omit<React.ComponentProps<typeof MessageRow>, "dragHandle">;
+type MessageRowBaseProps = Omit<
+  React.ComponentProps<typeof MessageRow>,
+  "dragHandle"
+>;
 
-function SortableMessageRow({ id, ...props }: { id: string } & MessageRowBaseProps) {
+function SortableMessageRow({
+  id,
+  ...props
+}: { id: string } & MessageRowBaseProps) {
   const {
     attributes,
     listeners,
@@ -429,10 +437,12 @@ function StepCard({
 }) {
   const msgSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const msgIds = step.messages.map((m, j) => m.id ?? `msg-new-${stepIndex}-${j}`);
+  const msgIds = step.messages.map(
+    (m, j) => m.id ?? `msg-new-${stepIndex}-${j}`
+  );
 
   function handleMsgDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -483,7 +493,10 @@ function StepCard({
               collisionDetection={closestCenter}
               onDragEnd={handleMsgDragEnd}
             >
-              <SortableContext items={msgIds} strategy={verticalListSortingStrategy}>
+              <SortableContext
+                items={msgIds}
+                strategy={verticalListSortingStrategy}
+              >
                 <div className="flex flex-col gap-2">
                   {step.messages.map((msg, j) => (
                     <SortableMessageRow
@@ -492,7 +505,8 @@ function StepCard({
                       msg={msg}
                       index={j}
                       uploadPending={
-                        uploadTarget?.step === stepIndex && uploadTarget?.msg === j
+                        uploadTarget?.step === stepIndex &&
+                        uploadTarget?.msg === j
                       }
                       onTypeChange={(v) => onMessageTypeChange(j, v)}
                       onTextChange={(v) => onMessageTextChange(j, v)}
@@ -521,9 +535,15 @@ function StepCard({
 
 // ── SortableStepCard ──────────────────────────────────────────────────────
 
-type StepCardBaseProps = Omit<React.ComponentProps<typeof StepCard>, "dragHandle">;
+type StepCardBaseProps = Omit<
+  React.ComponentProps<typeof StepCard>,
+  "dragHandle"
+>;
 
-function SortableStepCard({ id, ...props }: { id: string } & StepCardBaseProps) {
+function SortableStepCard({
+  id,
+  ...props
+}: { id: string } & StepCardBaseProps) {
   const {
     attributes,
     listeners,
@@ -890,7 +910,7 @@ export function FlowEditor({
 
   const stepSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   const stepIds = draft.steps.map((s, i) => s.id ?? `step-new-${i}`);
@@ -1228,7 +1248,10 @@ export function FlowEditor({
             collisionDetection={closestCenter}
             onDragEnd={handleStepDragEnd}
           >
-            <SortableContext items={stepIds} strategy={verticalListSortingStrategy}>
+            <SortableContext
+              items={stepIds}
+              strategy={verticalListSortingStrategy}
+            >
               <div className="flex flex-col">
                 {draft.steps.map((step, i) => (
                   <SortableStepCard
@@ -1260,8 +1283,12 @@ export function FlowEditor({
                       setUploadTarget({ step: i, msg: j });
                       setMediaPickerOpen(true);
                     }}
-                    onDelayChange={(secs) => patchStep(i, { delaySeconds: secs })}
-                    onReorderMessages={(from, to) => reorderMessages(i, from, to)}
+                    onDelayChange={(secs) =>
+                      patchStep(i, { delaySeconds: secs })
+                    }
+                    onReorderMessages={(from, to) =>
+                      reorderMessages(i, from, to)
+                    }
                   />
                 ))}
               </div>

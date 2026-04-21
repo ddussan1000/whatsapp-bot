@@ -549,9 +549,7 @@ function ConfigStatus({
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
       {value === null ? (
-        <span className="text-muted-foreground text-xs">
-          {nullNote ?? "—"}
-        </span>
+        <span className="text-muted-foreground text-xs">{nullNote ?? "—"}</span>
       ) : value ? (
         <span className="text-emerald-600 dark:text-emerald-400">✅</span>
       ) : (

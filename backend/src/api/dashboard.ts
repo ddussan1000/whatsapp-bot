@@ -148,6 +148,7 @@ const ConversationSchema = z.object({
   ad_name: z.string().nullable().optional(),
   ad_source: AdSourceSchema.nullable().optional(),
   last_message_text: z.string().nullable().optional(),
+  last_message_type: z.string().nullable().optional(),
   last_message_direction: z.enum(["inbound", "outbound"]).nullable().optional(),
   unread_count: z.number().optional(),
 });
@@ -3619,6 +3620,7 @@ dashboardApi.openapi(
           updated_at: (c.updated_at as string | null) ?? null,
           ad_name: adNameByPhone.get(c.phone as string) ?? null,
           last_message_text: lastMsgText,
+          last_message_type: lastMsg?.message_type ?? null,
           last_message_direction: lastMsg
             ? (lastMsg.direction as "inbound" | "outbound")
             : null,

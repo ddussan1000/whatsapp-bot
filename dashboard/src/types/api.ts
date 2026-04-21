@@ -178,12 +178,8 @@ export type ProductReferral = {
   created_at?: string | null;
 };
 
-export type FlowMessageTypeV2 =
-  | "text"
-  | "image"
-  | "document"
-  | "video"
-  | "audio";
+export type FlowMessageType = "text" | "image" | "document" | "video" | "audio";
+export type FlowMessageTypeV2 = FlowMessageType;
 export type FlowStepMessageV2 = {
   id: string;
   step_id: string;
@@ -294,6 +290,7 @@ export type OrgMediaUploadResponse = {
   ok: boolean;
   media: OrgMedia;
 };
+export type MediaTypeFilter = OrgMedia["media_type"] | "all";
 export type SendMessageResponse = Json200<
   "/api/conversations/{id}/messages",
   "post"
@@ -434,7 +431,6 @@ export type OrgRole = SessionInfo["role"];
 
 // ── Flow engine types (not in generated OpenAPI yet) ──────────────────────
 
-export type FlowMessageType = "text" | "image" | "document" | "video" | "audio";
 export type FlowDefinitionType = "keyword" | "sequential";
 
 export type FlowStepMessage = {

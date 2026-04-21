@@ -5,6 +5,7 @@ import {
   Image as ImageIcon,
   FileText,
   Video,
+  Mic,
   Clock,
   Zap,
   ArrowRight,
@@ -38,33 +39,10 @@ import { emptyDraft } from "@/lib/flowUtils";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type MsgType = "text" | "image" | "document" | "video";
-
-type TemplateMsgDraft = {
-  position: number;
-  messageType: MsgType;
-  textContent?: string | null;
-  mediaUrl?: string | null;
-  filename?: string | null;
-  caption?: string | null;
-};
-
-type TemplateStepDraft = {
-  position: number;
-  delaySeconds: number;
-  label?: string;
-  messages: TemplateMsgDraft[];
-};
-
-type FlowTemplateDraft = {
-  name: string;
-  triggerPhrase: string;
-  keywords: string[];
-  noMatchBehavior: "trigger" | "ignore";
-  systemPrompt?: string | null;
-  isActive: boolean;
-  steps: TemplateStepDraft[];
-};
+type FlowTemplateDraft = FlowTemplate["draft"];
+type TemplateStepDraft = FlowTemplateDraft["steps"][number];
+type TemplateMsgDraft = TemplateStepDraft["messages"][number];
+type MsgType = TemplateMsgDraft["messageType"];
 
 const USER_CATEGORIES = [
   "Personalizado",
@@ -85,6 +63,7 @@ const MSG_META: Record<
   image: { icon: ImageIcon, label: "Imagen", color: "text-green-500" },
   document: { icon: FileText, label: "Documento", color: "text-orange-500" },
   video: { icon: Video, label: "Video", color: "text-purple-500" },
+  audio: { icon: Mic, label: "Audio", color: "text-pink-500" },
 };
 
 function msgMeta(type: string) {
@@ -269,10 +248,9 @@ function TemplateCard({
   const [stepsOpen, setStepsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const draft = template.draft as Record<string, unknown>;
-  const steps = (draft.steps as TemplateStepDraft[] | undefined) ?? [];
-  const triggerPhrase =
-    typeof draft.triggerPhrase === "string" ? draft.triggerPhrase : null;
+  const draft: FlowTemplateDraft = template.draft;
+  const steps: TemplateStepDraft[] = draft.steps ?? [];
+  const triggerPhrase = draft.triggerPhrase ?? null;
   const totalMessages = steps.reduce((acc, s) => acc + s.messages.length, 0);
 
   return (
