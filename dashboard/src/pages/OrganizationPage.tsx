@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
   Building2,
   Check,
+  Clock,
   Copy,
   Hash,
   Pencil,
@@ -121,6 +122,27 @@ function SectionCard({
   );
 }
 
+// Common IANA timezones with friendly labels
+const TIMEZONES = [
+  { value: "America/Bogota", label: "Colombia (UTC−5)" },
+  { value: "America/Lima", label: "Perú (UTC−5)" },
+  { value: "America/Guayaquil", label: "Ecuador (UTC−5)" },
+  { value: "America/Caracas", label: "Venezuela (UTC−4)" },
+  { value: "America/La_Paz", label: "Bolivia (UTC−4)" },
+  { value: "America/Santiago", label: "Chile (UTC−4/−3)" },
+  { value: "America/Argentina/Buenos_Aires", label: "Argentina (UTC−3)" },
+  { value: "America/Sao_Paulo", label: "Brasil (UTC−3)" },
+  { value: "America/Montevideo", label: "Uruguay (UTC−3)" },
+  { value: "America/Asuncion", label: "Paraguay (UTC−4/−3)" },
+  { value: "America/Mexico_City", label: "México Centro (UTC−6)" },
+  { value: "America/Cancun", label: "México Este (UTC−5)" },
+  { value: "America/New_York", label: "EE.UU. Este (UTC−5/−4)" },
+  { value: "America/Chicago", label: "EE.UU. Centro (UTC−6/−5)" },
+  { value: "America/Los_Angeles", label: "EE.UU. Pacífico (UTC−8/−7)" },
+  { value: "Europe/Madrid", label: "España (UTC+1/+2)" },
+  { value: "UTC", label: "UTC+0" },
+];
+
 // ── OrganizationPage ──────────────────────────────────────────────────────
 
 export function OrganizationPage() {
@@ -128,6 +150,8 @@ export function OrganizationPage() {
   const [role, setRole] = useState<OrgRole>("agent");
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const [editingTimezone, setEditingTimezone] = useState(false);
+  const [timezoneInput, setTimezoneInput] = useState("");
 
   const org = useCurrentOrgQuery();
   const invites = useInvitesQuery();
@@ -135,7 +159,7 @@ export function OrganizationPage() {
   const resendInvite = useResendInviteMutation();
   const updateOrg = useUpdateOrgMutation();
 
-  // Sync name input when data loads — setState in effect is intentional here:
+  // Sync name/timezone inputs when data loads — setState in effect is intentional here:
   // initializes local edit state from async server data when not actively editing.
   useEffect(() => {
     if (org.data?.organization.name && !editingName) {
@@ -143,6 +167,13 @@ export function OrganizationPage() {
       setNameInput(org.data.organization.name);
     }
   }, [org.data?.organization.name, editingName]);
+
+  useEffect(() => {
+    if (org.data?.organization.timezone && !editingTimezone) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTimezoneInput(org.data.organization.timezone ?? "America/Bogota");
+    }
+  }, [org.data?.organization.timezone, editingTimezone]);
 
   const canEditOrg = ["owner", "admin"].includes(
     org.data?.membership.role ?? ""
@@ -161,6 +192,24 @@ export function OrganizationPage() {
           setEditingName(false);
         },
         onError: () => toast.error("No se pudo actualizar el nombre"),
+      }
+    );
+  };
+
+  const handleSaveTimezone = (value: string) => {
+    if (value === org.data?.organization.timezone) {
+      setEditingTimezone(false);
+      return;
+    }
+    updateOrg.mutate(
+      { timezone: value },
+      {
+        onSuccess: () => {
+          toast.success("Zona horaria actualizada");
+          setTimezoneInput(value);
+          setEditingTimezone(false);
+        },
+        onError: () => toast.error("No se pudo actualizar la zona horaria"),
       }
     );
   };
@@ -249,6 +298,65 @@ export function OrganizationPage() {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Timezone */}
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                <Clock size={10} />
+                Zona horaria
+              </p>
+              {editingTimezone ? (
+                <div className="flex items-center gap-2 max-w-xs">
+                  <Select
+                    value={timezoneInput}
+                    onValueChange={(v) => {
+                      setTimezoneInput(v);
+                      handleSaveTimezone(v);
+                    }}
+                  >
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIMEZONES.map((tz) => (
+                        <SelectItem key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => setEditingTimezone(false)}
+                  >
+                    <X size={15} />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">
+                    {TIMEZONES.find((t) => t.value === (org.data?.organization.timezone ?? "America/Bogota"))?.label ??
+                      org.data?.organization.timezone ??
+                      "America/Bogota"}
+                  </span>
+                  {canEditOrg && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingTimezone(true)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Editar zona horaria"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground max-w-xs">
+                Usada para calcular el inicio del día en los KPIs del dashboard.
+              </p>
             </div>
 
             {/* Slug + role */}

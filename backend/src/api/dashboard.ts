@@ -26,10 +26,23 @@ import { validateAiProvider } from "../ai/assistant";
 import { log } from "../logger";
 import { invalidateInstanceCache } from "../db/instances";
 
-function todayStartIso() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
+function todayStartIso(timezone = "America/Bogota") {
+  // Get today's local date string in the given timezone, then find the UTC equivalent
+  // of midnight there. Works with half-hour offsets (e.g. India UTC+5:30) too.
+  const localDate = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+  const utcMidnight = new Date(`${localDate}T00:00:00Z`);
+  const [h, m] = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(utcMidnight)
+    .split(":")
+    .map(Number);
+  const localMin = h * 60 + m;
+  const offsetMin = localMin === 0 ? 0 : localMin < 720 ? -localMin : 1440 - localMin;
+  return new Date(utcMidnight.getTime() + offsetMin * 60_000).toISOString();
 }
 
 function splitCsv(input?: string) {
@@ -383,11 +396,16 @@ dashboardApi.openapi(
   async (c) => {
     if (!supabase) return c.json({ total: 0, count: 0, average: 0 }, 200);
     const session = getSession(c);
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("timezone")
+      .eq("id", orgId(c))
+      .maybeSingle();
     const { data, error } = await supabase
       .from("payments")
       .select("amount, product")
       .eq("organization_id", orgId(c))
-      .gte("validated_at", todayStartIso());
+      .gte("validated_at", todayStartIso(org?.timezone ?? "America/Bogota"));
     if (error) return c.json({ error: error.message }, 500);
     const total = (data ?? []).reduce(
       (sum, row) => sum + Number(row.amount ?? 0),
@@ -703,6 +721,7 @@ const OrganizationSchema = z.object({
   id: z.string(),
   slug: z.string(),
   name: z.string(),
+  timezone: z.string().default("America/Bogota"),
 });
 
 const InviteSchema = z.object({
@@ -931,7 +950,7 @@ dashboardApi.openapi(
     const session = getSession(c);
     const { data: organization, error } = await supabase
       .from("organizations")
-      .select("id, slug, name")
+      .select("id, slug, name, timezone")
       .eq("id", orgId(c))
       .maybeSingle();
     if (error) return c.json({ error: error.message }, 500);
@@ -958,7 +977,12 @@ dashboardApi.openapi(
       headers: AuthHeaderSchema,
       body: {
         content: {
-          "application/json": { schema: z.object({ name: z.string().min(2) }) },
+          "application/json": {
+            schema: z.object({
+              name: z.string().min(2).optional(),
+              timezone: z.string().optional(),
+            }),
+          },
         },
       },
     },
@@ -990,11 +1014,14 @@ dashboardApi.openapi(
       );
     }
     const body = c.req.valid("json");
+    const updates: Record<string, string> = {};
+    if (body.name) updates.name = body.name;
+    if (body.timezone) updates.timezone = body.timezone;
     const { data, error } = await supabase
       .from("organizations")
-      .update({ name: body.name })
+      .update(updates)
       .eq("id", orgId(c))
-      .select("id, slug, name")
+      .select("id, slug, name, timezone")
       .maybeSingle();
     if (error) return c.json({ error: error.message }, 500);
     return c.json(data!, 200);

@@ -260,7 +260,7 @@ export function useCurrentOrgQuery() {
 export function useUpdateOrgMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { name: string }) => api.updateOrganization(payload),
+    mutationFn: (payload: { name?: string; timezone?: string }) => api.updateOrganization(payload),
     onSuccess: () =>
       void qc.invalidateQueries({ queryKey: ["org", "current"] }),
   });

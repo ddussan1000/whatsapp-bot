@@ -401,7 +401,7 @@ export const api = {
     ),
   getSession: () => fetchSessionResolved(),
   getCurrentOrganization: () => request<OrganizationInfo>("/api/org/current"),
-  updateOrganization: (payload: { name: string }) =>
+  updateOrganization: (payload: { name?: string; timezone?: string }) =>
     buildHeaders(true).then((headers) =>
       fetch(`${API_URL}/api/org/current`, {
         method: "PUT",
