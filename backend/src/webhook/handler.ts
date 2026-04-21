@@ -337,7 +337,7 @@ export async function handleWebhook(c: Context) {
           nextState = await handleFlow(type, phone, text, nextState);
         }
       }
-    } else if (!flowIsInProgress && nextState.stage !== "flow_started") {
+    } else if (!flowIsInProgress) {
       if (msg.type === "text" && text) {
         nextState = await handleFlow(type, phone, text, nextState);
       }

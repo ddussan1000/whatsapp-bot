@@ -261,6 +261,22 @@ export async function processScheduledMessages(): Promise<void> {
         .from("scheduled_flow_messages")
         .update({ sent_at: sentAt })
         .eq("id", row.id);
+
+      // If no more pending steps for this phone, mark conversation as flujo_terminado
+      const { count: remaining } = await supabase
+        .from("scheduled_flow_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", row.organization_id)
+        .eq("phone", row.phone)
+        .eq("status", "pending");
+
+      if ((remaining ?? 0) === 0 && row.conversation_id) {
+        await supabase
+          .from("conversations")
+          .update({ stage: "flujo_terminado" })
+          .eq("id", row.conversation_id)
+          .eq("stage", "flow_started");
+      }
     } catch (err) {
       log.error({ err, rowId: row.id }, "processScheduledMessages: send error");
       await supabase

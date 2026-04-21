@@ -54,6 +54,7 @@ function timeAgo(iso?: string | null) {
 
 const STAGE_OPTIONS = [
   { value: "flow_started", label: "En flujo" },
+  { value: "flujo_terminado", label: "Flujo terminado" },
   { value: "interesado", label: "Interesado" },
   { value: "esperando_comprobante", label: "Esperando comprobante" },
   { value: "confirmar_comprobante", label: "Revisión manual" },

@@ -496,6 +496,16 @@ textarea {
   color: hsl(270 95% 40%);
 }
 
+.badge-orange {
+  background: hsl(24 100% 93%);
+  color: hsl(21 90% 42%);
+}
+
+.badge-slate {
+  background: hsl(215 25% 93%);
+  color: hsl(215 20% 40%);
+}
+
 .btn {
   border-radius: 10px;
   border: 1px solid transparent;

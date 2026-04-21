@@ -58,11 +58,13 @@ import {
 
 const STAGE_LABELS: Record<string, string> = {
   flow_started: "En flujo",
+  flujo_terminado: "Flujo terminado",
   interesado: "Interesado",
   listo_pagar: "Listo para pagar",
   necesita_agente: "Necesita agente",
   confirmar_comprobante: "En revisión",
   pago_confirmado: "Pago confirmado",
+  post_venta: "Post venta",
 };
 
 function stageLabel(stage: string): string {
@@ -586,12 +588,24 @@ export function ReportsPage() {
                         width={120}
                         tick={<FunnelYAxisTick />}
                       />
-                      <ChartTooltip
-                        content={<ChartTooltipContent />}
-                        formatter={(value, _name, props) => [
-                          value,
-                          stageLabel(props.payload?.stage ?? ""),
-                        ]}
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const item = payload[0];
+                          return (
+                            <div className="rounded-lg border bg-background px-3 py-2 shadow-sm text-sm">
+                              <p className="font-medium text-foreground mb-1">
+                                {stageLabel(item?.payload?.stage ?? "")}
+                              </p>
+                              <p className="text-muted-foreground">
+                                Conversaciones:{" "}
+                                <span className="font-semibold text-foreground">
+                                  {item?.value}
+                                </span>
+                              </p>
+                            </div>
+                          );
+                        }}
                       />
                       <Bar dataKey="count" fill="var(--color-count)" radius={4}>
                         <LabelList

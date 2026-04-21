@@ -536,6 +536,31 @@ function EditDialog({
 
 // ── Meta status modal ─────────────────────────────────────────────────────
 
+function ConfigStatus({
+  value,
+  label,
+  nullNote,
+}: {
+  value: boolean | null;
+  label: string;
+  nullNote?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      {value === null ? (
+        <span className="text-muted-foreground text-xs">
+          {nullNote ?? "—"}
+        </span>
+      ) : value ? (
+        <span className="text-emerald-600 dark:text-emerald-400">✅</span>
+      ) : (
+        <span className="text-destructive">❌</span>
+      )}
+    </div>
+  );
+}
+
 function MetaStatusModal({
   instance,
   onClose,
@@ -585,31 +610,6 @@ function MetaStatusModal({
       </span>
     );
   };
-
-  function ConfigStatus({
-    value,
-    label,
-    nullNote,
-  }: {
-    value: boolean | null;
-    label: string;
-    nullNote?: string;
-  }) {
-    return (
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        {value === null ? (
-          <span className="text-muted-foreground text-xs">
-            {nullNote ?? "—"}
-          </span>
-        ) : value ? (
-          <span className="text-emerald-600 dark:text-emerald-400">✅</span>
-        ) : (
-          <span className="text-destructive">❌</span>
-        )}
-      </div>
-    );
-  }
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>

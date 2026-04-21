@@ -9,6 +9,7 @@ import {
   Info,
   Library,
   Megaphone,
+  Mic,
   Send,
   Video,
   Workflow,
@@ -131,6 +132,7 @@ function getAttachmentInfo(m: ChatMessage): {
   href?: string;
   isImage: boolean;
   isVideo: boolean;
+  isAudio: boolean;
 } | null {
   const payload =
     (m.payload as Record<string, unknown> | null | undefined) ?? {};
@@ -138,13 +140,13 @@ function getAttachmentInfo(m: ChatMessage): {
   if (m.message_type === "image") {
     const image = payload.image as { id?: string; link?: string } | undefined;
     const href = m.media_url ?? image?.link;
-    return { label: "Imagen adjunta", href, isImage: true, isVideo: false };
+    return { label: "Imagen adjunta", href, isImage: true, isVideo: false, isAudio: false };
   }
 
   if (m.message_type === "video") {
     const video = payload.video as { id?: string; link?: string } | undefined;
     const href = m.media_url ?? video?.link;
-    return { label: "Video adjunto", href, isImage: false, isVideo: true };
+    return { label: "Video adjunto", href, isImage: false, isVideo: true, isAudio: false };
   }
 
   if (m.message_type === "document") {
@@ -153,7 +155,14 @@ function getAttachmentInfo(m: ChatMessage): {
       | undefined;
     const href = m.media_url ?? doc?.link;
     const label = doc?.filename ?? "Documento adjunto";
-    return { label, href, isImage: false, isVideo: false };
+    return { label, href, isImage: false, isVideo: false, isAudio: false };
+  }
+
+  if (m.message_type === "audio") {
+    const audio = payload.audio as { id?: string; url?: string; voice?: boolean } | undefined;
+    const href = m.media_url ?? audio?.url;
+    const label = audio?.voice ? "Nota de voz" : "Audio";
+    return { label, href, isImage: false, isVideo: false, isAudio: true };
   }
 
   return null;
@@ -303,6 +312,33 @@ function ChatBubble({ m }: { m: ChatMessage }) {
                   </span>
                 )}
               </div>
+            ) : attachment.isAudio ? (
+              <div className="flex flex-col gap-1.5">
+                <div
+                  className={`flex items-center gap-1.5 text-xs ${
+                    isOut ? "text-primary-foreground/70" : "text-muted-foreground"
+                  }`}
+                >
+                  <Mic size={13} />
+                  <span>{attachment.label}</span>
+                </div>
+                {attachment.href ? (
+                  <audio
+                    controls
+                    src={attachment.href}
+                    className="h-8 w-48 max-w-full"
+                    style={{ colorScheme: isOut ? "dark" : "light" }}
+                  />
+                ) : (
+                  <span
+                    className={`text-xs ${
+                      isOut ? "text-primary-foreground/50" : "text-muted-foreground/60"
+                    }`}
+                  >
+                    (URL de audio expirada)
+                  </span>
+                )}
+              </div>
             ) : (
               <div
                 className={`flex items-center gap-1.5 rounded-lg p-2 text-xs ${
@@ -400,6 +436,7 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 
 const STAGE_OPTIONS = [
   { value: "flow_started", label: "En flujo" },
+  { value: "flujo_terminado", label: "Flujo terminado" },
   { value: "interesado", label: "Interesado" },
   { value: "esperando_comprobante", label: "Esperando comprobante" },
   { value: "confirmar_comprobante", label: "Revisión manual" },

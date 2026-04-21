@@ -4,6 +4,7 @@ type Props = {
 
 const colorMap: Record<string, string> = {
   flow_started: "badge badge-indigo",
+  flujo_terminado: "badge badge-slate",
   interesado: "badge badge-blue",
   esperando_comprobante: "badge badge-amber",
   confirmar_comprobante: "badge badge-purple",
@@ -13,6 +14,7 @@ const colorMap: Record<string, string> = {
 
 const labelMap: Record<string, string> = {
   flow_started: "En flujo",
+  flujo_terminado: "Flujo terminado",
   interesado: "Interesado",
   esperando_comprobante: "Esperando comprobante",
   confirmar_comprobante: "Revisión manual",

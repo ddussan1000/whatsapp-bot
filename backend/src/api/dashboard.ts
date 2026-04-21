@@ -31,7 +31,7 @@ function todayStartIso(timezone = "America/Bogota") {
   // of midnight there. Works with half-hour offsets (e.g. India UTC+5:30) too.
   const localDate = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
   const utcMidnight = new Date(`${localDate}T00:00:00Z`);
-  const [h, m] = new Intl.DateTimeFormat("en-US", {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     hour: "2-digit",
     minute: "2-digit",
@@ -40,7 +40,7 @@ function todayStartIso(timezone = "America/Bogota") {
     .format(utcMidnight)
     .split(":")
     .map(Number);
-  const localMin = h * 60 + m;
+  const localMin = (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
   const offsetMin = localMin === 0 ? 0 : localMin < 720 ? -localMin : 1440 - localMin;
   return new Date(utcMidnight.getTime() + offsetMin * 60_000).toISOString();
 }
