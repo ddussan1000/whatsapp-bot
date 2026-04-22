@@ -11,9 +11,10 @@ export type WhatsAppInstance = {
   is_active: boolean;
   flow_id?: string | null;
   currency?: string | null;
+  high_amount_threshold?: number | null;
 };
 
-const INSTANCE_SELECT = "id, organization_id, phone_number_id, meta_token, app_secret, is_active, flow_id, currency";
+const INSTANCE_SELECT = "id, organization_id, phone_number_id, meta_token, app_secret, is_active, flow_id, currency, high_amount_threshold";
 
 async function decryptInstance(data: WhatsAppInstance | null): Promise<WhatsAppInstance | null> {
   if (!data) return null;

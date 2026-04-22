@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Check, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Area,
@@ -51,6 +52,7 @@ import {
   useInstancesQuery,
   useReportsQuery,
   usePaymentsQuery,
+  useUpdatePaymentAmountMutation,
   useUpdatePaymentStateMutation,
 } from "../lib/hooks";
 
@@ -129,10 +131,10 @@ function toIsoEnd(date: string) {
 function dateInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
 }
-function money(value: number) {
+function money(value: number, currency = "COP") {
   return value.toLocaleString("es-CO", {
     style: "currency",
-    currency: "COP",
+    currency,
     maximumFractionDigits: 0,
   });
 }
@@ -247,8 +249,21 @@ export function ReportsPage() {
   const { data: paymentsData, isLoading: paymentsLoading } =
     usePaymentsQuery(paymentsQueryParams);
   const updatePaymentState = useUpdatePaymentStateMutation();
+  const updatePaymentAmount = useUpdatePaymentAmountMutation();
+  const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
+  const [amountDraft, setAmountDraft] = useState("");
 
   const loading = isLoading || isFetching;
+
+  // Derive display currency from instance selection.
+  // Single instance → use its currency. All instances → use common currency if uniform, else null (mixed).
+  const displayCurrency = useMemo(() => {
+    if (instanceId !== "all") {
+      return instances.find((i) => i.id === instanceId)?.currency ?? "COP";
+    }
+    const unique = [...new Set(instances.map((i) => i.currency ?? "COP"))];
+    return unique.length === 1 ? unique[0] : unique.length === 0 ? "COP" : null;
+  }, [instanceId, instances]);
 
   const kpis = data?.kpis;
   const exportCsv = () => {
@@ -468,18 +483,32 @@ export function ReportsPage() {
             </Card>
           ) : null}
 
+          {displayCurrency === null && !loading && (
+            <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
+              Monedas mixtas — las instancias usan distintas divisas. Los totales
+              agregados combinan monedas; filtra por instancia para ver ingresos
+              precisos.
+            </p>
+          )}
+
           <div className="grid gap-3 md:grid-cols-5">
             {loading || !kpis
               ? Array.from({ length: 5 }).map((_, idx) => (
                   <Skeleton key={idx} className="h-24 w-full" />
                 ))
               : [
-                  { label: "Ingresos", value: money(kpis.revenueTotal) },
+                  {
+                    label: "Ingresos",
+                    value: money(kpis.revenueTotal, displayCurrency ?? "COP"),
+                  },
                   {
                     label: "Ventas",
                     value: kpis.salesCount.toLocaleString("es-CO"),
                   },
-                  { label: "Ticket promedio", value: money(kpis.avgTicket) },
+                  {
+                    label: "Ticket promedio",
+                    value: money(kpis.avgTicket, displayCurrency ?? "COP"),
+                  },
                   {
                     label: "Conversaciones",
                     value: kpis.conversationsCount.toLocaleString("es-CO"),
@@ -670,7 +699,7 @@ export function ReportsPage() {
                         content={<ChartTooltipContent />}
                         formatter={(value) => [
                           typeof value === "number"
-                            ? money(value)
+                            ? money(value, displayCurrency ?? "COP")
                             : String(value),
                           "Ingresos",
                         ]}
@@ -732,7 +761,7 @@ export function ReportsPage() {
                       <Tooltip
                         formatter={(value, name) => [
                           typeof value === "number"
-                            ? money(value)
+                            ? money(value, displayCurrency ?? "COP")
                             : String(value),
                           name,
                         ]}
@@ -821,7 +850,85 @@ export function ReportsPage() {
                         <TableCell>{p.flow_name ?? "-"}</TableCell>
                         <TableCell>{p.instance_label ?? "-"}</TableCell>
                         <TableCell>
-                          {p.amount != null ? money(p.amount) : "-"}
+                          {editingAmountId === p.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={1}
+                                autoFocus
+                                disabled={updatePaymentAmount.isPending}
+                                className="h-7 w-28 rounded-md border bg-background px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                                value={amountDraft}
+                                onChange={(e) => setAmountDraft(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    const v = parseFloat(amountDraft);
+                                    if (!isNaN(v) && v > 0) {
+                                      updatePaymentAmount.mutate(
+                                        { id: p.id, amount: v },
+                                        {
+                                          onSuccess: () => {
+                                            setEditingAmountId(null);
+                                            toast.success("Monto actualizado");
+                                          },
+                                        }
+                                      );
+                                    } else {
+                                      toast.error("El monto debe ser un número positivo");
+                                    }
+                                  }
+                                  if (e.key === "Escape" && !updatePaymentAmount.isPending)
+                                    setEditingAmountId(null);
+                                }}
+                              />
+                              <button
+                                className="text-primary hover:opacity-70 disabled:opacity-40"
+                                disabled={updatePaymentAmount.isPending}
+                                onClick={() => {
+                                  const v = parseFloat(amountDraft);
+                                  if (!isNaN(v) && v > 0) {
+                                    updatePaymentAmount.mutate(
+                                      { id: p.id, amount: v },
+                                      {
+                                        onSuccess: () => {
+                                          setEditingAmountId(null);
+                                          toast.success("Monto actualizado");
+                                        },
+                                      }
+                                    );
+                                  } else {
+                                    toast.error("El monto debe ser un número positivo");
+                                  }
+                                }}
+                              >
+                                <Check size={13} />
+                              </button>
+                              <button
+                                className="text-muted-foreground hover:opacity-70 disabled:opacity-40"
+                                disabled={updatePaymentAmount.isPending}
+                                onClick={() => setEditingAmountId(null)}
+                              >
+                                <X size={13} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 group/amount">
+                              <span>
+                                {p.amount != null
+                                  ? money(p.amount, p.currency ?? displayCurrency ?? "COP")
+                                  : "-"}
+                              </span>
+                              <button
+                                className="opacity-0 group-hover/amount:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+                                onClick={() => {
+                                  setAmountDraft(String(p.amount ?? ""));
+                                  setEditingAmountId(p.id);
+                                }}
+                              >
+                                <Pencil size={11} />
+                              </button>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Select
@@ -923,7 +1030,7 @@ export function ReportsPage() {
                       },
                       {
                         label: "Ingresos ads",
-                        value: money(adTotals.revenue),
+                        value: money(adTotals.revenue, displayCurrency ?? "COP"),
                       },
                       {
                         label: "Tasa conversion",
@@ -1074,7 +1181,7 @@ export function ReportsPage() {
                             {item.conversions.toLocaleString("es-CO")}
                           </TableCell>
                           <TableCell className="text-right">
-                            {money(item.revenue)}
+                            {money(item.revenue, displayCurrency ?? "COP")}
                           </TableCell>
                           <TableCell className="text-right">
                             {pct(item.conversionRate)}

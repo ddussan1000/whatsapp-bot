@@ -317,6 +317,7 @@ export async function handleWebhook(c: Context) {
         instance?.meta_token ?? null,
         instance?.currency ?? "COP",
         alreadyPaid,
+        instance?.high_amount_threshold ?? null,
       );
       if (imgResult.handled) {
         nextState = imgResult.state;

@@ -234,11 +234,23 @@ function EditDialog({
     instance.flow_id ?? NO_FLOW_VALUE
   );
   const [currency, setCurrency] = useState(instance.currency ?? "COP");
+  const [highAmountThreshold, setHighAmountThreshold] = useState(
+    instance.high_amount_threshold != null
+      ? String(instance.high_amount_threshold)
+      : ""
+  );
   const [showToken, setShowToken] = useState(false);
 
   const activeFlows = flows.filter((f) => f.is_active);
 
   const save = () => {
+    const thresholdRaw = highAmountThreshold.trim();
+    const thresholdNum = thresholdRaw ? Number(thresholdRaw) : null;
+    if (thresholdNum !== null && (isNaN(thresholdNum) || thresholdNum <= 0)) {
+      toast.error("El umbral debe ser un número positivo");
+      return;
+    }
+
     updateInstance.mutate(
       {
         id: instance.id,
@@ -247,6 +259,7 @@ function EditDialog({
           metaToken: metaToken.trim() || undefined,
           displayPhoneNumber: displayPhone.trim() || undefined,
           currency: currency || undefined,
+          highAmountThreshold: thresholdNum,
         },
       },
       {
@@ -479,6 +492,26 @@ function EditDialog({
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </Field>
+              <Field
+                label="Umbral monto alto"
+                hint={`Pagos con monto superior a este valor van a revisión manual en lugar de confirmarse automáticamente. Déjalo vacío para no aplicar límite.`}
+              >
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder={`Sin límite`}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    value={highAmountThreshold}
+                    onChange={(e) => setHighAmountThreshold(e.target.value)}
+                  />
+                  {currency && (
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      {currency}
+                    </span>
+                  )}
+                </div>
               </Field>
             </div>
 

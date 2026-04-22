@@ -76,6 +76,7 @@ export function useConversationsQuery(params?: {
   return useQuery({
     queryKey: ["conversations", params],
     queryFn: () => api.getConversations(params),
+    staleTime: 30_000,
   });
 }
 
@@ -84,6 +85,7 @@ export function useConversationQuery(id: string) {
     queryKey: ["conversation", id],
     queryFn: () => api.getConversationById(id),
     enabled: Boolean(id),
+    staleTime: 30_000,
   });
 }
 
@@ -175,6 +177,7 @@ export function usePaymentsQuery(params?: {
   return useQuery({
     queryKey: ["payments", params],
     queryFn: () => api.getPayments(params),
+    staleTime: 30_000,
   });
 }
 
@@ -212,7 +215,7 @@ export function useMarkConversationReadMutation() {
 }
 
 export function useBotConfigQuery() {
-  return useQuery({ queryKey: ["bot-config"], queryFn: api.getBotConfig });
+  return useQuery({ queryKey: ["bot-config"], queryFn: api.getBotConfig, staleTime: 60_000 });
 }
 
 export function useUpdateBotConfigMutation() {
@@ -279,6 +282,7 @@ export function useCurrentOrgQuery() {
   return useQuery({
     queryKey: ["org", "current"],
     queryFn: api.getCurrentOrganization,
+    staleTime: 60_000,
   });
 }
 
@@ -349,7 +353,7 @@ export function useFlowsQuery(params: {
 }
 
 export function useFlowsV2Query() {
-  return useQuery({ queryKey: ["flows-v2"], queryFn: api.getFlowsV2 });
+  return useQuery({ queryKey: ["flows-v2"], queryFn: api.getFlowsV2, staleTime: 60_000 });
 }
 
 export function useFlowV2Query(id: string) {
@@ -432,7 +436,7 @@ export function useUpdateProductMutation() {
 }
 
 export function useInstancesQuery() {
-  return useQuery({ queryKey: ["instances"], queryFn: api.getInstances });
+  return useQuery({ queryKey: ["instances"], queryFn: api.getInstances, staleTime: 60_000 });
 }
 export function useWebhookConfigQuery() {
   return useQuery({

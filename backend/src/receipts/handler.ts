@@ -13,10 +13,13 @@ const DEFAULT_RECEIPT_REJECTED_MESSAGE =
   "No pudimos validar tu comprobante. Un agente lo revisara manualmente y te informara.";
 const DEFAULT_RECEIPT_CONFIRMED_MESSAGE =
   "¡Gracias! Recibimos tu pago correctamente.";
+const DEFAULT_HIGH_AMOUNT_MESSAGE =
+  "Recibimos tu comprobante. Por el monto, un agente lo revisara manualmente y te confirmara.";
 
 type ReceiptMessages = {
   rejectedMessage: string;
   confirmedMessage: string;
+  highAmountMessage: string;
 };
 
 function pick(value: unknown, fallback: string): string {
@@ -33,6 +36,7 @@ async function getReceiptMessages(
     return {
       rejectedMessage: DEFAULT_RECEIPT_REJECTED_MESSAGE,
       confirmedMessage: DEFAULT_RECEIPT_CONFIRMED_MESSAGE,
+      highAmountMessage: DEFAULT_HIGH_AMOUNT_MESSAGE,
     };
   }
 
@@ -65,6 +69,10 @@ async function getReceiptMessages(
       flowOverrides.receiptConfirmedMessage,
       pick(orgCfg.receiptConfirmedMessage, DEFAULT_RECEIPT_CONFIRMED_MESSAGE),
     ),
+    highAmountMessage: pick(
+      flowOverrides.receiptHighAmountMessage,
+      pick(orgCfg.receiptHighAmountMessage, DEFAULT_HIGH_AMOUNT_MESSAGE),
+    ),
   };
 }
 
@@ -94,6 +102,7 @@ export async function classifyAndHandleImage(
   metaToken?: string | null,
   currency = "COP",
   alreadyPaid = false,
+  highAmountThreshold?: number | null,
 ): Promise<{ handled: boolean; state: ConversationState }> {
   if (!state.organizationId) return { handled: false, state };
   if (msg.type !== "image" || !msg.image?.id) return { handled: false, state };
@@ -241,6 +250,32 @@ export async function classifyAndHandleImage(
   }
 
   // Valid receipt (amount + date within 24h).
+  // If amount exceeds the per-instance high-amount threshold, send to manual review.
+  if (highAmountThreshold != null && highAmountThreshold > 0 && amount > highAmountThreshold) {
+    log.info(
+      { phone, event: "receipt.high_amount", amount, threshold: highAmountThreshold },
+      "classifyAndHandleImage: amount exceeds threshold → pending_manual_review",
+    );
+    await insertPayment({
+      organizationId: state.organizationId,
+      phone,
+      product: state.flowName ?? null,
+      flow_id: state.flowId ?? null,
+      whatsapp_instance_id: state.whatsappInstanceId ?? null,
+      amount,
+      currency: ocrResult.currency ?? currency,
+      receipt_url: receiptUrl,
+      receipt_date: receiptDate ? receiptDate.toISOString() : null,
+      conversation_id: state.id ?? null,
+      state: "pending_manual_review",
+      meta_message_id: metaMessageId,
+    });
+    await cancelPending();
+    const { highAmountMessage } = await getReceiptMessages(state.organizationId, state.flowId);
+    await sendMessage(phone, textMessage(highAmountMessage), msgCtx(state));
+    return { handled: true, state: { ...state, stage: "revision_manual" } };
+  }
+
   // If the conversation already has a confirmed payment, treat as manual review
   // to avoid registering duplicate payments.
   if (alreadyPaid) {

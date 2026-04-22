@@ -796,6 +796,7 @@ const InstanceSchema = z.object({
   flow_id: z.string().nullable().optional(),
   is_active: z.boolean(),
   currency: z.string().default("COP"),
+  high_amount_threshold: z.number().positive().nullable().optional(),
   updated_at: z.string().nullable().optional(),
 });
 
@@ -1556,7 +1557,7 @@ dashboardApi.openapi(
     const { data, error } = await supabase
       .from("whatsapp_instances")
       .select(
-        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, updated_at",
+        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, updated_at",
       )
       .eq("organization_id", orgId(c))
       .order("created_at", { ascending: false });
@@ -1590,6 +1591,7 @@ dashboardApi.openapi(
               displayPhoneNumber: z.string().optional(),
               isActive: z.boolean().default(true),
               currency: z.string().default("COP"),
+              highAmountThreshold: z.number().positive().nullable().optional(),
               flowId: z.string().optional(),
             }),
           },
@@ -1631,9 +1633,10 @@ dashboardApi.openapi(
         display_phone_number: body.displayPhoneNumber ?? null,
         is_active: body.isActive,
         currency: body.currency ?? "COP",
+        high_amount_threshold: body.highAmountThreshold ?? null,
       })
       .select(
-        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, updated_at",
+        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, updated_at",
       )
       .single();
 
@@ -1756,6 +1759,7 @@ dashboardApi.openapi(
               displayPhoneNumber: z.string().nullable().optional(),
               isActive: z.boolean().optional(),
               currency: z.string().nullable().optional(),
+              highAmountThreshold: z.number().positive().nullable().optional(),
             }),
           },
         },
@@ -1792,6 +1796,7 @@ dashboardApi.openapi(
         : {}),
       ...(body.isActive !== undefined ? { is_active: body.isActive } : {}),
       ...(body.currency !== undefined ? { currency: body.currency } : {}),
+      ...(body.highAmountThreshold !== undefined ? { high_amount_threshold: body.highAmountThreshold } : {}),
       updated_at: new Date().toISOString(),
     };
     const { data, error } = await supabase
@@ -1800,7 +1805,7 @@ dashboardApi.openapi(
       .eq("id", id)
       .eq("organization_id", orgId(c))
       .select(
-        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, updated_at",
+        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, updated_at",
       )
       .single();
     if (error) return c.json({ error: error.message }, 500);
@@ -3460,15 +3465,7 @@ dashboardApi.openapi(
   }),
   async (c) => {
     if (!supabase)
-      return c.json(
-        {
-          items: [] as z.infer<typeof ConversationSchema>[],
-          page: 1,
-          pageSize: 20,
-          total: 0,
-        },
-        200,
-      );
+      return c.json({ items: [], page: 1, pageSize: 20, total: 0 }, 200);
     const {
       state,
       search,
@@ -3478,261 +3475,25 @@ dashboardApi.openapi(
       hasUnread,
       page,
       pageSize,
-      sortBy,
       sortDir,
     } = c.req.valid("query");
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
     const organization = orgId(c);
 
-    // Resolve phones from ad_click_logs when filtering by ad
-    let adPhones: string[] | null = null;
-    if (adSourceId) {
-      const { data: adRows } = await supabase
-        .from("ad_click_logs")
-        .select("phone")
-        .eq("organization_id", organization)
-        .eq("source_id", adSourceId);
-      adPhones = [...new Set((adRows ?? []).map((r) => r.phone as string))];
-      if (adPhones.length === 0)
-        return c.json(
-          {
-            items: [] as z.infer<typeof ConversationSchema>[],
-            page,
-            pageSize,
-            total: 0,
-          },
-          200,
-        );
-    } else if (fromAd) {
-      const { data: adRows } = await supabase
-        .from("ad_click_logs")
-        .select("phone")
-        .eq("organization_id", organization);
-      adPhones = [...new Set((adRows ?? []).map((r) => r.phone as string))];
-      if (adPhones.length === 0)
-        return c.json(
-          {
-            items: [] as z.infer<typeof ConversationSchema>[],
-            page,
-            pageSize,
-            total: 0,
-          },
-          200,
-        );
-    }
+    const { data, error } = await supabase.rpc("get_conversations_list", {
+      p_org_id:       organization,
+      p_state:        state        ?? null,
+      p_search:       search       ?? null,
+      p_flow_id:      flowId       ?? null,
+      p_from_ad:      fromAd       ?? false,
+      p_ad_source_id: adSourceId   ?? null,
+      p_has_unread:   hasUnread    ?? false,
+      p_page:         page,
+      p_page_size:    pageSize,
+      p_sort_dir:     sortDir,
+    });
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json(data ?? { items: [], page, pageSize, total: 0 }, 200);
 
-    let baseQuery = supabase
-      .from("conversations")
-      .select(
-        "id, phone, contact_name, stage, flow_id, flow_name, started_at, updated_at, last_read_at",
-      )
-      .eq("organization_id", organization)
-      .order(sortBy, { ascending: sortDir === "asc" });
-    if (state) baseQuery = baseQuery.eq("stage", state);
-    if (search) baseQuery = baseQuery.ilike("phone", `%${search}%`);
-    if (flowId) baseQuery = baseQuery.eq("flow_id", flowId);
-    if (adPhones) baseQuery = baseQuery.in("phone", adPhones);
-
-    let data: Record<string, unknown>[] | null = null;
-    let fetchError: { message: string } | null = null;
-
-    if (hasUnread) {
-      // Fetch all matching conversations, compute unread for each, filter to unread-only, then paginate
-      const { data: allData, error } = await baseQuery;
-      if (error) return c.json({ error: error.message }, 500);
-      const allConvIds = (allData ?? []).map((c) => (c as Record<string, unknown>).id as string);
-      let allUnreadByConvId = new Map<string, number>();
-      if (allConvIds.length > 0) {
-        const { data: allMsgRows } = await supabase
-          .from("messages")
-          .select("conversation_id, direction, created_at")
-          .in("conversation_id", allConvIds)
-          .order("created_at", { ascending: true });
-        type UnreadRow = { conversation_id: string; direction: string; created_at: string };
-        for (const cid of allConvIds) {
-          const convMsgs = ((allMsgRows ?? []) as unknown as UnreadRow[]).filter((m) => m.conversation_id === cid);
-          const convRow = (allData ?? []).find((r) => (r as Record<string, unknown>).id === cid);
-          const lastReadAt = (convRow as Record<string, unknown>)?.last_read_at as string | null;
-          const lastReadTime = lastReadAt ? new Date(lastReadAt).getTime() : 0;
-          const lastOutbound = [...convMsgs].reverse().find((m) => m.direction === "outbound");
-          const lastOutboundTime = lastOutbound ? new Date(lastOutbound.created_at).getTime() : 0;
-          const readUpTo = Math.max(lastReadTime, lastOutboundTime);
-          const unread = readUpTo === 0
-            ? convMsgs.filter((m) => m.direction === "inbound").length
-            : convMsgs.filter((m) => m.direction === "inbound" && new Date(m.created_at).getTime() > readUpTo).length;
-          allUnreadByConvId.set(cid, unread);
-        }
-      }
-      const filtered = (allData ?? []).filter((r) => (allUnreadByConvId.get((r as Record<string, unknown>).id as string) ?? 0) > 0);
-      const total = filtered.length;
-      const pageData = filtered.slice(from, to + 1);
-      // Build items for this page using the pre-computed unread map
-      const convIdsFull = (allData ?? []).map((c) => (c as Record<string, unknown>).id as string);
-      const pageConvIds = pageData.map((c) => (c as Record<string, unknown>).id as string);
-      type MsgRow2 = { conversation_id: string; text_body: string | null; direction: string; message_type: string; created_at: string };
-      let lastMsgByConvId2 = new Map<string, MsgRow2>();
-      if (pageConvIds.length > 0) {
-        const { data: pageMsgRows } = await supabase
-          .from("messages")
-          .select("conversation_id, text_body, direction, message_type, created_at")
-          .in("conversation_id", pageConvIds)
-          .order("created_at", { ascending: false });
-        for (const row of ((pageMsgRows ?? []) as unknown as MsgRow2[])) {
-          if (!lastMsgByConvId2.has(row.conversation_id)) lastMsgByConvId2.set(row.conversation_id, row);
-        }
-      }
-      const phones2 = pageData.map((c) => (c as Record<string, unknown>).phone as string);
-      let adNameByPhone2 = new Map<string, string | null>();
-      if (phones2.length > 0) {
-        const { data: adRows2 } = await supabase
-          .from("ad_click_logs")
-          .select("phone, ad_name, headline")
-          .eq("organization_id", organization)
-          .in("phone", phones2)
-          .order("created_at", { ascending: false });
-        for (const row of adRows2 ?? []) {
-          const p = row.phone as string;
-          if (!adNameByPhone2.has(p)) adNameByPhone2.set(p, (row.ad_name as string | null) ?? (row.headline as string | null) ?? null);
-        }
-      }
-      const unreadItems: z.infer<typeof ConversationSchema>[] = pageData.map((conv) => {
-        const c = conv as Record<string, unknown>;
-        const cid = c.id as string;
-        const lastMsg = lastMsgByConvId2.get(cid);
-        return {
-          id: cid,
-          phone: c.phone as string,
-          stage: c.stage as string,
-          contact_name: (c.contact_name as string | null) ?? null,
-          flow_id: (c.flow_id as string | null) ?? null,
-          flow_name: (c.flow_name as string | null) ?? null,
-          started_at: (c.started_at as string | null) ?? null,
-          updated_at: (c.updated_at as string | null) ?? null,
-          ad_name: adNameByPhone2.get(c.phone as string) ?? null,
-          last_message_text: lastMsg?.text_body?.trim() || null,
-          last_message_type: lastMsg?.message_type ?? null,
-          last_message_direction: lastMsg ? (lastMsg.direction as "inbound" | "outbound") : null,
-          unread_count: allUnreadByConvId.get(cid) ?? 0,
-        };
-      });
-      void convIdsFull; // suppress unused warning
-      return c.json({ items: unreadItems, page, pageSize, total }, 200);
-    }
-
-    const { data: rawData, error: rawError } = await baseQuery.range(from, to);
-    data = (rawData ?? []) as Record<string, unknown>[];
-    fetchError = rawError;
-    if (fetchError) return c.json({ error: fetchError.message }, 500);
-
-    // Batch-fetch most recent ad click per phone to show ad name in list
-    const phones = (data ?? []).map(
-      (c) => (c as Record<string, unknown>).phone as string,
-    );
-    let adNameByPhone: Map<string, string | null> = new Map();
-    if (phones.length > 0) {
-      const { data: adRows } = await supabase
-        .from("ad_click_logs")
-        .select("phone, ad_name, headline")
-        .eq("organization_id", organization)
-        .in("phone", phones)
-        .order("created_at", { ascending: false });
-      for (const row of adRows ?? []) {
-        const p = row.phone as string;
-        if (!adNameByPhone.has(p)) {
-          adNameByPhone.set(
-            p,
-            (row.ad_name as string | null) ??
-              (row.headline as string | null) ??
-              null,
-          );
-        }
-      }
-    }
-
-    // Batch-fetch last message and unread count per conversation
-    type MsgRow = {
-      conversation_id: string;
-      text_body: string | null;
-      direction: string;
-      message_type: string;
-      created_at: string;
-    };
-    let lastMsgByConvId = new Map<string, MsgRow>();
-    let unreadByConvId = new Map<string, number>();
-
-    if ((data ?? []).length > 0) {
-      const convIds = (data ?? []).map(
-        (conv) => (conv as Record<string, unknown>).id as string,
-      );
-
-      const { data: msgRows } = await supabase
-        .from("messages")
-        .select("conversation_id, text_body, direction, message_type, created_at")
-        .in("conversation_id", convIds)
-        .order("created_at", { ascending: false });
-
-      for (const row of (msgRows ?? []) as unknown as MsgRow[]) {
-        if (!lastMsgByConvId.has(row.conversation_id)) {
-          lastMsgByConvId.set(row.conversation_id, row);
-        }
-      }
-
-      // Compute unread per conv: inbound messages after MAX(last outbound, last_read_at)
-      const allMsgs = ((msgRows ?? []) as unknown as MsgRow[]).sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-      );
-      for (const cid of convIds) {
-        const convMsgs = allMsgs.filter((m) => m.conversation_id === cid);
-        const convRow = (data ?? []).find((r) => r.id === cid);
-        const lastReadAt = (convRow as Record<string, unknown> | undefined)?.last_read_at as string | null;
-        const lastReadTime = lastReadAt ? new Date(lastReadAt).getTime() : 0;
-        const lastOutbound = [...convMsgs].reverse().find((m) => m.direction === "outbound");
-        const lastOutboundTime = lastOutbound ? new Date(lastOutbound.created_at).getTime() : 0;
-        const readUpTo = Math.max(lastReadTime, lastOutboundTime);
-        const unread = readUpTo === 0
-          ? convMsgs.filter((m) => m.direction === "inbound").length
-          : convMsgs.filter((m) => m.direction === "inbound" && new Date(m.created_at).getTime() > readUpTo).length;
-        unreadByConvId.set(cid, unread);
-      }
-    }
-
-    const items: z.infer<typeof ConversationSchema>[] = (data ?? []).map(
-      (conv) => {
-        const c = conv as Record<string, unknown>;
-        const convId = c.id as string;
-        const lastMsg = lastMsgByConvId.get(convId);
-        const lastMsgText = lastMsg?.text_body?.trim() || null;
-        return {
-          id: convId,
-          phone: c.phone as string,
-          stage: c.stage as string,
-          contact_name: (c.contact_name as string | null) ?? null,
-          flow_id: (c.flow_id as string | null) ?? null,
-          flow_name: (c.flow_name as string | null) ?? null,
-          started_at: (c.started_at as string | null) ?? null,
-          updated_at: (c.updated_at as string | null) ?? null,
-          ad_name: adNameByPhone.get(c.phone as string) ?? null,
-          last_message_text: lastMsgText,
-          last_message_type: lastMsg?.message_type ?? null,
-          last_message_direction: lastMsg
-            ? (lastMsg.direction as "inbound" | "outbound")
-            : null,
-          unread_count: unreadByConvId.get(convId) ?? 0,
-        };
-      },
-    );
-
-    let countQuery = supabase
-      .from("conversations")
-      .select("*", { count: "exact", head: true })
-      .eq("organization_id", organization);
-    if (state) countQuery = countQuery.eq("stage", state);
-    if (search) countQuery = countQuery.ilike("phone", `%${search}%`);
-    if (flowId) countQuery = countQuery.eq("flow_id", flowId);
-    if (adPhones) countQuery = countQuery.in("phone", adPhones);
-    const { count } = await countQuery;
-    return c.json({ items, page, pageSize, total: count ?? items.length }, 200);
   },
 );
 

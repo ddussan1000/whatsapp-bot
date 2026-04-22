@@ -140,6 +140,7 @@ export type WhatsAppInstance = {
   flow_id?: string | null;
   is_active: boolean;
   currency: string;
+  high_amount_threshold?: number | null;
   updated_at?: string | null;
 };
 export type InstanceHealth = {
@@ -351,12 +352,14 @@ export type CreateInstanceBody = {
   displayPhoneNumber?: string;
   isActive?: boolean;
   currency?: string;
+  highAmountThreshold?: number | null;
   flowId?: string;
 };
 export type UpdateInstanceBody = Partial<CreateInstanceBody> & {
   metaToken?: string | null;
   appSecret?: string | null;
   currency?: string | null;
+  highAmountThreshold?: number | null;
 };
 
 // ── Meta token discovery ──────────────────────────────────────────────────

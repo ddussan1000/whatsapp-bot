@@ -912,13 +912,15 @@ function ClientInfoModal({
                             <div className="flex items-center gap-1">
                               <input
                                 type="number"
-                                className="h-7 w-28 rounded-md border bg-background px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                min={1}
+                                className="h-7 w-28 rounded-md border bg-background px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
                                 value={amountDraft}
+                                disabled={updatePaymentAmount.isPending}
                                 onChange={(e) => setAmountDraft(e.target.value)}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     const v = parseFloat(amountDraft);
-                                    if (!isNaN(v)) {
+                                    if (!isNaN(v) && v > 0) {
                                       updatePaymentAmount.mutate(
                                         { id: p.id, amount: v },
                                         {
@@ -928,9 +930,11 @@ function ClientInfoModal({
                                           },
                                         }
                                       );
+                                    } else {
+                                      toast.error("El monto debe ser un número positivo");
                                     }
                                   }
-                                  if (e.key === "Escape")
+                                  if (e.key === "Escape" && !updatePaymentAmount.isPending)
                                     setEditingAmountId(null);
                                 }}
                                 autoFocus
@@ -940,7 +944,7 @@ function ClientInfoModal({
                                 disabled={updatePaymentAmount.isPending}
                                 onClick={() => {
                                   const v = parseFloat(amountDraft);
-                                  if (!isNaN(v)) {
+                                  if (!isNaN(v) && v > 0) {
                                     updatePaymentAmount.mutate(
                                       { id: p.id, amount: v },
                                       {
@@ -950,13 +954,16 @@ function ClientInfoModal({
                                         },
                                       }
                                     );
+                                  } else {
+                                    toast.error("El monto debe ser un número positivo");
                                   }
                                 }}
                               >
                                 <Check size={14} />
                               </button>
                               <button
-                                className="text-muted-foreground hover:opacity-70"
+                                className="text-muted-foreground hover:opacity-70 disabled:opacity-40"
+                                disabled={updatePaymentAmount.isPending}
                                 onClick={() => setEditingAmountId(null)}
                               >
                                 <X size={14} />
