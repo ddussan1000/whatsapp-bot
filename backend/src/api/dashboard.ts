@@ -3438,6 +3438,7 @@ dashboardApi.openapi(
         fromAd: z.coerce.boolean().optional(),
         adSourceId: z.string().optional(),
         flowId: z.string().optional(),
+        hasUnread: z.coerce.boolean().optional(),
         page: z.coerce.number().default(1),
         pageSize: z.coerce.number().default(20),
         sortBy: z.string().default("updated_at"),
@@ -3474,6 +3475,7 @@ dashboardApi.openapi(
       fromAd,
       adSourceId,
       flowId,
+      hasUnread,
       page,
       pageSize,
       sortBy,
@@ -3520,20 +3522,108 @@ dashboardApi.openapi(
         );
     }
 
-    let query = supabase
+    let baseQuery = supabase
       .from("conversations")
       .select(
-        "id, phone, contact_name, stage, flow_id, flow_name, started_at, updated_at",
+        "id, phone, contact_name, stage, flow_id, flow_name, started_at, updated_at, last_read_at",
       )
       .eq("organization_id", organization)
-      .order(sortBy, { ascending: sortDir === "asc" })
-      .range(from, to);
-    if (state) query = query.eq("stage", state);
-    if (search) query = query.ilike("phone", `%${search}%`);
-    if (flowId) query = query.eq("flow_id", flowId);
-    if (adPhones) query = query.in("phone", adPhones);
-    const { data, error } = await query;
-    if (error) return c.json({ error: error.message }, 500);
+      .order(sortBy, { ascending: sortDir === "asc" });
+    if (state) baseQuery = baseQuery.eq("stage", state);
+    if (search) baseQuery = baseQuery.ilike("phone", `%${search}%`);
+    if (flowId) baseQuery = baseQuery.eq("flow_id", flowId);
+    if (adPhones) baseQuery = baseQuery.in("phone", adPhones);
+
+    let data: Record<string, unknown>[] | null = null;
+    let fetchError: { message: string } | null = null;
+
+    if (hasUnread) {
+      // Fetch all matching conversations, compute unread for each, filter to unread-only, then paginate
+      const { data: allData, error } = await baseQuery;
+      if (error) return c.json({ error: error.message }, 500);
+      const allConvIds = (allData ?? []).map((c) => (c as Record<string, unknown>).id as string);
+      let allUnreadByConvId = new Map<string, number>();
+      if (allConvIds.length > 0) {
+        const { data: allMsgRows } = await supabase
+          .from("messages")
+          .select("conversation_id, direction, created_at")
+          .in("conversation_id", allConvIds)
+          .order("created_at", { ascending: true });
+        type UnreadRow = { conversation_id: string; direction: string; created_at: string };
+        for (const cid of allConvIds) {
+          const convMsgs = ((allMsgRows ?? []) as unknown as UnreadRow[]).filter((m) => m.conversation_id === cid);
+          const convRow = (allData ?? []).find((r) => (r as Record<string, unknown>).id === cid);
+          const lastReadAt = (convRow as Record<string, unknown>)?.last_read_at as string | null;
+          const lastReadTime = lastReadAt ? new Date(lastReadAt).getTime() : 0;
+          const lastOutbound = [...convMsgs].reverse().find((m) => m.direction === "outbound");
+          const lastOutboundTime = lastOutbound ? new Date(lastOutbound.created_at).getTime() : 0;
+          const readUpTo = Math.max(lastReadTime, lastOutboundTime);
+          const unread = readUpTo === 0
+            ? convMsgs.filter((m) => m.direction === "inbound").length
+            : convMsgs.filter((m) => m.direction === "inbound" && new Date(m.created_at).getTime() > readUpTo).length;
+          allUnreadByConvId.set(cid, unread);
+        }
+      }
+      const filtered = (allData ?? []).filter((r) => (allUnreadByConvId.get((r as Record<string, unknown>).id as string) ?? 0) > 0);
+      const total = filtered.length;
+      const pageData = filtered.slice(from, to + 1);
+      // Build items for this page using the pre-computed unread map
+      const convIdsFull = (allData ?? []).map((c) => (c as Record<string, unknown>).id as string);
+      const pageConvIds = pageData.map((c) => (c as Record<string, unknown>).id as string);
+      type MsgRow2 = { conversation_id: string; text_body: string | null; direction: string; message_type: string; created_at: string };
+      let lastMsgByConvId2 = new Map<string, MsgRow2>();
+      if (pageConvIds.length > 0) {
+        const { data: pageMsgRows } = await supabase
+          .from("messages")
+          .select("conversation_id, text_body, direction, message_type, created_at")
+          .in("conversation_id", pageConvIds)
+          .order("created_at", { ascending: false });
+        for (const row of ((pageMsgRows ?? []) as unknown as MsgRow2[])) {
+          if (!lastMsgByConvId2.has(row.conversation_id)) lastMsgByConvId2.set(row.conversation_id, row);
+        }
+      }
+      const phones2 = pageData.map((c) => (c as Record<string, unknown>).phone as string);
+      let adNameByPhone2 = new Map<string, string | null>();
+      if (phones2.length > 0) {
+        const { data: adRows2 } = await supabase
+          .from("ad_click_logs")
+          .select("phone, ad_name, headline")
+          .eq("organization_id", organization)
+          .in("phone", phones2)
+          .order("created_at", { ascending: false });
+        for (const row of adRows2 ?? []) {
+          const p = row.phone as string;
+          if (!adNameByPhone2.has(p)) adNameByPhone2.set(p, (row.ad_name as string | null) ?? (row.headline as string | null) ?? null);
+        }
+      }
+      const unreadItems: z.infer<typeof ConversationSchema>[] = pageData.map((conv) => {
+        const c = conv as Record<string, unknown>;
+        const cid = c.id as string;
+        const lastMsg = lastMsgByConvId2.get(cid);
+        return {
+          id: cid,
+          phone: c.phone as string,
+          stage: c.stage as string,
+          contact_name: (c.contact_name as string | null) ?? null,
+          flow_id: (c.flow_id as string | null) ?? null,
+          flow_name: (c.flow_name as string | null) ?? null,
+          started_at: (c.started_at as string | null) ?? null,
+          updated_at: (c.updated_at as string | null) ?? null,
+          ad_name: adNameByPhone2.get(c.phone as string) ?? null,
+          last_message_text: lastMsg?.text_body?.trim() || null,
+          last_message_type: lastMsg?.message_type ?? null,
+          last_message_direction: lastMsg ? (lastMsg.direction as "inbound" | "outbound") : null,
+          unread_count: allUnreadByConvId.get(cid) ?? 0,
+        };
+      });
+      void convIdsFull; // suppress unused warning
+      return c.json({ items: unreadItems, page, pageSize, total }, 200);
+    }
+
+    const { data: rawData, error: rawError } = await baseQuery.range(from, to);
+    data = (rawData ?? []) as Record<string, unknown>[];
+    fetchError = rawError;
+    if (fetchError) return c.json({ error: fetchError.message }, 500);
 
     // Batch-fetch most recent ad click per phone to show ad name in list
     const phones = (data ?? []).map(
@@ -3588,17 +3678,21 @@ dashboardApi.openapi(
         }
       }
 
-      // Compute unread per conv: inbound messages since last outbound
+      // Compute unread per conv: inbound messages after MAX(last outbound, last_read_at)
       const allMsgs = ((msgRows ?? []) as unknown as MsgRow[]).sort(
         (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       );
       for (const cid of convIds) {
         const convMsgs = allMsgs.filter((m) => m.conversation_id === cid);
-        const lastOutboundIdx = convMsgs.map((m) => m.direction).lastIndexOf("outbound");
-        const unread =
-          lastOutboundIdx === -1
-            ? convMsgs.filter((m) => m.direction === "inbound").length
-            : convMsgs.slice(lastOutboundIdx + 1).filter((m) => m.direction === "inbound").length;
+        const convRow = (data ?? []).find((r) => r.id === cid);
+        const lastReadAt = (convRow as Record<string, unknown> | undefined)?.last_read_at as string | null;
+        const lastReadTime = lastReadAt ? new Date(lastReadAt).getTime() : 0;
+        const lastOutbound = [...convMsgs].reverse().find((m) => m.direction === "outbound");
+        const lastOutboundTime = lastOutbound ? new Date(lastOutbound.created_at).getTime() : 0;
+        const readUpTo = Math.max(lastReadTime, lastOutboundTime);
+        const unread = readUpTo === 0
+          ? convMsgs.filter((m) => m.direction === "inbound").length
+          : convMsgs.filter((m) => m.direction === "inbound" && new Date(m.created_at).getTime() > readUpTo).length;
         unreadByConvId.set(cid, unread);
       }
     }
@@ -3735,6 +3829,38 @@ dashboardApi.openapi(
       .update({ stage, updated_at: new Date().toISOString() })
       .eq("id", id)
       .eq("organization_id", organization);
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true }, 200);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/conversations/{id}/read",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "Marcado como leído",
+        content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { error } = await supabase
+      .from("conversations")
+      .update({ last_read_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("organization_id", orgId(c));
     if (error) return c.json({ error: error.message }, 500);
     return c.json({ ok: true }, 200);
   },
@@ -4292,6 +4418,69 @@ dashboardApi.openapi(
         state,
         validated_at: state === "validated" ? new Date().toISOString() : null,
       })
+      .eq("id", id)
+      .eq("organization_id", organization);
+
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true }, 200);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
+    method: "patch",
+    path: "/payments/{id}",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              amount: z.number().positive(),
+              currency: z.string().optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Pago actualizado",
+        content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+      },
+      404: {
+        description: "No encontrado",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { amount, currency } = c.req.valid("json");
+    const organization = orgId(c);
+
+    const { data: existing } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("id", id)
+      .eq("organization_id", organization)
+      .maybeSingle();
+
+    if (!existing) return c.json({ error: "Pago no encontrado" }, 404);
+
+    const update: Record<string, unknown> = { amount };
+    if (currency) update.currency = currency;
+
+    const { error } = await supabase
+      .from("payments")
+      .update(update)
       .eq("id", id)
       .eq("organization_id", organization);
 

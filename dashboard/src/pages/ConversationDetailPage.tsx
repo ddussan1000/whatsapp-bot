@@ -8,11 +8,18 @@ import {
   ImageIcon,
   Info,
   Library,
+  MapPin,
   Megaphone,
   Mic,
+  Pencil,
   Send,
+  ShoppingCart,
+  Sparkles,
+  ThumbsUp,
+  User,
   Video,
   Workflow,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -39,6 +46,7 @@ import {
   useSendConversationMessageMutation,
   useSendMediaFromLibraryMutation,
   useUpdateConversationStageMutation,
+  useUpdatePaymentAmountMutation,
   useUpdatePaymentStateMutation,
 } from "../lib/hooks";
 import { api } from "../lib/api";
@@ -84,102 +92,142 @@ function formatDateTime(iso: string) {
 
 const PAGE_SIZE = 50;
 
-// ── Message helpers ────────────────────────────────────────────────────────
+// ── Message content types ──────────────────────────────────────────────────
 
-function getMessageMainText(m: ChatMessage): string | null {
-  if (m.text_body && m.text_body.trim().length > 0) return m.text_body;
-  const payload =
-    (m.payload as Record<string, unknown> | null | undefined) ?? {};
+type MsgContent =
+  | { kind: "text"; text: string }
+  | { kind: "image"; href: string | null; caption: string | null }
+  | { kind: "video"; href: string | null; caption: string | null }
+  | { kind: "audio"; href: string | null; isVoice: boolean }
+  | {
+      kind: "document";
+      href: string | null;
+      filename: string | null;
+      caption: string | null;
+    }
+  | { kind: "sticker"; href: string | null }
+  | {
+      kind: "location";
+      lat: number;
+      lng: number;
+      name: string | null;
+      address: string | null;
+    }
+  | { kind: "contacts"; names: string[] }
+  | { kind: "reaction" }
+  | { kind: "interactive_reply"; text: string }
+  | { kind: "button"; text: string }
+  | { kind: "order" }
+  | { kind: "system"; text: string }
+  | { kind: "unsupported" };
 
-  if (m.message_type === "interactive") {
-    const interactive = payload.interactive as
-      | {
-          button_reply?: { title?: string };
-          list_reply?: { title?: string };
-          body?: { text?: string };
-        }
-      | undefined;
-    return (
-      interactive?.button_reply?.title ??
-      interactive?.list_reply?.title ??
-      interactive?.body?.text ??
-      "Mensaje interactivo"
-    );
+function parseContent(m: ChatMessage): MsgContent {
+  const p = (m.payload as Record<string, unknown> | null | undefined) ?? {};
+
+  switch (m.message_type) {
+    case "text": {
+      const body =
+        m.text_body?.trim() ||
+        (p.text as { body?: string } | undefined)?.body?.trim();
+      return { kind: "text", text: body ?? "" };
+    }
+    case "image": {
+      const img = p.image as { link?: string; caption?: string } | undefined;
+      return {
+        kind: "image",
+        href: m.media_url ?? img?.link ?? null,
+        caption: img?.caption?.trim() ?? null,
+      };
+    }
+    case "video": {
+      const vid = p.video as { link?: string; caption?: string } | undefined;
+      return {
+        kind: "video",
+        href: m.media_url ?? vid?.link ?? null,
+        caption: vid?.caption?.trim() ?? null,
+      };
+    }
+    case "audio": {
+      const aud = p.audio as { url?: string; voice?: boolean } | undefined;
+      return {
+        kind: "audio",
+        href: m.media_url ?? aud?.url ?? null,
+        isVoice: aud?.voice === true,
+      };
+    }
+    case "document": {
+      const doc = p.document as
+        | { link?: string; filename?: string; caption?: string }
+        | undefined;
+      return {
+        kind: "document",
+        href: m.media_url ?? doc?.link ?? null,
+        filename: doc?.filename ?? null,
+        caption: doc?.caption?.trim() ?? null,
+      };
+    }
+    case "sticker": {
+      const stk = p.sticker as { url?: string } | undefined;
+      return { kind: "sticker", href: m.media_url ?? stk?.url ?? null };
+    }
+    case "location": {
+      const loc = p.location as
+        | {
+            latitude?: number;
+            longitude?: number;
+            name?: string;
+            address?: string;
+          }
+        | undefined;
+      return {
+        kind: "location",
+        lat: loc?.latitude ?? 0,
+        lng: loc?.longitude ?? 0,
+        name: loc?.name ?? null,
+        address: loc?.address ?? null,
+      };
+    }
+    case "contacts": {
+      const contacts = p.contacts as
+        | Array<{ name?: { formatted_name?: string } }>
+        | undefined;
+      const names = (contacts ?? [])
+        .map((c) => c?.name?.formatted_name ?? "Contacto")
+        .filter(Boolean);
+      return { kind: "contacts", names };
+    }
+    case "reaction":
+      return { kind: "reaction" };
+    case "interactive": {
+      const inter = p.interactive as
+        | {
+            type?: string;
+            button_reply?: { title?: string };
+            list_reply?: { title?: string; description?: string };
+            nfm_reply?: { response_json?: string };
+            body?: { text?: string };
+          }
+        | undefined;
+      const text =
+        inter?.button_reply?.title ??
+        inter?.list_reply?.title ??
+        inter?.body?.text ??
+        "Respuesta interactiva";
+      return { kind: "interactive_reply", text };
+    }
+    case "button": {
+      const btn = p.button as { text?: string } | undefined;
+      return { kind: "button", text: btn?.text ?? m.text_body ?? "Botón" };
+    }
+    case "order":
+      return { kind: "order" };
+    case "system": {
+      const sys = p.system as { body?: string } | undefined;
+      return { kind: "system", text: sys?.body ?? "Mensaje del sistema" };
+    }
+    default:
+      return { kind: "unsupported" };
   }
-
-  if (m.message_type === "image") {
-    const image = payload.image as { caption?: string } | undefined;
-    return image?.caption?.trim() || null;
-  }
-
-  if (m.message_type === "document") {
-    const doc = payload.document as
-      | { filename?: string; caption?: string }
-      | undefined;
-    return doc?.caption?.trim() || doc?.filename?.trim() || null;
-  }
-
-  if (m.message_type === "video") {
-    const video = payload.video as { caption?: string } | undefined;
-    return video?.caption?.trim() || null;
-  }
-
-  return null;
-}
-
-function getAttachmentInfo(m: ChatMessage): {
-  label: string;
-  href?: string;
-  isImage: boolean;
-  isVideo: boolean;
-  isAudio: boolean;
-} | null {
-  const payload =
-    (m.payload as Record<string, unknown> | null | undefined) ?? {};
-
-  if (m.message_type === "image") {
-    const image = payload.image as { id?: string; link?: string } | undefined;
-    const href = m.media_url ?? image?.link;
-    return {
-      label: "Imagen adjunta",
-      href,
-      isImage: true,
-      isVideo: false,
-      isAudio: false,
-    };
-  }
-
-  if (m.message_type === "video") {
-    const video = payload.video as { id?: string; link?: string } | undefined;
-    const href = m.media_url ?? video?.link;
-    return {
-      label: "Video adjunto",
-      href,
-      isImage: false,
-      isVideo: true,
-      isAudio: false,
-    };
-  }
-
-  if (m.message_type === "document") {
-    const doc = payload.document as
-      | { id?: string; link?: string; filename?: string }
-      | undefined;
-    const href = m.media_url ?? doc?.link;
-    const label = doc?.filename ?? "Documento adjunto";
-    return { label, href, isImage: false, isVideo: false, isAudio: false };
-  }
-
-  if (m.message_type === "audio") {
-    const audio = payload.audio as
-      | { id?: string; url?: string; voice?: boolean }
-      | undefined;
-    const href = m.media_url ?? audio?.url;
-    const label = audio?.voice ? "Nota de voz" : "Audio";
-    return { label, href, isImage: false, isVideo: false, isAudio: true };
-  }
-
-  return null;
 }
 
 // ── DeliveryIcon ──────────────────────────────────────────────────────────
@@ -239,190 +287,417 @@ function ImagePreviewModal({
   );
 }
 
-function ChatBubble({ m }: { m: ChatMessage }) {
-  const isOut = m.direction === "outbound";
-  const mainText = getMessageMainText(m);
-  const attachment = getAttachmentInfo(m);
-  const isFailed = m.delivery_status === "failed";
-  const [imgError, setImgError] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
+// ── BubbleTimestamp ────────────────────────────────────────────────────────
 
+function BubbleTimestamp({ m, isOut }: { m: ChatMessage; isOut: boolean }) {
+  if (!m.created_at) return null;
+  return (
+    <div
+      className={`mt-1 flex items-center justify-end gap-1.5 text-[10px] leading-none ${
+        isOut ? "text-primary-foreground/60" : "text-muted-foreground"
+      }`}
+    >
+      {m.delivery_status === "failed" && (
+        <span className="font-semibold text-rose-300 dark:text-rose-400">
+          No entregado
+        </span>
+      )}
+      <span>{formatTime(m.created_at)}</span>
+      {isOut && <DeliveryIcon status={m.delivery_status} />}
+    </div>
+  );
+}
+
+// ── BubbleShell ────────────────────────────────────────────────────────────
+
+function BubbleShell({
+  isOut,
+  children,
+  noPadding = false,
+}: {
+  isOut: boolean;
+  children: React.ReactNode;
+  noPadding?: boolean;
+}) {
   return (
     <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
       <div
-        className={`relative max-w-[72%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ${
+        className={`relative max-w-[72%] rounded-2xl text-sm shadow-sm ${
+          noPadding ? "overflow-hidden" : "px-3.5 py-2.5"
+        } ${
           isOut
             ? "rounded-br-sm bg-primary text-primary-foreground"
             : "rounded-bl-sm bg-card border"
         }`}
       >
-        {attachment && attachment.isImage && attachment.href && (
-          <ImagePreviewModal
-            src={attachment.href}
-            open={previewOpen}
-            onClose={() => setPreviewOpen(false)}
-          />
-        )}
-        {attachment && (
-          <div className="mb-1.5">
-            {attachment.isImage ? (
-              attachment.href && !imgError ? (
-                <button
-                  type="button"
-                  onClick={() => setPreviewOpen(true)}
-                  className="block cursor-zoom-in"
-                >
-                  <img
-                    src={attachment.href}
-                    alt={attachment.label}
-                    className="max-h-64 w-auto rounded-lg object-cover hover:opacity-90 transition-opacity"
-                    onError={() => setImgError(true)}
-                  />
-                </button>
-              ) : (
-                <div
-                  className={`flex items-center gap-1.5 text-xs ${
-                    isOut
-                      ? "text-primary-foreground/70"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  <ImageIcon size={14} />
-                  {attachment.label}
-                </div>
-              )
-            ) : attachment.isVideo ? (
-              <div
-                className={`flex items-center gap-1.5 rounded-lg p-2 text-xs ${
-                  isOut ? "bg-primary-foreground/10" : "bg-muted"
-                }`}
-              >
-                <Video
-                  size={14}
-                  className={
-                    isOut
-                      ? "text-primary-foreground/80"
-                      : "text-muted-foreground"
-                  }
-                />
-                {attachment.href ? (
-                  <a
-                    href={attachment.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`underline underline-offset-2 ${
-                      isOut ? "text-primary-foreground" : "text-foreground"
-                    }`}
-                  >
-                    {attachment.label}
-                  </a>
-                ) : (
-                  <span
-                    className={
-                      isOut
-                        ? "text-primary-foreground/70"
-                        : "text-muted-foreground"
-                    }
-                  >
-                    {attachment.label}
-                  </span>
-                )}
-              </div>
-            ) : attachment.isAudio ? (
-              <div className="flex flex-col gap-1.5">
-                <div
-                  className={`flex items-center gap-1.5 text-xs ${
-                    isOut
-                      ? "text-primary-foreground/70"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  <Mic size={13} />
-                  <span>{attachment.label}</span>
-                </div>
-                {attachment.href ? (
-                  <audio
-                    controls
-                    src={attachment.href}
-                    className="h-8 w-48 max-w-full"
-                    style={{ colorScheme: isOut ? "dark" : "light" }}
-                  />
-                ) : (
-                  <span
-                    className={`text-xs ${
-                      isOut
-                        ? "text-primary-foreground/50"
-                        : "text-muted-foreground/60"
-                    }`}
-                  >
-                    (URL de audio expirada)
-                  </span>
-                )}
-              </div>
-            ) : (
-              <div
-                className={`flex items-center gap-1.5 rounded-lg p-2 text-xs ${
-                  isOut ? "bg-primary-foreground/10" : "bg-muted"
-                }`}
-              >
-                <FileText
-                  size={14}
-                  className={
-                    isOut
-                      ? "text-primary-foreground/80"
-                      : "text-muted-foreground"
-                  }
-                />
-                {attachment.href ? (
-                  <a
-                    href={attachment.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`underline underline-offset-2 ${
-                      isOut ? "text-primary-foreground" : "text-foreground"
-                    }`}
-                  >
-                    {attachment.label}
-                  </a>
-                ) : (
-                  <span
-                    className={
-                      isOut
-                        ? "text-primary-foreground/70"
-                        : "text-muted-foreground"
-                    }
-                  >
-                    {attachment.label}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {mainText && (
-          <p className="whitespace-pre-wrap wrap-break-word leading-snug">
-            {mainText}
-          </p>
-        )}
-
-        {m.created_at && (
-          <div
-            className={`mt-1 flex items-center justify-end gap-1.5 text-[10px] leading-none ${
-              isOut ? "text-primary-foreground/60" : "text-muted-foreground"
-            }`}
-          >
-            {isFailed && (
-              <span className="font-semibold text-rose-300 dark:text-rose-400">
-                No entregado
-              </span>
-            )}
-            <span>{formatTime(m.created_at)}</span>
-            {isOut && <DeliveryIcon status={m.delivery_status} />}
-          </div>
-        )}
+        {children}
       </div>
     </div>
+  );
+}
+
+// ── ChatBubble ─────────────────────────────────────────────────────────────
+
+function ChatBubble({ m }: { m: ChatMessage }) {
+  const isOut = m.direction === "outbound";
+  const content = parseContent(m);
+  const [imgError, setImgError] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  // System messages render as centered notices, not bubbles
+  if (content.kind === "system") {
+    return (
+      <div className="flex justify-center py-1">
+        <span className="rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">
+          {content.text}
+        </span>
+      </div>
+    );
+  }
+
+  // Reactions render as small pill
+  if (content.kind === "reaction") {
+    return (
+      <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
+        <span
+          className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
+            isOut ? "bg-primary/5" : "bg-muted"
+          } text-muted-foreground`}
+        >
+          <ThumbsUp size={11} className="shrink-0" />
+          Reacción
+        </span>
+      </div>
+    );
+  }
+
+  if (content.kind === "image") {
+    return (
+      <BubbleShell isOut={isOut} noPadding={Boolean(content.href && !imgError)}>
+        {content.href && !imgError && (
+          <>
+            <ImagePreviewModal
+              src={content.href}
+              open={previewOpen}
+              onClose={() => setPreviewOpen(false)}
+            />
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              className="block cursor-zoom-in"
+            >
+              <img
+                src={content.href}
+                alt="Imagen"
+                className="max-h-64 w-auto object-cover hover:opacity-90 transition-opacity"
+                onError={() => setImgError(true)}
+              />
+            </button>
+          </>
+        )}
+        {(!content.href || imgError) && (
+          <div
+            className={`flex items-center gap-1.5 text-xs px-3.5 py-2.5 ${isOut ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+          >
+            <ImageIcon size={14} />
+            Imagen
+          </div>
+        )}
+        {content.caption && (
+          <p
+            className={`px-3.5 py-2 text-sm whitespace-pre-wrap ${isOut ? "text-primary-foreground" : ""}`}
+          >
+            {content.caption}
+          </p>
+        )}
+        <div className="px-3.5 pb-2">
+          <BubbleTimestamp m={m} isOut={isOut} />
+        </div>
+      </BubbleShell>
+    );
+  }
+
+  if (content.kind === "sticker") {
+    return (
+      <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
+        {content.href && !imgError ? (
+          <img
+            src={content.href}
+            alt="Sticker"
+            className="h-24 w-24 object-contain"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <BubbleShell isOut={isOut}>
+            <div
+              className={`flex items-center gap-1.5 text-xs ${isOut ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+            >
+              <Sparkles size={13} className="shrink-0" />
+              <span>Sticker</span>
+            </div>
+            <BubbleTimestamp m={m} isOut={isOut} />
+          </BubbleShell>
+        )}
+      </div>
+    );
+  }
+
+  if (content.kind === "video") {
+    return (
+      <BubbleShell isOut={isOut}>
+        <div
+          className={`flex items-center gap-1.5 rounded-lg p-2 text-xs mb-1.5 ${isOut ? "bg-primary-foreground/10" : "bg-muted"}`}
+        >
+          <Video
+            size={14}
+            className={
+              isOut ? "text-primary-foreground/80" : "text-muted-foreground"
+            }
+          />
+          {content.href ? (
+            <a
+              href={content.href}
+              target="_blank"
+              rel="noreferrer"
+              className={`underline underline-offset-2 ${isOut ? "text-primary-foreground" : "text-foreground"}`}
+            >
+              Ver video
+            </a>
+          ) : (
+            <span
+              className={
+                isOut ? "text-primary-foreground/70" : "text-muted-foreground"
+              }
+            >
+              Video adjunto
+            </span>
+          )}
+        </div>
+        {content.caption && (
+          <p className="whitespace-pre-wrap leading-snug mb-1.5">
+            {content.caption}
+          </p>
+        )}
+        <BubbleTimestamp m={m} isOut={isOut} />
+      </BubbleShell>
+    );
+  }
+
+  if (content.kind === "audio") {
+    return (
+      <BubbleShell isOut={isOut}>
+        <div className="flex flex-col gap-1.5">
+          <div
+            className={`flex items-center gap-1.5 text-xs ${isOut ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+          >
+            <Mic size={13} />
+            <span>{content.isVoice ? "Nota de voz" : "Audio"}</span>
+          </div>
+          {content.href ? (
+            <audio
+              controls
+              src={content.href}
+              className="h-8 w-48 max-w-full"
+              style={{ colorScheme: isOut ? "dark" : "light" }}
+            />
+          ) : (
+            <span
+              className={`text-xs ${isOut ? "text-primary-foreground/50" : "text-muted-foreground/60"}`}
+            >
+              (URL expirada)
+            </span>
+          )}
+        </div>
+        <BubbleTimestamp m={m} isOut={isOut} />
+      </BubbleShell>
+    );
+  }
+
+  if (content.kind === "document") {
+    const label = content.filename ?? "Documento";
+    return (
+      <BubbleShell isOut={isOut}>
+        <div
+          className={`flex items-center gap-1.5 rounded-lg p-2 text-xs mb-1.5 ${isOut ? "bg-primary-foreground/10" : "bg-muted"}`}
+        >
+          <FileText
+            size={14}
+            className={
+              isOut ? "text-primary-foreground/80" : "text-muted-foreground"
+            }
+          />
+          {content.href ? (
+            <a
+              href={content.href}
+              target="_blank"
+              rel="noreferrer"
+              className={`underline underline-offset-2 truncate max-w-48 ${isOut ? "text-primary-foreground" : "text-foreground"}`}
+            >
+              {label}
+            </a>
+          ) : (
+            <span
+              className={`truncate max-w-48 ${isOut ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+            >
+              {label}
+            </span>
+          )}
+        </div>
+        {content.caption && (
+          <p className="whitespace-pre-wrap leading-snug mb-1.5">
+            {content.caption}
+          </p>
+        )}
+        <BubbleTimestamp m={m} isOut={isOut} />
+      </BubbleShell>
+    );
+  }
+
+  if (content.kind === "location") {
+    const mapsUrl = `https://www.google.com/maps?q=${content.lat},${content.lng}`;
+    const label =
+      content.name ??
+      content.address ??
+      `${content.lat.toFixed(5)}, ${content.lng.toFixed(5)}`;
+    return (
+      <BubbleShell isOut={isOut}>
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 mb-1"
+        >
+          <div
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isOut ? "bg-primary-foreground/15" : "bg-muted"}`}
+          >
+            <MapPin
+              size={14}
+              className={
+                isOut ? "text-primary-foreground/80" : "text-muted-foreground"
+              }
+            />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span
+              className={`text-xs font-medium truncate max-w-48 underline underline-offset-2 ${isOut ? "text-primary-foreground" : "text-foreground"}`}
+            >
+              {label}
+            </span>
+            {content.address && content.name && (
+              <span
+                className={`text-[10px] truncate max-w-48 ${isOut ? "text-primary-foreground/60" : "text-muted-foreground"}`}
+              >
+                {content.address}
+              </span>
+            )}
+          </div>
+        </a>
+        <BubbleTimestamp m={m} isOut={isOut} />
+      </BubbleShell>
+    );
+  }
+
+  if (content.kind === "contacts") {
+    return (
+      <BubbleShell isOut={isOut}>
+        <div className="flex flex-col gap-1 mb-1">
+          {content.names.length > 0 ? (
+            content.names.map((name, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-1.5 text-xs ${isOut ? "text-primary-foreground/80" : ""}`}
+              >
+                <User
+                  size={12}
+                  className={
+                    isOut
+                      ? "text-primary-foreground/60"
+                      : "text-muted-foreground"
+                  }
+                />
+                <span>{name}</span>
+              </div>
+            ))
+          ) : (
+            <div
+              className={`flex items-center gap-1.5 text-xs ${isOut ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+            >
+              <User size={12} />
+              Contacto compartido
+            </div>
+          )}
+        </div>
+        <BubbleTimestamp m={m} isOut={isOut} />
+      </BubbleShell>
+    );
+  }
+
+  if (content.kind === "interactive_reply") {
+    return (
+      <BubbleShell isOut={isOut}>
+        <p className="whitespace-pre-wrap wrap-break-word leading-snug">
+          {content.text}
+        </p>
+        <BubbleTimestamp m={m} isOut={isOut} />
+      </BubbleShell>
+    );
+  }
+
+  if (content.kind === "button") {
+    return (
+      <BubbleShell isOut={isOut}>
+        <p className="whitespace-pre-wrap wrap-break-word leading-snug">
+          {content.text}
+        </p>
+        <BubbleTimestamp m={m} isOut={isOut} />
+      </BubbleShell>
+    );
+  }
+
+  if (content.kind === "order") {
+    return (
+      <BubbleShell isOut={isOut}>
+        <div
+          className={`flex items-center gap-1.5 text-xs ${isOut ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+        >
+          <ShoppingCart size={13} className="shrink-0" />
+          <span>Pedido realizado</span>
+        </div>
+        <BubbleTimestamp m={m} isOut={isOut} />
+      </BubbleShell>
+    );
+  }
+
+  if (content.kind === "unsupported") {
+    return (
+      <BubbleShell isOut={isOut}>
+        <span
+          className={`text-xs italic ${isOut ? "text-primary-foreground/50" : "text-muted-foreground/60"}`}
+        >
+          Tipo de mensaje no soportado
+        </span>
+        <BubbleTimestamp m={m} isOut={isOut} />
+      </BubbleShell>
+    );
+  }
+
+  // Default: text (content.kind === "text")
+  const text = content.kind === "text" ? content.text : "";
+  return (
+    <BubbleShell isOut={isOut}>
+      {text ? (
+        <p className="whitespace-pre-wrap wrap-break-word leading-snug">
+          {text}
+        </p>
+      ) : (
+        <span
+          className={`text-xs italic ${isOut ? "text-primary-foreground/50" : "text-muted-foreground/60"}`}
+        >
+          Mensaje vacío
+        </span>
+      )}
+      <BubbleTimestamp m={m} isOut={isOut} />
+    </BubbleShell>
   );
 }
 
@@ -455,13 +730,10 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 }
 
 const STAGE_OPTIONS = [
-  { value: "flow_started", label: "En flujo" },
+  { value: "en_flujo", label: "En flujo" },
   { value: "flujo_terminado", label: "Flujo terminado" },
-  { value: "interesado", label: "Interesado" },
-  { value: "esperando_comprobante", label: "Esperando comprobante" },
-  { value: "confirmar_comprobante", label: "Revisión manual" },
   { value: "pago_confirmado", label: "Pago confirmado" },
-  { value: "post_venta", label: "Post venta" },
+  { value: "revision_manual", label: "Revisión manual" },
 ];
 
 const PAYMENT_STATE_OPTIONS = [
@@ -505,6 +777,9 @@ function ClientInfoModal({
   const currentStage = conversation ? String(conversation.stage) : "";
   const knownStage = STAGE_OPTIONS.some((o) => o.value === currentStage);
   const updatePaymentState = useUpdatePaymentStateMutation();
+  const updatePaymentAmount = useUpdatePaymentAmountMutation();
+  const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
+  const [amountDraft, setAmountDraft] = useState("");
   const { data: paymentsData } = usePaymentsQuery(
     conversation?.phone
       ? { phone: conversation.phone, pageSize: 20 }
@@ -632,16 +907,83 @@ function ClientInfoModal({
                       className="rounded-xl border bg-muted/20 p-3 flex flex-col gap-2"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-semibold text-sm">
-                            {p.amount != null
-                              ? new Intl.NumberFormat("es-CO", {
-                                  style: "currency",
-                                  currency: p.currency ?? "COP",
-                                  maximumFractionDigits: 0,
-                                }).format(p.amount)
-                              : "Sin monto"}
-                          </span>
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          {editingAmountId === p.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                className="h-7 w-28 rounded-md border bg-background px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={amountDraft}
+                                onChange={(e) => setAmountDraft(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    const v = parseFloat(amountDraft);
+                                    if (!isNaN(v)) {
+                                      updatePaymentAmount.mutate(
+                                        { id: p.id, amount: v },
+                                        {
+                                          onSuccess: () => {
+                                            setEditingAmountId(null);
+                                            toast.success("Monto actualizado");
+                                          },
+                                        }
+                                      );
+                                    }
+                                  }
+                                  if (e.key === "Escape")
+                                    setEditingAmountId(null);
+                                }}
+                                autoFocus
+                              />
+                              <button
+                                className="text-primary hover:opacity-70 disabled:opacity-40"
+                                disabled={updatePaymentAmount.isPending}
+                                onClick={() => {
+                                  const v = parseFloat(amountDraft);
+                                  if (!isNaN(v)) {
+                                    updatePaymentAmount.mutate(
+                                      { id: p.id, amount: v },
+                                      {
+                                        onSuccess: () => {
+                                          setEditingAmountId(null);
+                                          toast.success("Monto actualizado");
+                                        },
+                                      }
+                                    );
+                                  }
+                                }}
+                              >
+                                <Check size={14} />
+                              </button>
+                              <button
+                                className="text-muted-foreground hover:opacity-70"
+                                onClick={() => setEditingAmountId(null)}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold text-sm">
+                                {p.amount != null
+                                  ? new Intl.NumberFormat("es-CO", {
+                                      style: "currency",
+                                      currency: p.currency ?? "COP",
+                                      maximumFractionDigits: 0,
+                                    }).format(p.amount)
+                                  : "Sin monto"}
+                              </span>
+                              <button
+                                className="text-muted-foreground hover:text-foreground"
+                                onClick={() => {
+                                  setAmountDraft(String(p.amount ?? ""));
+                                  setEditingAmountId(p.id);
+                                }}
+                              >
+                                <Pencil size={11} />
+                              </button>
+                            </div>
+                          )}
                           {p.receipt_date && (
                             <span className="text-xs text-muted-foreground">
                               {formatDateTime(p.receipt_date)}
@@ -868,7 +1210,7 @@ export function ConversationDetailPage() {
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => navigate("/conversations")}
+            onClick={() => navigate(-1)}
             className="shrink-0"
             aria-label="Volver"
           >

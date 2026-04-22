@@ -38,10 +38,10 @@ export async function handleFlow(_type: string, phone: string, text: string, sta
 
   const ai = await askAssistantForOrg(text, orgConfig, systemPrompt);
 
-  // AI is disabled for this org - transition to post_venta without responding
+  // AI is disabled for this org — keep current stage, no response sent
   if (ai === null) {
     log.info({ phone, organizationId: state.organizationId }, "handleFlow: AI disabled for org, skipping response");
-    return { ...state, stage: "post_venta", flowName: state.flowName ?? null };
+    return { ...state, flowName: state.flowName ?? null };
   }
 
   if (!ai.reply) {

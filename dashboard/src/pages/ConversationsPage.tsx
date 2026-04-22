@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   X,
@@ -14,10 +13,13 @@ import {
   ImageIcon,
   Video,
   FileText,
+  MailOpen,
+  BellDot,
 } from "lucide-react";
 import {
   useConversationFiltersQuery,
   useConversationsQuery,
+  useMarkConversationReadMutation,
 } from "../lib/hooks";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -85,13 +87,10 @@ function timeAgo(iso?: string | null) {
 }
 
 const STAGE_OPTIONS = [
-  { value: "flow_started", label: "En flujo" },
+  { value: "en_flujo", label: "En flujo" },
   { value: "flujo_terminado", label: "Flujo terminado" },
-  { value: "interesado", label: "Interesado" },
-  { value: "esperando_comprobante", label: "Esperando comprobante" },
-  { value: "confirmar_comprobante", label: "Revisión manual" },
   { value: "pago_confirmado", label: "Pago confirmado" },
-  { value: "post_venta", label: "Post venta" },
+  { value: "revision_manual", label: "Revisión manual" },
 ];
 
 // ── ConversationRow ───────────────────────────────────────────────────────
@@ -99,9 +98,11 @@ const STAGE_OPTIONS = [
 function ConversationRow({
   conv,
   onClick,
+  onMarkRead,
 }: {
   conv: Conversation;
   onClick: () => void;
+  onMarkRead: (e: React.MouseEvent) => void;
 }) {
   const unread = conv.unread_count ?? 0;
   const lastText = conv.last_message_text ?? null;
@@ -206,6 +207,18 @@ function ConversationRow({
           )}
         </div>
       </div>
+
+      {/* Mark as read button — only visible on hover when there are unread messages */}
+      {unread > 0 && (
+        <button
+          type="button"
+          aria-label="Marcar como leído"
+          onClick={onMarkRead}
+          className="ml-1 shrink-0 rounded-lg p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100"
+        >
+          <MailOpen size={15} />
+        </button>
+      )}
     </button>
   );
 }
@@ -214,14 +227,61 @@ function ConversationRow({
 
 export function ConversationsPage() {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [stateFilter, setStateFilter] = useState("all");
-  const [flowFilter, setFlowFilter] = useState("all");
-  const [adFilter, setAdFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Read all filter state from URL params
+  const search = searchParams.get("q") ?? "";
+  const stateFilter = searchParams.get("state") ?? "all";
+  const flowFilter = searchParams.get("flow") ?? "all";
+  const adFilter = searchParams.get("ad") ?? "all";
+  const hasUnread = searchParams.get("unread") === "1";
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const sortDir = (searchParams.get("sort") ?? "desc") as "asc" | "desc";
+
   const pageSize = 15;
 
+  function setParam(key: string, value: string, resetPage = true) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value && value !== "all" && value !== "desc") {
+          next.set(key, value);
+        } else {
+          next.delete(key);
+        }
+        if (resetPage) next.delete("page");
+        return next;
+      },
+      { replace: true }
+    );
+  }
+
+  function toggleUnread() {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (next.get("unread") === "1") next.delete("unread");
+        else next.set("unread", "1");
+        next.delete("page");
+        return next;
+      },
+      { replace: true }
+    );
+  }
+
+  function setPage(p: number) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (p > 1) next.set("page", String(p));
+        else next.delete("page");
+        return next;
+      },
+      { replace: true }
+    );
+  }
+
+  const markRead = useMarkConversationReadMutation();
   const { data: filters } = useConversationFiltersQuery();
 
   const { data, isLoading, isFetching, refetch } = useConversationsQuery({
@@ -232,6 +292,7 @@ export function ConversationsPage() {
     flowId: flowFilter !== "all" ? flowFilter : undefined,
     adSourceId: adFilter !== "all" && adFilter !== "any" ? adFilter : undefined,
     fromAd: adFilter === "any" ? true : undefined,
+    hasUnread: hasUnread || undefined,
     sortBy: "updated_at",
     sortDir,
   });
@@ -240,19 +301,14 @@ export function ConversationsPage() {
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
-  const clearFilters = () => {
-    setSearch("");
-    setStateFilter("all");
-    setFlowFilter("all");
-    setAdFilter("all");
-    setPage(1);
-  };
+  const clearFilters = () => setSearchParams({}, { replace: true });
 
   const hasFilters =
     search ||
     stateFilter !== "all" ||
     flowFilter !== "all" ||
-    adFilter !== "all";
+    adFilter !== "all" ||
+    hasUnread;
 
   const hasFlowOptions = (filters?.flows?.length ?? 0) > 0;
   const hasAdOptions = (filters?.ads?.length ?? 0) > 0;
@@ -271,6 +327,15 @@ export function ConversationsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            variant={hasUnread ? "default" : "outline"}
+            size="sm"
+            onClick={toggleUnread}
+            className="gap-1.5"
+          >
+            <BellDot size={14} />
+            No leídos
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={() => void refetch()}
@@ -284,8 +349,7 @@ export function ConversationsPage() {
             value={`updated_at:${sortDir}`}
             onValueChange={(v) => {
               const [, dir] = v.split(":");
-              setSortDir(dir as "asc" | "desc");
-              setPage(1);
+              setParam("sort", dir === "asc" ? "asc" : "");
             }}
           >
             <SelectTrigger className="w-44 h-9 text-sm">
@@ -334,19 +398,13 @@ export function ConversationsPage() {
                 id="conv-search"
                 placeholder="Teléfono o nombre…"
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setParam("q", e.target.value)}
                 className="pl-7 h-9 text-sm"
               />
               {search && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setPage(1);
-                  }}
+                  onClick={() => setParam("q", "")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X size={13} />
@@ -365,10 +423,7 @@ export function ConversationsPage() {
             </label>
             <Select
               value={stateFilter}
-              onValueChange={(v) => {
-                setStateFilter(v);
-                setPage(1);
-              }}
+              onValueChange={(v) => setParam("state", v)}
             >
               <SelectTrigger
                 id="conv-state"
@@ -398,10 +453,7 @@ export function ConversationsPage() {
             </label>
             <Select
               value={flowFilter}
-              onValueChange={(v) => {
-                setFlowFilter(v);
-                setPage(1);
-              }}
+              onValueChange={(v) => setParam("flow", v)}
               disabled={!hasFlowOptions}
             >
               <SelectTrigger
@@ -432,10 +484,7 @@ export function ConversationsPage() {
             </label>
             <Select
               value={adFilter}
-              onValueChange={(v) => {
-                setAdFilter(v);
-                setPage(1);
-              }}
+              onValueChange={(v) => setParam("ad", v)}
               disabled={!hasAdOptions}
             >
               <SelectTrigger
@@ -510,6 +559,10 @@ export function ConversationsPage() {
               key={conv.id}
               conv={conv}
               onClick={() => navigate(`/conversations/${conv.id}`)}
+              onMarkRead={(e) => {
+                e.stopPropagation();
+                markRead.mutate(conv.id);
+              }}
             />
           ))}
         </div>
@@ -527,7 +580,7 @@ export function ConversationsPage() {
               variant="outline"
               size="sm"
               disabled={page <= 1 || isLoading}
-              onClick={() => setPage((p) => p - 1)}
+              onClick={() => setPage(page - 1)}
               className="gap-1"
             >
               <ChevronLeft size={14} />
@@ -537,7 +590,7 @@ export function ConversationsPage() {
               variant="outline"
               size="sm"
               disabled={page >= pageCount || isLoading}
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => setPage(page + 1)}
               className="gap-1"
             >
               Siguiente

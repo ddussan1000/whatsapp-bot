@@ -57,13 +57,17 @@ import {
 // ── Stage label normalization ─────────────────────────────────────────────
 
 const STAGE_LABELS: Record<string, string> = {
-  flow_started: "En flujo",
+  // current stages
+  en_flujo: "En flujo",
   flujo_terminado: "Flujo terminado",
+  pago_confirmado: "Pago confirmado",
+  revision_manual: "Revisión manual",
+  // legacy stages kept for old data
+  flow_started: "En flujo",
+  confirmar_comprobante: "En revisión",
   interesado: "Interesado",
   listo_pagar: "Listo para pagar",
   necesita_agente: "Necesita agente",
-  confirmar_comprobante: "En revisión",
-  pago_confirmado: "Pago confirmado",
   post_venta: "Post venta",
 };
 

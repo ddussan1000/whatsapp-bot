@@ -173,19 +173,14 @@ export async function handleWebhook(c: Context) {
 
     const state = await getState(phone, metaPhoneNumberId || null);
 
-    // Fall back to DB stage if Redis cache expired
-    if (!state.stage && previous?.stage) {
+    // Fall back to DB stage if Redis cache expired.
+    // Also catches the case where Redis returned the default "nuevo" for an existing conversation.
+    if ((!state.stage || state.stage === "nuevo") && previous?.stage && previous.stage !== "nuevo") {
       state.stage = previous.stage as string;
     }
 
-    // Transition to post_venta when client writes after a terminal stage
-    // (successful payment or manual review after receipt error)
-    if (
-      state.stage === "pago_confirmado" ||
-      state.stage === "confirmar_comprobante"
-    ) {
-      state.stage = "post_venta";
-    }
+    // Track if the user already has a confirmed payment, so a second receipt goes to manual review
+    const alreadyPaid = state.stage === "pago_confirmado";
 
     const referral = extractReferral(msg);
     const ctwaClid = referral?.ctwa_clid ?? null;
@@ -321,17 +316,18 @@ export async function handleWebhook(c: Context) {
         nextState,
         instance?.meta_token ?? null,
         instance?.currency ?? "COP",
+        alreadyPaid,
       );
       if (imgResult.handled) {
         nextState = imgResult.state;
       }
-      // If not handled (not a receipt), do nothing -- image was not a receipt, flow continues silently
+      // If not handled (not a receipt), image was saved but flow continues silently
     } else if (shouldStartFlow) {
       const fullFlow = await getFullFlow(runtimeFlow.id, organizationId);
       const hasSteps = Boolean(fullFlow?.steps?.length);
       if (hasSteps) {
         await startAssignedFlow(phone, nextState);
-        nextState = { ...nextState, stage: "flow_started" };
+        nextState = { ...nextState, stage: "en_flujo" };
       } else {
         if (msg.type === "text" && text) {
           nextState = await handleFlow(type, phone, text, nextState);

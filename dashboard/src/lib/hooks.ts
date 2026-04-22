@@ -67,6 +67,7 @@ export function useConversationsQuery(params?: {
   fromAd?: boolean;
   adSourceId?: string;
   flowId?: string;
+  hasUnread?: boolean;
   page?: number;
   pageSize?: number;
   sortBy?: string;
@@ -183,6 +184,30 @@ export function useUpdatePaymentStateMutation() {
     mutationFn: ({ id, state }: { id: string; state: string }) =>
       api.updatePaymentState(id, state),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["payments"] }),
+  });
+}
+
+export function useUpdatePaymentAmountMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      amount,
+      currency,
+    }: {
+      id: string;
+      amount: number;
+      currency?: string;
+    }) => api.updatePaymentAmount(id, amount, currency),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["payments"] }),
+  });
+}
+
+export function useMarkConversationReadMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.markConversationRead(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["conversations"] }),
   });
 }
 

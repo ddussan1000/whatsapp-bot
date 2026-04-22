@@ -275,7 +275,7 @@ export async function processScheduledMessages(): Promise<void> {
           .from("conversations")
           .update({ stage: "flujo_terminado" })
           .eq("id", row.conversation_id)
-          .eq("stage", "flow_started");
+          .in("stage", ["en_flujo", "flow_started"]);
       }
     } catch (err) {
       log.error({ err, rowId: row.id }, "processScheduledMessages: send error");

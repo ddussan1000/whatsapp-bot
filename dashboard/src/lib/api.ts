@@ -215,6 +215,7 @@ export const api = {
     fromAd?: boolean;
     adSourceId?: string;
     flowId?: string;
+    hasUnread?: boolean;
     page?: number;
     pageSize?: number;
     sortBy?: string;
@@ -226,6 +227,7 @@ export const api = {
     if (params?.fromAd) q.set("fromAd", "true");
     if (params?.adSourceId) q.set("adSourceId", params.adSourceId);
     if (params?.flowId) q.set("flowId", params.flowId);
+    if (params?.hasUnread) q.set("hasUnread", "true");
     if (params?.page) q.set("page", String(params.page));
     if (params?.pageSize) q.set("pageSize", String(params.pageSize));
     if (params?.sortBy) q.set("sortBy", params.sortBy);
@@ -345,6 +347,27 @@ export const api = {
         method: "PUT",
         headers,
         body: JSON.stringify({ state }),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
+  updatePaymentAmount: (id: string, amount: number, currency?: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/payments/${id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ amount, ...(currency ? { currency } : {}) }),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
+  markConversationRead: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/conversations/${id}/read`, {
+        method: "POST",
+        headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
         return r.json() as Promise<{ ok: boolean }>;

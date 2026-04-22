@@ -80,8 +80,12 @@ function msgCtx(state: ConversationState) {
 
 /**
  * Classify image and handle if it's a receipt.
+ * Always persists the image to storage regardless of OCR result.
  * Returns { handled: true, state } if the image was a receipt (processed or retry).
  * Returns { handled: false } if the image is NOT a receipt -> caller should continue with normal flow.
+ *
+ * alreadyPaid: true when the conversation already has a confirmed payment — any new
+ * valid receipt is stored as pending_manual_review instead of creating a second payment.
  */
 export async function classifyAndHandleImage(
   msg: WhatsAppMessage,
@@ -89,6 +93,7 @@ export async function classifyAndHandleImage(
   state: ConversationState,
   metaToken?: string | null,
   currency = "COP",
+  alreadyPaid = false,
 ): Promise<{ handled: boolean; state: ConversationState }> {
   if (!state.organizationId) return { handled: false, state };
   if (msg.type !== "image" || !msg.image?.id) return { handled: false, state };
@@ -113,6 +118,29 @@ export async function classifyAndHandleImage(
     return { handled: false, state };
   }
 
+  // Always persist the image, regardless of whether it's a receipt
+  const metaMessageId = (msg as unknown as { id?: string }).id ?? null;
+  let receiptUrl = "";
+  let receiptPublicUrl: string | null = null;
+  try {
+    const saved = await saveReceipt(buffer, phone, state.organizationId);
+    receiptUrl = saved.storageUri;
+    receiptPublicUrl = saved.publicUrl;
+    if (receiptPublicUrl && metaMessageId) {
+      updateMessageMediaUrl(metaMessageId, receiptPublicUrl).catch(() => {});
+    }
+  } catch (err) {
+    log.warn({ err, phone }, "classifyAndHandleImage: storage save failed, continuing without URL");
+  }
+
+  const cancelPending = () =>
+    supabase
+      ?.from("scheduled_flow_messages")
+      .update({ status: "cancelled" })
+      .eq("organization_id", state.organizationId!)
+      .eq("phone", phone)
+      .eq("status", "pending");
+
   let ocrResult: Awaited<ReturnType<typeof runOcrWithFallback>>;
   try {
     ocrResult = await runOcrWithFallback(buffer, currency);
@@ -127,22 +155,17 @@ export async function classifyAndHandleImage(
   } catch (err) {
     log.warn(
       { err, phone },
-      "classifyAndHandleImage: OCR timeout/error → confirmar_comprobante",
+      "classifyAndHandleImage: OCR timeout/error → revision_manual",
     );
     const { rejectedMessage } = await getReceiptMessages(
       state.organizationId,
       state.flowId,
     );
-    await supabase
-      ?.from("scheduled_flow_messages")
-      .update({ status: "cancelled" })
-      .eq("organization_id", state.organizationId)
-      .eq("phone", phone)
-      .eq("status", "pending");
+    await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
     return {
       handled: true,
-      state: { ...state, stage: "confirmar_comprobante" },
+      state: { ...state, stage: "revision_manual" },
     };
   }
 
@@ -170,40 +193,27 @@ export async function classifyAndHandleImage(
     "classifyAndHandleImage: fields extracted",
   );
 
-  const { storageUri: receiptUrl, publicUrl: receiptPublicUrl } = await saveReceipt(buffer, phone, state.organizationId);
-  const metaMessageId = (msg as unknown as { id?: string }).id ?? null;
-  if (receiptPublicUrl && metaMessageId) {
-    updateMessageMediaUrl(metaMessageId, receiptPublicUrl).catch(() => {});
-  }
   const { rejectedMessage, confirmedMessage } =
     await getReceiptMessages(state.organizationId, state.flowId);
-
-  const cancelPending = () =>
-    supabase
-      ?.from("scheduled_flow_messages")
-      .update({ status: "cancelled" })
-      .eq("organization_id", state.organizationId!)
-      .eq("phone", phone)
-      .eq("status", "pending");
 
   if (!amount) {
     log.warn(
       { phone, event: "receipt.illegible" },
-      "classifyAndHandleImage: amount not detected → confirmar_comprobante",
+      "classifyAndHandleImage: amount not detected → revision_manual",
     );
     await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: "confirmar_comprobante" } };
+    return { handled: true, state: { ...state, stage: "revision_manual" } };
   }
 
   if (receiptDate && !isWithin24Hours) {
     log.warn(
       { phone, event: "receipt.rejected", receiptDate: receiptDate.toISOString() },
-      "classifyAndHandleImage: receipt older than 24h → confirmar_comprobante",
+      "classifyAndHandleImage: receipt older than 24h → revision_manual",
     );
     await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: "confirmar_comprobante" } };
+    return { handled: true, state: { ...state, stage: "revision_manual" } };
   }
 
   if (!receiptDate && amount) {
@@ -227,7 +237,34 @@ export async function classifyAndHandleImage(
     });
     await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: "confirmar_comprobante" } };
+    return { handled: true, state: { ...state, stage: "revision_manual" } };
+  }
+
+  // Valid receipt (amount + date within 24h).
+  // If the conversation already has a confirmed payment, treat as manual review
+  // to avoid registering duplicate payments.
+  if (alreadyPaid) {
+    log.info(
+      { phone, event: "receipt.duplicate", amount },
+      "classifyAndHandleImage: second receipt on confirmed payment → pending_manual_review",
+    );
+    await insertPayment({
+      organizationId: state.organizationId,
+      phone,
+      product: state.flowName ?? null,
+      flow_id: state.flowId ?? null,
+      whatsapp_instance_id: state.whatsappInstanceId ?? null,
+      amount,
+      currency: ocrResult.currency ?? currency,
+      receipt_url: receiptUrl,
+      receipt_date: receiptDate ? receiptDate.toISOString() : null,
+      conversation_id: state.id ?? null,
+      state: "pending_manual_review",
+      meta_message_id: metaMessageId,
+    });
+    await cancelPending();
+    await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
+    return { handled: true, state: { ...state, stage: "revision_manual" } };
   }
 
   log.info(
