@@ -3382,28 +3382,29 @@ dashboardApi.openapi(
     if (!supabase) return c.json({ flows: [], ads: [] }, 200);
     const organization = orgId(c);
 
-    // Distinct flows that have at least one conversation
-    const { data: flowRows } = await supabase
+    // Distinct flow IDs from conversations → look up current names from flows table
+    // (avoids stale flow_name on conversations created before the sync trigger)
+    const { data: convFlowRows } = await supabase
       .from("conversations")
-      .select("flow_id, flow_name")
+      .select("flow_id")
       .eq("organization_id", organization)
       .not("flow_id", "is", null);
 
-    const seenFlows = new Map<string, string>();
-    for (const r of flowRows ?? []) {
-      if (r.flow_id && !seenFlows.has(r.flow_id)) {
-        seenFlows.set(
-          r.flow_id as string,
-          (r.flow_name as string) ?? (r.flow_id as string),
-        );
-      }
-    }
-    const flows = Array.from(seenFlows.entries()).map(([id, name]) => ({
-      id,
-      name,
-    }));
+    const flowIds = [
+      ...new Set((convFlowRows ?? []).map((r) => r.flow_id).filter(Boolean)),
+    ] as string[];
 
-    // Distinct ads that have click logs
+    let flows: { id: string; name: string }[] = [];
+    if (flowIds.length > 0) {
+      const { data: flowRows } = await supabase
+        .from("flows")
+        .select("id, name")
+        .in("id", flowIds);
+      flows = (flowRows ?? []).map((r) => ({ id: r.id, name: r.name }));
+    }
+
+    // Distinct ads that have click logs — prefer non-null ad_name when a
+    // source_id appears multiple times (first record may predate enrichment)
     const { data: adRows } = await supabase
       .from("ad_click_logs")
       .select("source_id, ad_name, campaign_name")
@@ -3415,7 +3416,9 @@ dashboardApi.openapi(
       { ad_name: string | null; campaign_name: string | null }
     >();
     for (const r of adRows ?? []) {
-      if (r.source_id && !seenAds.has(r.source_id as string)) {
+      if (!r.source_id) continue;
+      const existing = seenAds.get(r.source_id as string);
+      if (!existing || (existing.ad_name === null && r.ad_name != null)) {
         seenAds.set(r.source_id as string, {
           ad_name: r.ad_name as string | null,
           campaign_name: r.campaign_name as string | null,
