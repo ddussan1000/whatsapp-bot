@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -232,6 +233,31 @@ export function ConversationsPage() {
   // Read all filter state from URL params
   const search = searchParams.get("q") ?? "";
   const stateFilter = searchParams.get("state") ?? "all";
+
+  // Local input state — decoupled from URL so debounce works
+  const [searchInput, setSearchInput] = useState(search);
+
+  // Sync input back when URL param is cleared externally (e.g. "Limpiar" button)
+  useEffect(() => {
+    setSearchInput(search);
+  }, [search]);
+
+  // Push to URL only after 350ms of inactivity
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (searchInput) next.set("q", searchInput);
+          else next.delete("q");
+          next.delete("page");
+          return next;
+        },
+        { replace: true },
+      );
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput, setSearchParams]);
   const flowFilter = searchParams.get("flow") ?? "all";
   const adFilter = searchParams.get("ad") ?? "all";
   const hasUnread = searchParams.get("unread") === "1";
@@ -397,14 +423,14 @@ export function ConversationsPage() {
               <Input
                 id="conv-search"
                 placeholder="Teléfono o nombre…"
-                value={search}
-                onChange={(e) => setParam("q", e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-7 h-9 text-sm"
               />
-              {search && (
+              {searchInput && (
                 <button
                   type="button"
-                  onClick={() => setParam("q", "")}
+                  onClick={() => setSearchInput("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X size={13} />

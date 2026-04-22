@@ -419,26 +419,31 @@ function ChatBubble({ m }: { m: ChatMessage }) {
 
   if (content.kind === "sticker") {
     return (
-      <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
+      <BubbleShell isOut={isOut} noPadding={Boolean(content.href && !imgError)}>
         {content.href && !imgError ? (
-          <img
-            src={content.href}
-            alt="Sticker"
-            className="h-24 w-24 object-contain"
-            onError={() => setImgError(true)}
-          />
+          <>
+            <img
+              src={content.href}
+              alt="Sticker"
+              className="h-24 w-24 object-contain"
+              onError={() => setImgError(true)}
+            />
+            <div className="px-3.5 pb-2.5 pt-1">
+              <BubbleTimestamp m={m} isOut={isOut} />
+            </div>
+          </>
         ) : (
-          <BubbleShell isOut={isOut}>
+          <>
             <div
               className={`flex items-center gap-1.5 text-xs ${isOut ? "text-primary-foreground/70" : "text-muted-foreground"}`}
             >
-              <Sparkles size={13} className="shrink-0" />
+              <Sparkles size={13} className="shrink-0" aria-hidden="true" />
               <span>Sticker</span>
             </div>
             <BubbleTimestamp m={m} isOut={isOut} />
-          </BubbleShell>
+          </>
         )}
-      </div>
+      </BubbleShell>
     );
   }
 
