@@ -592,12 +592,17 @@ dashboardApi.openapi(
       ? new Date(from)
       : new Date(Date.now() - 30 * 24 * 3600 * 1000);
     const toDate = to ? new Date(to) : new Date();
+    const fromTs = fromDate.getTime();
+
+    // Attribution window: look back 30 days before the selected period so that
+    // a click on day N-5 correctly attributes a payment on day N.
+    const attributionFrom = new Date(fromDate.getTime() - 30 * 24 * 3600 * 1000);
 
     let clickQuery = supabase
       .from("ad_click_logs")
       .select("source_id, headline, ad_name, phone, flow_id, created_at")
       .eq("organization_id", organizationId)
-      .gte("created_at", fromDate.toISOString())
+      .gte("created_at", attributionFrom.toISOString())
       .lte("created_at", toDate.toISOString());
 
     const flowIds = splitCsv(flowId);
@@ -608,6 +613,7 @@ dashboardApi.openapi(
     const { data: clicks, error: clickErr } = await clickQuery;
     if (clickErr) return c.json({ error: clickErr.message }, 500);
 
+    // All phones that clicked within the attribution window (used for payment lookup)
     const adPhones = new Set((clicks ?? []).map((c) => c.phone));
     const phoneList = [...adPhones];
 
@@ -634,7 +640,10 @@ dashboardApi.openapi(
     type AdGroup = {
       sourceId: string | null;
       headline: string | null;
-      phones: Set<string>;
+      // phones that clicked in the selected period (for uniqueLeads metric)
+      periodPhones: Set<string>;
+      // phones that clicked in the full attribution window (for conversion matching)
+      attributionPhones: Set<string>;
       clicks: number;
     };
 
@@ -646,13 +655,18 @@ dashboardApi.openapi(
         group = {
           sourceId: click.source_id,
           headline: (click.ad_name as string | null) ?? click.headline,
-          phones: new Set(),
+          periodPhones: new Set(),
+          attributionPhones: new Set(),
           clicks: 0,
         };
         byAd.set(key, group);
       }
-      group.clicks++;
-      group.phones.add(click.phone);
+      group.attributionPhones.add(click.phone);
+      // Only count clicks and leads that fall within the selected period
+      if (new Date(click.created_at as string).getTime() >= fromTs) {
+        group.clicks++;
+        group.periodPhones.add(click.phone);
+      }
     }
 
     const payByPhone = new Map<string, { count: number; revenue: number }>();
@@ -679,16 +693,22 @@ dashboardApi.openapi(
     let totalRevenue = 0;
 
     for (const group of byAd.values()) {
+      // Skip groups with no activity in the selected period and no conversions
+      if (group.clicks === 0 && group.periodPhones.size === 0) {
+        const hasConversion = [...group.attributionPhones].some(p => payByPhone.has(p));
+        if (!hasConversion) continue;
+      }
       let conversions = 0;
       let revenue = 0;
-      for (const phone of group.phones) {
+      // Match payments using the full attribution window phones
+      for (const phone of group.attributionPhones) {
         const pData = payByPhone.get(phone);
         if (pData) {
           conversions += pData.count;
           revenue += pData.revenue;
         }
       }
-      const uniqueLeads = group.phones.size;
+      const uniqueLeads = group.periodPhones.size;
       items.push({
         sourceId: group.sourceId,
         headline: group.headline,
