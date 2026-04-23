@@ -28,6 +28,26 @@ import { invalidateInstanceCache } from "../db/instances";
 import { fetchDailyAdSpend, MetaAdsError } from "../meta/adsInsights";
 import { getExternalAccounts, sendSheetEntry, ExternalReportingError } from "../external/reportingClient";
 
+// Converts a Meta daily date (YYYY-MM-DD) to the same bucket format the SQL RPC uses.
+// Postgres: day → YYYY-MM-DD | week → IYYY-"W"IW | month → YYYY-MM
+function metaDateToBucket(dateStr: string, gran: string): string {
+  if (gran === "month") return dateStr.slice(0, 7);
+  if (gran === "week") {
+    const d = new Date(dateStr + "T12:00:00Z");
+    const dow = d.getUTCDay() || 7; // Mon=1 … Sun=7
+    const thursday = new Date(d);
+    thursday.setUTCDate(d.getUTCDate() + (4 - dow));
+    const year = thursday.getUTCFullYear();
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const jan4dow = jan4.getUTCDay() || 7;
+    const week1Mon = new Date(jan4);
+    week1Mon.setUTCDate(jan4.getUTCDate() - (jan4dow - 1));
+    const weekNum = Math.round((thursday.getTime() - week1Mon.getTime()) / (7 * 86400000)) + 1;
+    return `${year}-W${String(weekNum).padStart(2, "0")}`;
+  }
+  return dateStr; // day
+}
+
 function todayStartIso(timezone = "America/Bogota") {
   // Get today's local date string in the given timezone, then find the UTC equivalent
   // of midnight there. Works with half-hour offsets (e.g. India UTC+5:30) too.
@@ -536,7 +556,7 @@ dashboardApi.openapi(
       if (adsInstances && adsInstances.length > 0) {
         const fromStr = fromDate.toISOString().slice(0, 10);
         const toStr = toDate.toISOString().slice(0, 10);
-        const spendByDate = new Map<string, number>();
+        const spendByDay = new Map<string, number>();
 
         await Promise.all(
           adsInstances.map(async (inst) => {
@@ -545,19 +565,26 @@ dashboardApi.openapi(
             if (!token) return;
             const rows = await fetchDailyAdSpend(token, inst.meta_ads_account_id, fromStr, toStr);
             for (const row of rows) {
-              spendByDate.set(row.date, (spendByDate.get(row.date) ?? 0) + row.spend);
+              spendByDay.set(row.date, (spendByDay.get(row.date) ?? 0) + row.spend);
             }
           }),
         );
 
-        const adSpendTotal = [...spendByDate.values()].reduce((a, b) => a + b, 0);
-        const roas = adSpendTotal > 0 ? reports.kpis.revenueTotal / adSpendTotal : null;
-        reports.kpis = { ...reports.kpis, adSpendTotal, roas };
+        if (spendByDay.size > 0) {
+          // Aggregate daily Meta spend into the same bucket format as the SQL timeseries
+          const spendByBucket = new Map<string, number>();
+          for (const [date, spend] of spendByDay) {
+            const bucket = metaDateToBucket(date, granularity);
+            spendByBucket.set(bucket, (spendByBucket.get(bucket) ?? 0) + spend);
+          }
 
-        if (spendByDate.size > 0) {
+          const adSpendTotal = [...spendByDay.values()].reduce((a, b) => a + b, 0);
+          const roas = adSpendTotal > 0 ? reports.kpis.revenueTotal / adSpendTotal : null;
+          reports.kpis = { ...reports.kpis, adSpendTotal, roas };
+
           reports.timeseries = reports.timeseries.map((point: { bucket: string; revenue: number; sales: number; conversations: number }) => ({
             ...point,
-            adSpend: spendByDate.get(point.bucket) ?? 0,
+            adSpend: spendByBucket.get(point.bucket) ?? 0,
           }));
         }
       }
