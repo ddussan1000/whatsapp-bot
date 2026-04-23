@@ -12,10 +12,12 @@ import type {
   WhatsAppReferral,
 } from "../types";
 import { classifyAndHandleImage } from "../receipts/handler";
+import { downloadFromMetaWithType } from "../receipts/downloader";
+import { saveInboundMedia } from "../receipts/storage";
 import { upsertConversation } from "../db/conversations";
 import { log } from "../logger";
 import { alertAdmin } from "../alerts/telegram";
-import { insertMessageLog, updateMessageDeliveryStatus } from "../db/messages";
+import { insertMessageLog, updateMessageDeliveryStatus, updateMessageMediaUrl } from "../db/messages";
 import {
   findFlowByCtwaClid,
   getFlowById,
@@ -88,6 +90,47 @@ async function logAdClick(
     }
   } catch (err) {
     log.warn({ err }, "logAdClick: failed to insert ad_click_log");
+  }
+}
+
+function extFromMime(mimeType: string): string {
+  const base = (mimeType.split(";")[0] ?? mimeType).trim().toLowerCase();
+  const map: Record<string, string> = {
+    "audio/ogg": "ogg",
+    "audio/mpeg": "mp3",
+    "audio/mp4": "m4a",
+    "audio/aac": "aac",
+    "audio/amr": "amr",
+  };
+  return map[base] ?? "ogg";
+}
+
+async function persistInboundAudio(
+  msg: WhatsAppMessage,
+  phone: string,
+  organizationId: string,
+  metaToken: string | null,
+  metaMessageId: string | null,
+) {
+  const m = msg as unknown as { audio?: { id?: string; mime_type?: string } };
+  const mediaId = m.audio?.id;
+  if (!mediaId || !metaToken) return;
+  try {
+    const { buffer, mimeType } = await downloadFromMetaWithType(mediaId, metaToken);
+    const ext = extFromMime(mimeType);
+    const saved = await saveInboundMedia({
+      buffer,
+      phone,
+      organizationId,
+      mediaType: "audio",
+      contentType: (mimeType.split(";")[0] ?? mimeType).trim(),
+      ext,
+    });
+    if (saved.publicUrl && metaMessageId) {
+      updateMessageMediaUrl(metaMessageId, saved.publicUrl).catch(() => {});
+    }
+  } catch (err) {
+    log.warn({ err, phone, mediaId }, "persistInboundAudio: falló, sin R2 URL");
   }
 }
 
@@ -323,6 +366,15 @@ export async function handleWebhook(c: Context) {
         nextState = imgResult.state;
       }
       // If not handled (not a receipt), image was saved but flow continues silently
+    } else if ((msg as unknown as { type: string }).type === "audio") {
+      persistInboundAudio(msg, phone, organizationId, instance?.meta_token ?? null, metaMsgId ?? null).catch(() => {});
+      if (shouldStartFlow) {
+        const fullFlow = await getFullFlow(runtimeFlow.id, organizationId);
+        if (fullFlow?.steps?.length) {
+          await startAssignedFlow(phone, nextState);
+          nextState = { ...nextState, stage: "en_flujo" };
+        }
+      }
     } else if (shouldStartFlow) {
       const fullFlow = await getFullFlow(runtimeFlow.id, organizationId);
       const hasSteps = Boolean(fullFlow?.steps?.length);

@@ -63,6 +63,22 @@ export async function uploadOrgMediaR2(params: {
   return uploadToR2({ key, buffer: params.buffer, contentType: params.contentType });
 }
 
+export async function uploadInboundMediaR2(params: {
+  organizationId: string;
+  phone: string;
+  mediaType: string;
+  buffer: Buffer;
+  contentType: string;
+  ext: string;
+}): Promise<{ key: string; publicUrl: string }> {
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+  // Prefix `inbound/` al inicio para que la lifecycle rule de R2 aplique por prefijo
+  const key = `inbound/${params.mediaType}/${params.organizationId}/${yyyy}/${mm}/${params.phone}_${Date.now()}.${params.ext}`;
+  return uploadToR2({ key, buffer: params.buffer, contentType: params.contentType });
+}
+
 export async function uploadReceiptAssetR2(params: {
   organizationId: string;
   bucket: string;
@@ -73,7 +89,8 @@ export async function uploadReceiptAssetR2(params: {
   const now = new Date();
   const yyyy = now.getUTCFullYear();
   const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const key = `${params.organizationId}/receipts/${yyyy}/${mm}/${params.phone}_${Date.now()}.jpg`;
+  // Prefix `receipts/` al inicio para que la lifecycle rule de R2 aplique por prefijo
+  const key = `receipts/${params.organizationId}/${yyyy}/${mm}/${params.phone}_${Date.now()}.jpg`;
   return uploadToR2({ key, buffer: params.buffer, contentType: params.contentType ?? "image/jpeg" });
 }
 

@@ -65,6 +65,27 @@ export async function uploadOrgMedia(params: {
   });
 }
 
+export async function uploadInboundMediaAsset(params: {
+  organizationId: string;
+  bucket: string;
+  phone: string;
+  mediaType: string;
+  buffer: Buffer;
+  contentType: string;
+  ext: string;
+}) {
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const path = `inbound/${params.mediaType}/${params.organizationId}/${yyyy}/${mm}/${params.phone}_${Date.now()}.${params.ext}`;
+  return uploadToSupabaseStorage({
+    bucket: params.bucket,
+    path,
+    buffer: params.buffer,
+    contentType: params.contentType,
+  });
+}
+
 export async function uploadReceiptAsset(params: {
   organizationId: string;
   bucket: string;
