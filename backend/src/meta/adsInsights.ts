@@ -36,6 +36,7 @@ export async function fetchDailyAdSpend(
   from: string,
   to: string,
 ): Promise<DailySpend[]> {
+  const normalizedId = accountId.startsWith("act_") ? accountId : `act_${accountId}`;
   const params = new URLSearchParams({
     fields: "spend,account_currency",
     time_increment: "1",
@@ -44,7 +45,7 @@ export async function fetchDailyAdSpend(
     limit: "500",
   });
 
-  const url = `${GRAPH_BASE}/${accountId}/insights?${params}`;
+  const url = `${GRAPH_BASE}/${normalizedId}/insights?${params}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
   const body = (await res.json()) as InsightsResponse;
 
@@ -52,6 +53,12 @@ export async function fetchDailyAdSpend(
     const { code, error_subcode, message } = body.error;
     if (code === 4 || (code === 100 && error_subcode === 1487534)) {
       throw new MetaAdsError(`Rate limit alcanzado. Intenta más tarde.`, code, error_subcode);
+    }
+    if (code === 100) {
+      throw new MetaAdsError(
+        `ID de cuenta publicitaria inválido. Verifica que sea el ID numérico de tu cuenta de anuncios (ej: 1234567890).`,
+        code,
+      );
     }
     if (code === 190) {
       throw new MetaAdsError(`Token inválido o expirado. Verifica el token de la instancia.`, code);

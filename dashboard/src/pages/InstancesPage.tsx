@@ -638,7 +638,7 @@ function EditDialog({
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={!instance.meta_ads_account_id || validateMetaAds.isPending}
+                  disabled={!(instance.meta_ads_account_id || saveMetaAds.isSuccess) || validateMetaAds.isPending}
                   loading={validateMetaAds.isPending}
                   loadingText="Verificando…"
                   onClick={() =>
