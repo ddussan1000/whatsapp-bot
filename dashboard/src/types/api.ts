@@ -141,6 +141,8 @@ export type WhatsAppInstance = {
   is_active: boolean;
   currency: string;
   high_amount_threshold?: number | null;
+  meta_ads_account_id?: string | null;
+  external_reporting_configured?: boolean;
   updated_at?: string | null;
 };
 export type InstanceHealth = {

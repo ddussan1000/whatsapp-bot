@@ -25,6 +25,8 @@ import { encrypt, safeDecrypt } from "../crypto/encrypt";
 import { validateAiProvider } from "../ai/assistant";
 import { log } from "../logger";
 import { invalidateInstanceCache } from "../db/instances";
+import { fetchDailyAdSpend, MetaAdsError } from "../meta/adsInsights";
+import { getExternalAccounts, sendSheetEntry, ExternalReportingError } from "../external/reportingClient";
 
 function todayStartIso(timezone = "America/Bogota") {
   // Get today's local date string in the given timezone, then find the UTC equivalent
@@ -85,12 +87,15 @@ const ReportsKpiSchema = z.object({
   avgTicket: z.number(),
   conversationsCount: z.number(),
   conversionRate: z.number(),
+  adSpendTotal: z.number().nullable().optional(),
+  roas: z.number().nullable().optional(),
 });
 const ReportsTimePointSchema = z.object({
   bucket: z.string(),
   revenue: z.number(),
   sales: z.number(),
   conversations: z.number(),
+  adSpend: z.number().nullable().optional(),
 });
 const ReportsGroupSchema = z.object({
   id: z.string(),
@@ -502,23 +507,65 @@ dashboardApi.openapi(
     });
     if (error) return c.json({ error: error.message }, 500);
 
-    return c.json(
-      data ?? {
-        kpis: {
-          revenueTotal: 0,
-          salesCount: 0,
-          avgTicket: 0,
-          conversationsCount: 0,
-          conversionRate: 0,
-        },
-        timeseries: [],
-        byFlow: [],
-        byInstance: [],
-        funnel: [],
-        table: { items: [], page, pageSize, total: 0 },
+    const reports = data ?? {
+      kpis: {
+        revenueTotal: 0,
+        salesCount: 0,
+        avgTicket: 0,
+        conversationsCount: 0,
+        conversionRate: 0,
       },
-      200,
-    );
+      timeseries: [],
+      byFlow: [],
+      byInstance: [],
+      funnel: [],
+      table: { items: [], page, pageSize, total: 0 },
+    };
+
+    // Enrich with Meta Ads spend (best-effort — never fails the request)
+    try {
+      let instanceQuery = supabase
+        .from("whatsapp_instances")
+        .select("meta_token, meta_ads_account_id")
+        .eq("organization_id", organizationId)
+        .eq("is_active", true)
+        .not("meta_ads_account_id", "is", null);
+      if (instanceIds.length > 0) instanceQuery = instanceQuery.in("id", instanceIds);
+      const { data: adsInstances } = await instanceQuery;
+
+      if (adsInstances && adsInstances.length > 0) {
+        const fromStr = fromDate.toISOString().slice(0, 10);
+        const toStr = toDate.toISOString().slice(0, 10);
+        const spendByDate = new Map<string, number>();
+
+        await Promise.all(
+          adsInstances.map(async (inst) => {
+            if (!inst.meta_token || !inst.meta_ads_account_id) return;
+            const token = await safeDecrypt(inst.meta_token);
+            if (!token) return;
+            const rows = await fetchDailyAdSpend(token, inst.meta_ads_account_id, fromStr, toStr);
+            for (const row of rows) {
+              spendByDate.set(row.date, (spendByDate.get(row.date) ?? 0) + row.spend);
+            }
+          }),
+        );
+
+        const adSpendTotal = [...spendByDate.values()].reduce((a, b) => a + b, 0);
+        const roas = adSpendTotal > 0 ? reports.kpis.revenueTotal / adSpendTotal : null;
+        reports.kpis = { ...reports.kpis, adSpendTotal, roas };
+
+        if (spendByDate.size > 0) {
+          reports.timeseries = reports.timeseries.map((point: { bucket: string; revenue: number; sales: number; conversations: number }) => ({
+            ...point,
+            adSpend: spendByDate.get(point.bucket) ?? 0,
+          }));
+        }
+      }
+    } catch (_err) {
+      // Ad spend is optional — don't fail the entire request
+    }
+
+    return c.json(reports, 200);
   },
 );
 
@@ -742,6 +789,130 @@ dashboardApi.openapi(
   },
 );
 
+// ── POST /reports/export-to-reporting ────────────────────────────────────────
+// Agrega pagos validados de una instancia para una fecha y los exporta al
+// sistema de reportes externo (junto con el gasto de Meta Ads si está configurado).
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/reports/export-to-reporting",
+    request: {
+      headers: AuthHeaderSchema,
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato YYYY-MM-DD requerido"),
+              instance_id: z.string().uuid(),
+              account_name: z.string().min(1),
+              currency: z.string().min(1),
+              include_meta_spend: z.boolean().default(false),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Exportación exitosa",
+        content: {
+          "application/json": {
+            schema: z.object({ ok: z.boolean(), warnings: z.array(z.string()) }),
+          },
+        },
+      },
+      400: { description: "Error de validación", content: { "application/json": { schema: ErrorSchema } } },
+      422: { description: "Sin configuración de reportes externo", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const org = orgId(c);
+    const { date, instance_id, account_name, currency, include_meta_spend } = c.req.valid("json");
+
+    // Load instance and verify ownership
+    const { data: inst, error: instErr } = await supabase
+      .from("whatsapp_instances")
+      .select("id, meta_token, meta_ads_account_id, external_reporting_key, external_reporting_url")
+      .eq("id", instance_id)
+      .eq("organization_id", org)
+      .maybeSingle();
+
+    if (instErr) return c.json({ error: instErr.message }, 500);
+    if (!inst) return c.json({ error: "Instancia no encontrada" }, 400);
+    if (!inst.external_reporting_key || !inst.external_reporting_url) {
+      return c.json({ error: "Esta instancia no tiene configurado el sistema de reportes externo" }, 422);
+    }
+
+    // Aggregate validated payments for that date grouped by flow
+    const dayStart = `${date}T00:00:00.000Z`;
+    const dayEnd = `${date}T23:59:59.999Z`;
+    const { data: payments, error: payErr } = await supabase
+      .from("payments")
+      .select("amount, flow_name")
+      .eq("organization_id", org)
+      .eq("whatsapp_instance_id", instance_id)
+      .eq("state", "validated")
+      .gte("validated_at", dayStart)
+      .lte("validated_at", dayEnd);
+
+    if (payErr) return c.json({ error: payErr.message }, 500);
+
+    const flowTotals = new Map<string, number>();
+    let totalAmount = 0;
+    for (const p of payments ?? []) {
+      const label = (p.flow_name as string | null) ?? "—";
+      flowTotals.set(label, (flowTotals.get(label) ?? 0) + Number(p.amount ?? 0));
+      totalAmount += Number(p.amount ?? 0);
+    }
+    const detail = [...flowTotals.entries()].map(([label, amount]) => ({ label, amount }));
+
+    // Optionally fetch Meta Ads spend for the day
+    let metaSpend: number | undefined;
+    let metaCurrency: string | undefined;
+    if (include_meta_spend && inst.meta_ads_account_id && inst.meta_token) {
+      try {
+        const token = await safeDecrypt(inst.meta_token);
+        if (token) {
+          const rows = await fetchDailyAdSpend(token, inst.meta_ads_account_id, date, date);
+          const firstRow = rows.at(0);
+          if (firstRow) {
+            metaSpend = firstRow.spend;
+            metaCurrency = firstRow.currency;
+          }
+        }
+      } catch (err) {
+        const msg = err instanceof MetaAdsError ? err.message : "Error al consultar Meta Ads";
+        return c.json({ error: msg }, 500);
+      }
+    }
+
+    // Send to external reporting system
+    const apiKey = await safeDecrypt(inst.external_reporting_key);
+    if (!apiKey) return c.json({ error: "No se pudo desencriptar la API key del sistema externo" }, 500);
+
+    try {
+      const result = await sendSheetEntry(inst.external_reporting_url, apiKey, {
+        account_name,
+        date,
+        amount: totalAmount,
+        currency,
+        ...(metaSpend !== undefined ? { meta_spend: metaSpend, meta_currency: metaCurrency } : {}),
+        ...(detail.length > 0 ? { detail } : {}),
+      });
+      return c.json(result, 200);
+    } catch (err) {
+      if (err instanceof ExternalReportingError) {
+        return c.json({ error: err.message }, 500);
+      }
+      return c.json({ error: "Error al conectar con el sistema de reportes externo" }, 500);
+    }
+  },
+);
+
 const MembershipSchema = z.object({
   organization_id: z.string(),
   role: z.enum(["owner", "admin", "agent", "viewer"]),
@@ -826,6 +997,8 @@ const InstanceSchema = z.object({
   is_active: z.boolean(),
   currency: z.string().default("COP"),
   high_amount_threshold: z.number().positive().nullable().optional(),
+  meta_ads_account_id: z.string().nullable().optional(),
+  external_reporting_configured: z.boolean().optional(),
   updated_at: z.string().nullable().optional(),
 });
 
@@ -1586,7 +1759,7 @@ dashboardApi.openapi(
     const { data, error } = await supabase
       .from("whatsapp_instances")
       .select(
-        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, updated_at",
+        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, meta_ads_account_id, external_reporting_key, updated_at",
       )
       .eq("organization_id", orgId(c))
       .order("created_at", { ascending: false });
@@ -1595,6 +1768,8 @@ dashboardApi.openapi(
       ...inst,
       meta_token: inst.meta_token ? "configured" : null,
       app_secret: inst.app_secret ? "configured" : null,
+      external_reporting_key: undefined,
+      external_reporting_configured: Boolean(inst.external_reporting_key),
     })) as unknown as z.infer<typeof InstanceSchema>[];
     return c.json(masked, 200);
   },
@@ -1665,7 +1840,7 @@ dashboardApi.openapi(
         high_amount_threshold: body.highAmountThreshold ?? null,
       })
       .select(
-        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, updated_at",
+        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, meta_ads_account_id, external_reporting_key, updated_at",
       )
       .single();
 
@@ -1675,6 +1850,8 @@ dashboardApi.openapi(
       ...data!,
       meta_token: data!.meta_token ? "configured" : null,
       app_secret: data!.app_secret ? "configured" : null,
+      external_reporting_key: undefined,
+      external_reporting_configured: Boolean((data! as Record<string, unknown>).external_reporting_key),
     } as unknown as z.infer<typeof InstanceSchema>;
 
     // ── Auto-configuración de Meta ────────────────────────────────────────
@@ -1834,7 +2011,7 @@ dashboardApi.openapi(
       .eq("id", id)
       .eq("organization_id", orgId(c))
       .select(
-        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, updated_at",
+        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, meta_ads_account_id, external_reporting_key, updated_at",
       )
       .single();
     if (error) return c.json({ error: error.message }, 500);
@@ -1844,6 +2021,8 @@ dashboardApi.openapi(
           ...data,
           meta_token: data.meta_token ? "configured" : null,
           app_secret: data.app_secret ? "configured" : null,
+          external_reporting_key: undefined,
+          external_reporting_configured: Boolean((data as Record<string, unknown>).external_reporting_key),
         }
       : data) as unknown as z.infer<typeof InstanceSchema>;
     return c.json(maskedUpdate, 200);
@@ -2215,6 +2394,236 @@ dashboardApi.openapi(
 
     if (deleteError) return c.json({ error: deleteError.message }, 500);
     return c.json({ ok: true }, 200);
+  },
+);
+
+// ── PUT /instances/{id}/meta-ads ──────────────────────────────────────────────
+// Guarda el ID de cuenta publicitaria de Meta Ads para la instancia.
+// Reusa el meta_token existente de la instancia para autenticación.
+
+dashboardApi.openapi(
+  createRoute({
+    method: "put",
+    path: "/instances/{id}/meta-ads",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              account_id: z.string().min(1, "account_id requerido"),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: { description: "Guardado", content: { "application/json": { schema: z.object({ ok: z.boolean() }) } } },
+      400: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { account_id } = c.req.valid("json");
+    const { error } = await supabase
+      .from("whatsapp_instances")
+      .update({ meta_ads_account_id: account_id })
+      .eq("id", id)
+      .eq("organization_id", orgId(c));
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true }, 200);
+  },
+);
+
+// ── POST /instances/{id}/meta-ads/validate ────────────────────────────────────
+// Verifica que el meta_token de la instancia tiene el permiso ads_read para
+// la cuenta publicitaria configurada.
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/instances/{id}/meta-ads/validate",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "Resultado de la validación",
+        content: {
+          "application/json": {
+            schema: z.object({ ok: z.boolean(), error: z.string().optional() }),
+          },
+        },
+      },
+      400: { description: "Sin configuración", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { data: inst, error: instErr } = await supabase
+      .from("whatsapp_instances")
+      .select("meta_token, meta_ads_account_id")
+      .eq("id", id)
+      .eq("organization_id", orgId(c))
+      .maybeSingle();
+    if (instErr) return c.json({ error: instErr.message }, 500);
+    if (!inst) return c.json({ error: "Instancia no encontrada" }, 400);
+    if (!inst.meta_ads_account_id) return c.json({ error: "Configura el ID de cuenta publicitaria primero" }, 400);
+    if (!inst.meta_token) return c.json({ error: "Esta instancia no tiene token de Meta configurado" }, 400);
+
+    const token = await safeDecrypt(inst.meta_token);
+    if (!token) return c.json({ error: "No se pudo leer el token de Meta" }, 400);
+
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    try {
+      await fetchDailyAdSpend(token, inst.meta_ads_account_id, yesterday, yesterday);
+      return c.json({ ok: true }, 200);
+    } catch (err) {
+      const msg = err instanceof MetaAdsError ? err.message : "Error al conectar con Meta Ads";
+      return c.json({ ok: false, error: msg }, 200);
+    }
+  },
+);
+
+// ── GET /instances/{id}/external-reporting ────────────────────────────────────
+
+dashboardApi.openapi(
+  createRoute({
+    method: "get",
+    path: "/instances/{id}/external-reporting",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "Estado del sistema de reportes externo",
+        content: {
+          "application/json": {
+            schema: z.object({
+              configured: z.boolean(),
+              base_url: z.string().nullable(),
+            }),
+          },
+        },
+      },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { data: inst, error } = await supabase
+      .from("whatsapp_instances")
+      .select("external_reporting_key, external_reporting_url")
+      .eq("id", id)
+      .eq("organization_id", orgId(c))
+      .maybeSingle();
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json(
+      {
+        configured: !!(inst?.external_reporting_key),
+        base_url: inst?.external_reporting_url ?? null,
+      },
+      200,
+    );
+  },
+);
+
+// ── PUT /instances/{id}/external-reporting ────────────────────────────────────
+
+dashboardApi.openapi(
+  createRoute({
+    method: "put",
+    path: "/instances/{id}/external-reporting",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              api_key: z.string().min(1),
+              base_url: z.string().url(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: { description: "Guardado", content: { "application/json": { schema: z.object({ ok: z.boolean() }) } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { api_key, base_url } = c.req.valid("json");
+    const encryptedKey = await encrypt(api_key);
+    const { error } = await supabase
+      .from("whatsapp_instances")
+      .update({ external_reporting_key: encryptedKey, external_reporting_url: base_url })
+      .eq("id", id)
+      .eq("organization_id", orgId(c));
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true }, 200);
+  },
+);
+
+// ── GET /instances/{id}/external-accounts ─────────────────────────────────────
+// Lista las cuentas disponibles en el sistema de reportes externo para esta instancia.
+
+dashboardApi.openapi(
+  createRoute({
+    method: "get",
+    path: "/instances/{id}/external-accounts",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "Cuentas del sistema externo",
+        content: {
+          "application/json": {
+            schema: z.array(z.object({ account_name: z.string(), has_sheet: z.boolean() })),
+          },
+        },
+      },
+      422: { description: "Sin configuración", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { data: inst, error: instErr } = await supabase
+      .from("whatsapp_instances")
+      .select("external_reporting_key, external_reporting_url")
+      .eq("id", id)
+      .eq("organization_id", orgId(c))
+      .maybeSingle();
+    if (instErr) return c.json({ error: instErr.message }, 500);
+    if (!inst?.external_reporting_key || !inst.external_reporting_url) {
+      return c.json({ error: "Esta instancia no tiene configurado el sistema de reportes externo" }, 422);
+    }
+    const apiKey = await safeDecrypt(inst.external_reporting_key);
+    if (!apiKey) return c.json({ error: "No se pudo leer la API key" }, 500);
+    try {
+      const accounts = await getExternalAccounts(inst.external_reporting_url, apiKey);
+      return c.json(accounts, 200);
+    } catch (err) {
+      const msg = err instanceof ExternalReportingError ? err.message : "Error al conectar con el sistema externo";
+      return c.json({ error: msg }, 500);
+    }
   },
 );
 

@@ -863,6 +863,68 @@ export const api = {
       })
     ),
 
+  // ── Meta Ads + External Reporting (per instance) ────────────────────────
+  saveInstanceMetaAds: (id: string, accountId: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/instances/${id}/meta-ads`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ account_id: accountId }),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
+  validateInstanceMetaAds: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/instances/${id}/meta-ads/validate`, {
+        method: "POST",
+        headers,
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean; error?: string }>;
+      })
+    ),
+  getInstanceExternalReporting: (id: string) =>
+    request<{ configured: boolean; base_url: string | null }>(
+      `/api/instances/${id}/external-reporting`
+    ),
+  saveInstanceExternalReporting: (
+    id: string,
+    payload: { api_key: string; base_url: string }
+  ) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/instances/${id}/external-reporting`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
+  getInstanceExternalAccounts: (id: string) =>
+    request<Array<{ account_name: string; has_sheet: boolean }>>(
+      `/api/instances/${id}/external-accounts`
+    ),
+  exportToReporting: (payload: {
+    date: string;
+    instance_id: string;
+    account_name: string;
+    currency: string;
+    include_meta_spend: boolean;
+  }) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/reports/export-to-reporting`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean; warnings: string[] }>;
+      })
+    ),
+
   // ── Flow step messages ───────────────────────────────────────────────────
   createFlowStepMessage: (payload: CreateFlowStepMessageBody) =>
     buildHeaders(true).then((headers) =>

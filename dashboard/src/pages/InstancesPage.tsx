@@ -15,6 +15,8 @@ import {
   Trash2,
   AlertTriangle,
   Activity,
+  BarChart2,
+  Megaphone,
 } from "lucide-react";
 import {
   InfoModal,
@@ -63,6 +65,10 @@ import {
   useWebhookConfigQuery,
   useInstanceMetaStatusQuery,
   useReconfigureMetaMutation,
+  useSaveInstanceMetaAdsMutation,
+  useValidateInstanceMetaAdsMutation,
+  useInstanceExternalReportingQuery,
+  useSaveInstanceExternalReportingMutation,
 } from "@/lib/hooks";
 import type { MetaStatusResponse, ReconfigureMetaResult } from "@/types/api";
 
@@ -224,6 +230,19 @@ function EditDialog({
 }) {
   const updateInstance = useUpdateInstanceMutation();
   const assignFlow = useAssignFlowMutation();
+  const saveMetaAds = useSaveInstanceMetaAdsMutation();
+  const validateMetaAds = useValidateInstanceMetaAdsMutation();
+  const externalReportingQ = useInstanceExternalReportingQuery(instance.id);
+  const saveExternalReporting = useSaveInstanceExternalReportingMutation();
+
+  const [metaAdsAccountId, setMetaAdsAccountId] = useState(instance.meta_ads_account_id ?? "");
+  const [metaAdsValidation, setMetaAdsValidation] = useState<{ ok: boolean; error?: string } | null>(null);
+
+  const [extReportingApiKey, setExtReportingApiKey] = useState("");
+  const [extReportingBaseUrlDraft, setExtReportingBaseUrlDraft] = useState<string | null>(null);
+  const extReportingBaseUrl =
+    extReportingBaseUrlDraft ?? externalReportingQ.data?.base_url ?? "";
+  const [showExtApiKey, setShowExtApiKey] = useState(false);
 
   const [label, setLabel] = useState(instance.label);
   const [metaToken, setMetaToken] = useState(instance.meta_token ?? "");
@@ -547,6 +566,178 @@ function EditDialog({
                   </SelectContent>
                 </Select>
               </Field>
+            </div>
+
+            <Separator />
+
+            {/* Meta Ads */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Megaphone size={14} className="text-muted-foreground" />
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Meta Ads
+                </p>
+                {instance.meta_ads_account_id && (
+                  <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    {instance.meta_ads_account_id}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Usa el token de Meta de esta instancia. El token debe tener el permiso{" "}
+                <code className="rounded bg-muted px-1 font-mono text-[11px]">ads_read</code>.
+              </p>
+              <Field label="ID de cuenta publicitaria" hint="Ej: act_123456789">
+                <Input
+                  value={metaAdsAccountId}
+                  onChange={(e) => {
+                    setMetaAdsAccountId(e.target.value);
+                    setMetaAdsValidation(null);
+                  }}
+                  placeholder="act_123456789"
+                  className="font-mono text-sm"
+                />
+              </Field>
+              {metaAdsValidation && (
+                <div
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                    metaAdsValidation.ok
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400"
+                      : "border-destructive/30 bg-destructive/10 text-destructive"
+                  }`}
+                >
+                  {metaAdsValidation.ok ? (
+                    <Check size={13} />
+                  ) : (
+                    <AlertTriangle size={13} />
+                  )}
+                  {metaAdsValidation.ok
+                    ? "Conexión verificada correctamente"
+                    : (metaAdsValidation.error ?? "Error al verificar")}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!metaAdsAccountId.trim() || saveMetaAds.isPending || validateMetaAds.isPending}
+                  loading={saveMetaAds.isPending}
+                  loadingText="Guardando…"
+                  onClick={() =>
+                    saveMetaAds.mutate(
+                      { id: instance.id, accountId: metaAdsAccountId.trim() },
+                      {
+                        onSuccess: () => toast.success("ID de cuenta guardado"),
+                        onError: (e) => toast.error((e as Error).message),
+                      }
+                    )
+                  }
+                >
+                  Guardar ID
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!instance.meta_ads_account_id || validateMetaAds.isPending}
+                  loading={validateMetaAds.isPending}
+                  loadingText="Verificando…"
+                  onClick={() =>
+                    validateMetaAds.mutate(instance.id, {
+                      onSuccess: (res) => setMetaAdsValidation(res),
+                      onError: (e) =>
+                        setMetaAdsValidation({ ok: false, error: (e as Error).message }),
+                    })
+                  }
+                >
+                  Verificar permisos
+                </Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Sistema de Reportes Externo */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <BarChart2 size={14} className="text-muted-foreground" />
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Sistema de Reportes Externo
+                </p>
+                {instance.external_reporting_configured && (
+                  <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    Configurado
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <Field label="URL base" hint="Ej: https://mi-plataforma.com">
+                  <Input
+                    value={extReportingBaseUrl}
+                    onChange={(e) => setExtReportingBaseUrlDraft(e.target.value)}
+                    placeholder="https://mi-plataforma.com"
+                  />
+                </Field>
+                <Field
+                  label="API Key"
+                  hint={
+                    instance.external_reporting_configured
+                      ? "Configurada — dejá vacío para mantener la actual"
+                      : "Ingresá la API key del sistema externo"
+                  }
+                >
+                  <div className="flex gap-2">
+                    <Input
+                      type={showExtApiKey ? "text" : "password"}
+                      value={extReportingApiKey}
+                      onChange={(e) => setExtReportingApiKey(e.target.value)}
+                      placeholder={
+                        instance.external_reporting_configured ? "•••••• (configurada)" : "api_key…"
+                      }
+                      className="flex-1 font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowExtApiKey((v) => !v)}
+                      className="rounded-md border bg-background px-2 text-muted-foreground hover:bg-muted"
+                    >
+                      {showExtApiKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </Field>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="self-start"
+                  disabled={
+                    !extReportingBaseUrl.trim() ||
+                    (!extReportingApiKey.trim() && !instance.external_reporting_configured) ||
+                    saveExternalReporting.isPending
+                  }
+                  loading={saveExternalReporting.isPending}
+                  loadingText="Guardando…"
+                  onClick={() => {
+                    if (!extReportingApiKey.trim() && instance.external_reporting_configured) {
+                      toast.info("No hubo cambios en la API key");
+                      return;
+                    }
+                    saveExternalReporting.mutate(
+                      {
+                        id: instance.id,
+                        payload: {
+                          api_key: extReportingApiKey,
+                          base_url: extReportingBaseUrl.trim(),
+                        },
+                      },
+                      {
+                        onSuccess: () => toast.success("Configuración de reportes guardada"),
+                        onError: (e) => toast.error((e as Error).message),
+                      }
+                    );
+                  }}
+                >
+                  Guardar configuración
+                </Button>
+              </div>
             </div>
           </div>
         </div>

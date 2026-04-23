@@ -511,6 +511,68 @@ export function useReconfigureMetaMutation() {
   });
 }
 
+export function useSaveInstanceMetaAdsMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, accountId }: { id: string; accountId: string }) =>
+      api.saveInstanceMetaAds(id, accountId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["instances"] }),
+  });
+}
+
+export function useValidateInstanceMetaAdsMutation() {
+  return useMutation({
+    mutationFn: (id: string) => api.validateInstanceMetaAds(id),
+  });
+}
+
+export function useInstanceExternalReportingQuery(id: string | null) {
+  return useQuery({
+    queryKey: ["instances", id, "external-reporting"],
+    queryFn: () => api.getInstanceExternalReporting(id!),
+    enabled: Boolean(id),
+    staleTime: 60_000,
+  });
+}
+
+export function useSaveInstanceExternalReportingMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: { api_key: string; base_url: string };
+    }) => api.saveInstanceExternalReporting(id, payload),
+    onSuccess: (_data, { id }) => {
+      void qc.invalidateQueries({ queryKey: ["instances"] });
+      void qc.invalidateQueries({ queryKey: ["instances", id, "external-reporting"] });
+    },
+  });
+}
+
+export function useInstanceExternalAccountsQuery(id: string | null) {
+  return useQuery({
+    queryKey: ["instances", id, "external-accounts"],
+    queryFn: () => api.getInstanceExternalAccounts(id!),
+    enabled: Boolean(id),
+    staleTime: 120_000,
+  });
+}
+
+export function useExportToReportingMutation() {
+  return useMutation({
+    mutationFn: (payload: {
+      date: string;
+      instance_id: string;
+      account_name: string;
+      currency: string;
+      include_meta_spend: boolean;
+    }) => api.exportToReporting(payload),
+  });
+}
+
 /** Descubre los números de WhatsApp disponibles para un token de Meta.
  *  El resultado es efímero (no se cachea) — solo se usa durante el wizard de creación. */
 export function useDiscoverInstancesMutation() {

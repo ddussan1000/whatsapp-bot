@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, Pencil, X } from "lucide-react";
+import { Check, Pencil, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Area,
@@ -47,8 +47,21 @@ import {
 } from "../components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
   useAdReferralsQuery,
+  useExportToReportingMutation,
   useFlowsV2Query,
+  useInstanceExternalAccountsQuery,
   useInstancesQuery,
   useReportsQuery,
   usePaymentsQuery,
@@ -271,6 +284,15 @@ export function ReportsPage() {
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
   const [amountDraft, setAmountDraft] = useState("");
 
+  // Export modal state
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportInstanceId, setExportInstanceId] = useState<string>("");
+  const [exportDate, setExportDate] = useState(
+    () => dateInputValue(new Date(Date.now() - 86400000))
+  );
+  const [exportAccountName, setExportAccountName] = useState<string>("");
+  const [exportIncludeMetaSpend, setExportIncludeMetaSpend] = useState(false);
+
   const loading = isLoading || isFetching;
 
   // Derive display currency from instance selection.
@@ -337,6 +359,16 @@ export function ReportsPage() {
   const payments = paymentsData?.items ?? [];
   const paymentsTotal = paymentsData?.total ?? 0;
 
+  const exportableInstances = instances.filter(
+    (i) => i.external_reporting_configured
+  );
+  const selectedExportInstance = instances.find(
+    (i) => i.id === exportInstanceId
+  );
+  const { data: exportAccounts = [] } =
+    useInstanceExternalAccountsQuery(exportInstanceId || null);
+  const exportToReporting = useExportToReportingMutation();
+
   return (
     <section className="flex flex-col gap-3 p-3 sm:gap-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -346,9 +378,20 @@ export function ReportsPage() {
             Ventas, conversiones y rendimiento de anuncios
           </p>
         </div>
-        <Button onClick={exportCsv} size="sm">
-          Exportar CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportCsv} size="sm" variant="outline">
+            Exportar CSV
+          </Button>
+          {exportableInstances.length > 0 && (
+            <Button
+              size="sm"
+              onClick={() => setExportOpen(true)}
+            >
+              <Send size={14} className="mr-1.5" />
+              Exportar a Reportes
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -560,6 +603,7 @@ export function ReportsPage() {
                     config={{
                       revenue: { label: "Ingresos", color: "#22c55e" },
                       sales: { label: "Ventas", color: "#3b82f6" },
+                      adSpend: { label: "Gasto ads", color: "#f97316" },
                     }}
                     className="h-72 w-full"
                   >
@@ -599,6 +643,15 @@ export function ReportsPage() {
                         fill="var(--color-sales)"
                         fillOpacity={0.2}
                       />
+                      {data?.timeseries?.some((p) => p.adSpend != null) && (
+                        <Area
+                          type="monotone"
+                          dataKey="adSpend"
+                          stroke="var(--color-adSpend)"
+                          fill="var(--color-adSpend)"
+                          fillOpacity={0.15}
+                        />
+                      )}
                     </AreaChart>
                   </ChartContainer>
                 )}
@@ -1028,6 +1081,35 @@ export function ReportsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Meta Ads spend KPIs — shown when configured on any instance */}
+              {!loading && kpis?.adSpendTotal != null && (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {[
+                    {
+                      label: "Gasto Meta Ads",
+                      value: money(kpis.adSpendTotal, displayCurrency ?? "COP"),
+                    },
+                    {
+                      label: "ROAS",
+                      value:
+                        kpis.roas != null
+                          ? `${kpis.roas.toFixed(2)}x`
+                          : "—",
+                    },
+                  ].map((kpi) => (
+                    <div
+                      key={kpi.label}
+                      className="rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800 p-3"
+                    >
+                      <p className="text-xs text-muted-foreground">
+                        {kpi.label}
+                      </p>
+                      <p className="text-lg font-semibold">{kpi.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {adLoading ? (
                 <Skeleton className="h-24 w-full" />
               ) : adTotals && adTotals.clicks > 0 ? (
@@ -1230,6 +1312,147 @@ export function ReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ── Export to Reporting Modal ───────────────────────────────────── */}
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Exportar a sistema de reportes</DialogTitle>
+            <DialogDescription>
+              Envía los pagos validados del día seleccionado a la plataforma
+              externa de reportes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="export-instance">Instancia de WhatsApp</Label>
+              <Select
+                value={exportInstanceId}
+                onValueChange={(v) => {
+                  setExportInstanceId(v);
+                  setExportAccountName("");
+                  setExportIncludeMetaSpend(false);
+                }}
+              >
+                <SelectTrigger id="export-instance" className="h-9 text-sm">
+                  <SelectValue placeholder="Seleccionar instancia…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {exportableInstances.map((i) => (
+                    <SelectItem key={i.id} value={i.id}>
+                      {i.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="export-date">Fecha</Label>
+              <Input
+                id="export-date"
+                type="date"
+                className="h-9 text-sm"
+                value={exportDate}
+                onChange={(e) => setExportDate(e.target.value)}
+              />
+            </div>
+
+            {exportInstanceId && (
+              <div className="space-y-1.5">
+                <Label htmlFor="export-account">Cuenta en sistema externo</Label>
+                <Select
+                  value={exportAccountName}
+                  onValueChange={setExportAccountName}
+                  disabled={exportAccounts.length === 0}
+                >
+                  <SelectTrigger id="export-account" className="h-9 text-sm">
+                    <SelectValue
+                      placeholder={
+                        exportAccounts.length === 0
+                          ? "Cargando cuentas…"
+                          : "Seleccionar cuenta…"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {exportAccounts.map((a) => (
+                      <SelectItem key={a.account_name} value={a.account_name}>
+                        {a.account_name}
+                        {a.has_sheet ? "" : " (sin hoja)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {selectedExportInstance?.meta_ads_account_id && (
+              <div className="flex items-center justify-between">
+                <Label htmlFor="export-meta-spend" className="cursor-pointer">
+                  Incluir gasto de Meta Ads
+                </Label>
+                <Switch
+                  id="export-meta-spend"
+                  checked={exportIncludeMetaSpend}
+                  onCheckedChange={setExportIncludeMetaSpend}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setExportOpen(false)}
+              disabled={exportToReporting.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              disabled={
+                !exportInstanceId ||
+                !exportDate ||
+                !exportAccountName ||
+                exportToReporting.isPending
+              }
+              loading={exportToReporting.isPending}
+              onClick={() => {
+                exportToReporting.mutate(
+                  {
+                    date: exportDate,
+                    instance_id: exportInstanceId,
+                    account_name: exportAccountName,
+                    currency:
+                      selectedExportInstance?.currency ?? "COP",
+                    include_meta_spend: exportIncludeMetaSpend,
+                  },
+                  {
+                    onSuccess: (result) => {
+                      setExportOpen(false);
+                      if (result.warnings?.length) {
+                        toast.warning(
+                          `Exportado con advertencias: ${result.warnings.join(", ")}`
+                        );
+                      } else {
+                        toast.success("Exportado exitosamente");
+                      }
+                    },
+                    onError: (err) => {
+                      toast.error(
+                        err instanceof Error
+                          ? err.message
+                          : "Error al exportar"
+                      );
+                    },
+                  }
+                );
+              }}
+            >
+              Exportar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
