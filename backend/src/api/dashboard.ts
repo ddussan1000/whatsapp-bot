@@ -852,7 +852,7 @@ dashboardApi.openapi(
     const dayEnd = `${date}T23:59:59.999Z`;
     const { data: payments, error: payErr } = await supabase
       .from("payments")
-      .select("amount, flow_name")
+      .select("amount, flow_id, flows(name)")
       .eq("organization_id", org)
       .eq("whatsapp_instance_id", instance_id)
       .eq("state", "validated")
@@ -864,7 +864,7 @@ dashboardApi.openapi(
     const flowTotals = new Map<string, number>();
     let totalAmount = 0;
     for (const p of payments ?? []) {
-      const label = (p.flow_name as string | null) ?? "—";
+      const label = (p.flows as { name?: string } | null)?.name ?? "—";
       flowTotals.set(label, (flowTotals.get(label) ?? 0) + Number(p.amount ?? 0));
       totalAmount += Number(p.amount ?? 0);
     }
