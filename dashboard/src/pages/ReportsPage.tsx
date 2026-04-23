@@ -123,13 +123,18 @@ function FunnelYAxisTick({
 }
 
 function toIsoStart(date: string) {
-  return new Date(`${date}T00:00:00.000Z`).toISOString();
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
 }
 function toIsoEnd(date: string) {
-  return new Date(`${date}T23:59:59.999Z`).toISOString();
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
 }
 function dateInputValue(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 function money(value: number, currency = "COP") {
   return value.toLocaleString("es-CO", {

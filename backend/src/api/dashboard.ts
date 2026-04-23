@@ -611,7 +611,9 @@ dashboardApi.openapi(
         .select("phone, amount, flow_id, state")
         .eq("organization_id", organizationId)
         .in("state", ["validated", "pending_manual_review"])
-        .in("phone", phoneList);
+        .in("phone", phoneList)
+        .gte("validated_at", fromDate.toISOString())
+        .lte("validated_at", toDate.toISOString());
 
       if (flowIds.length > 0) {
         payQuery = payQuery.in("flow_id", flowIds);

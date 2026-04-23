@@ -112,10 +112,12 @@ function ConversationRow({
   const hasAd = Boolean(conv.ad_source);
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="group flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-all hover:bg-muted/40 hover:shadow-sm"
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+      className="flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-all hover:bg-muted/40 hover:shadow-sm cursor-pointer"
     >
       {/* Avatar with unread badge */}
       <div className="relative shrink-0">
@@ -147,9 +149,21 @@ function ConversationRow({
               </span>
             )}
           </div>
-          <span className="text-xs text-muted-foreground shrink-0">
-            {timeAgo(conv.updated_at)}
-          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            {unread > 0 && (
+              <button
+                type="button"
+                aria-label="Marcar como leído"
+                onClick={onMarkRead}
+                className="flex items-center justify-center rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <MailOpen size={14} />
+              </button>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {timeAgo(conv.updated_at)}
+            </span>
+          </div>
         </div>
 
         {/* Row 2: last message preview */}
@@ -209,18 +223,7 @@ function ConversationRow({
         </div>
       </div>
 
-      {/* Mark as read button — only visible on hover when there are unread messages */}
-      {unread > 0 && (
-        <button
-          type="button"
-          aria-label="Marcar como leído"
-          onClick={onMarkRead}
-          className="ml-1 shrink-0 rounded-lg p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100"
-        >
-          <MailOpen size={15} />
-        </button>
-      )}
-    </button>
+    </div>
   );
 }
 
