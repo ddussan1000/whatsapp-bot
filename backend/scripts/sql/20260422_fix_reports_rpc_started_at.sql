@@ -10,7 +10,8 @@ create or replace function public.get_reports_analytics(
   p_flow_ids uuid[] default null,
   p_granularity text default 'day',
   p_page integer default 1,
-  p_page_size integer default 20
+  p_page_size integer default 20,
+  p_timezone text default 'America/Bogota'
 )
 returns jsonb
 language plpgsql
@@ -63,9 +64,9 @@ begin
   payments_by_bucket as (
     select
       case
-        when p_granularity = 'month' then to_char(date_trunc('month', fp.validated_at), 'YYYY-MM')
-        when p_granularity = 'week' then to_char(date_trunc('week', fp.validated_at), 'IYYY-"W"IW')
-        else to_char(date_trunc('day', fp.validated_at), 'YYYY-MM-DD')
+        when p_granularity = 'month' then to_char(date_trunc('month', fp.validated_at at time zone p_timezone), 'YYYY-MM')
+        when p_granularity = 'week' then to_char(date_trunc('week', fp.validated_at at time zone p_timezone), 'IYYY-"W"IW')
+        else to_char(date_trunc('day', fp.validated_at at time zone p_timezone), 'YYYY-MM-DD')
       end as bucket,
       coalesce(sum(fp.amount), 0)::numeric as revenue,
       count(fp.id)::integer as sales
@@ -75,9 +76,9 @@ begin
   conv_by_bucket as (
     select
       case
-        when p_granularity = 'month' then to_char(date_trunc('month', fc.started_at), 'YYYY-MM')
-        when p_granularity = 'week' then to_char(date_trunc('week', fc.started_at), 'IYYY-"W"IW')
-        else to_char(date_trunc('day', fc.started_at), 'YYYY-MM-DD')
+        when p_granularity = 'month' then to_char(date_trunc('month', fc.started_at at time zone p_timezone), 'YYYY-MM')
+        when p_granularity = 'week' then to_char(date_trunc('week', fc.started_at at time zone p_timezone), 'IYYY-"W"IW')
+        else to_char(date_trunc('day', fc.started_at at time zone p_timezone), 'YYYY-MM-DD')
       end as bucket,
       count(fc.id)::integer as conversations
     from filtered_conversations fc

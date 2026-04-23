@@ -483,6 +483,12 @@ dashboardApi.openapi(
     const instanceIds = splitCsv(instanceId);
     const flowIds = splitCsv(flowId);
     const organizationId = orgId(c);
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("timezone")
+      .eq("id", organizationId)
+      .maybeSingle();
+    const timezone = orgData?.timezone ?? "America/Bogota";
     const { data, error } = await supabase.rpc("get_reports_analytics", {
       p_organization_id: organizationId,
       p_from: fromIso,
@@ -492,6 +498,7 @@ dashboardApi.openapi(
       p_granularity: granularity,
       p_page: page,
       p_page_size: pageSize,
+      p_timezone: timezone,
     });
     if (error) return c.json({ error: error.message }, 500);
 
