@@ -852,7 +852,7 @@ dashboardApi.openapi(
     const dayEnd = `${date}T23:59:59.999Z`;
     const { data: payments, error: payErr } = await supabase
       .from("payments")
-      .select("amount, flow_id, flows(name)")
+      .select("amount, flows(name)")
       .eq("organization_id", org)
       .eq("whatsapp_instance_id", instance_id)
       .eq("state", "validated")

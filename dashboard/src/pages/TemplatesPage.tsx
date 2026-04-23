@@ -14,6 +14,7 @@ import {
   BookMarked,
   Eye,
   LayoutTemplate,
+  Paperclip,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -193,8 +194,8 @@ function StepsModal({
                                   {m.textContent}
                                 </p>
                               ) : m.filename ? (
-                                <p className="text-sm text-muted-foreground">
-                                  📎 {m.filename}
+                                <p className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Paperclip className="h-3.5 w-3.5 shrink-0" /> {m.filename}
                                 </p>
                               ) : m.caption ? (
                                 <p className="text-sm text-muted-foreground italic">

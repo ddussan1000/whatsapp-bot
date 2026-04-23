@@ -477,7 +477,7 @@ export function InstructionsPage() {
               },
               {
                 type: "System User Token",
-                dur: "No vence ✓",
+                dur: "No vence",
                 use: "Generado desde Business Manager → Usuarios del sistema. Recomendado para producción.",
                 warn: false,
               },
@@ -487,7 +487,10 @@ export function InstructionsPage() {
                 className={`rounded-lg p-3 flex flex-col gap-1 border ${t.warn ? "border-amber-200 bg-amber-50 dark:bg-amber-900/10" : "border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10"}`}
               >
                 <span className="font-semibold">{t.type}</span>
-                <span className="text-muted-foreground">Duración: {t.dur}</span>
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  Duración: {t.dur}
+                  {!t.warn && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
+                </span>
                 <span className="text-muted-foreground">{t.use}</span>
               </div>
             ))}

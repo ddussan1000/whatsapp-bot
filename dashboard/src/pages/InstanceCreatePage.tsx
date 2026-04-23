@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Check,
+  CheckCircle2,
+  XCircle,
   Eye,
   EyeOff,
   Link,
@@ -1086,8 +1088,8 @@ function AutoConfigChecklist({
   function StatusIcon({ value }: { value: boolean | null }) {
     if (value === null) return <span className="text-muted-foreground">—</span>;
     if (value)
-      return <span className="text-emerald-600 dark:text-emerald-400">✅</span>;
-    return <span className="text-destructive">❌</span>;
+      return <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
+    return <XCircle className="h-4 w-4 text-destructive" />;
   }
 
   const items = [

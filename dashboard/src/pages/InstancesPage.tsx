@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import {
   Copy,
   Check,
+  CheckCircle2,
+  XCircle,
   Workflow,
   Smartphone,
   ExternalLink,
@@ -775,9 +777,9 @@ function ConfigStatus({
       {value === null ? (
         <span className="text-muted-foreground text-xs">{nullNote ?? "—"}</span>
       ) : value ? (
-        <span className="text-emerald-600 dark:text-emerald-400">✅</span>
+        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
       ) : (
-        <span className="text-destructive">❌</span>
+        <XCircle className="h-4 w-4 text-destructive" />
       )}
     </div>
   );
