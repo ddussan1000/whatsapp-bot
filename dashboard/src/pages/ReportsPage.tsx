@@ -80,6 +80,19 @@ function stageLabel(stage: string): string {
   );
 }
 
+function mergeFunnelByLabel(
+  funnel: { stage: string; count: number }[]
+): { stage: string; count: number }[] {
+  const merged = new Map<string, number>();
+  for (const entry of funnel) {
+    const label = stageLabel(entry.stage);
+    merged.set(label, (merged.get(label) ?? 0) + entry.count);
+  }
+  return Array.from(merged.entries())
+    .map(([stage, count]) => ({ stage, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 // Custom YAxis tick that wraps long text into two lines via SVG tspan
 function FunnelYAxisTick({
   x,
@@ -90,7 +103,7 @@ function FunnelYAxisTick({
   y?: number;
   payload?: { value: string };
 }) {
-  const label = stageLabel(payload?.value ?? "");
+  const label = payload?.value ?? "";
   const words = label.split(" ");
   // Split into at most 2 lines at the midpoint
   const mid = Math.ceil(words.length / 2);
@@ -606,7 +619,7 @@ export function ReportsPage() {
                     className="flex-1 min-h-[120px] w-full"
                   >
                     <BarChart
-                      data={data?.funnel ?? []}
+                      data={mergeFunnelByLabel(data?.funnel ?? [])}
                       layout="vertical"
                       margin={{ top: 4, right: 36, bottom: 4, left: 0 }}
                       barSize={22}
@@ -633,7 +646,7 @@ export function ReportsPage() {
                           return (
                             <div className="rounded-lg border bg-background px-3 py-2 shadow-sm text-sm">
                               <p className="font-medium text-foreground mb-1">
-                                {stageLabel(item?.payload?.stage ?? "")}
+                                {item?.payload?.stage ?? ""}
                               </p>
                               <p className="text-muted-foreground">
                                 Conversaciones:{" "}
