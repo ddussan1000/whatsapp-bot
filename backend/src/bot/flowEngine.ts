@@ -10,6 +10,8 @@ import { sendMessage } from "./sender";
 import { textMessage } from "./messages";
 import type { ConversationState } from "../types";
 import { STAGES, FLOW_IN_PROGRESS_STAGES } from "../stages";
+import { scheduleJob, cancelJobsForPhone } from "../queue/scheduledMessages";
+import type { ScheduledJobPayload } from "../queue/scheduledMessages";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -158,12 +160,7 @@ export async function startAssignedFlow(
   if (!flow?.steps?.length) return false;
   const sorted = [...flow.steps].sort((a, b) => a.position - b.position);
 
-  await supabase
-    .from("scheduled_flow_messages")
-    .update({ status: "cancelled" })
-    .eq("organization_id", state.organizationId)
-    .eq("phone", phone)
-    .eq("status", "pending");
+  await cancelJobsForPhone(state.organizationId, phone);
 
   const now = Date.now();
   let cumulativeDelayMs = 0;
@@ -175,19 +172,18 @@ export async function startAssignedFlow(
       // First step with no delay → send immediately
       await sendStepMessages(step, phone, state);
     } else {
-      // Schedule future step
-      const scheduledAt = new Date(now + cumulativeDelayMs).toISOString();
-      await supabase.from("scheduled_flow_messages").insert({
-        organization_id: state.organizationId,
-        conversation_id: state.id ?? null,
-        step_id: step.id,
+      const payload: ScheduledJobPayload = {
+        id: crypto.randomUUID(),
+        orgId: state.organizationId,
         phone,
-        whatsapp_instance_id: state.whatsappInstanceId ?? null,
-        meta_phone_number_id: state.metaPhoneNumberId ?? null,
-        flow_id: state.flowId ?? null,
-        scheduled_at: scheduledAt,
-        status: "pending",
-      });
+        stepId: step.id,
+        conversationId: state.id ?? null,
+        instanceId: state.whatsappInstanceId ?? null,
+        metaPhoneNumberId: state.metaPhoneNumberId ?? null,
+        flowId: state.flowId ?? null,
+        sendAt: now + cumulativeDelayMs,
+      };
+      await scheduleJob(payload);
     }
   }
 
@@ -199,14 +195,13 @@ export async function startAssignedFlow(
   return true;
 }
 
-// ── Scheduled message processor ───────────────────────────────────────────
-
-/**
- * Called by the cron job every minute.
- * Atomically claims pending scheduled messages (FOR UPDATE SKIP LOCKED)
- * to prevent duplicate sends when multiple server instances run concurrently.
- */
-export async function processScheduledMessages(): Promise<void> {
+// ── DB-based scheduled message processor (legacy fallback) ───────────────────
+//
+// Processes old-style pending rows (redis_job_id IS NULL) that were created
+// before the Redis queue migration or when Redis was unavailable.
+// claim_scheduled_messages() only claims rows with redis_job_id IS NULL,
+// so this cron and the Redis worker never race on the same job.
+export async function processDatabaseScheduledMessages(): Promise<void> {
   if (!supabase) return;
 
   // Atomically claim due rows — concurrent instances will skip locked rows

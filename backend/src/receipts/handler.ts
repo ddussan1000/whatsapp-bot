@@ -9,6 +9,7 @@ import { updateMessageMediaUrl } from "../db/messages";
 import { supabase } from "../db/supabase";
 import { log } from "../logger";
 import { STAGES } from "../stages";
+import { cancelJobsForPhone } from "../queue/scheduledMessages";
 
 const DEFAULT_RECEIPT_REJECTED_MESSAGE =
   "No pudimos validar tu comprobante. Un agente lo revisara manualmente y te informara.";
@@ -143,13 +144,7 @@ export async function classifyAndHandleImage(
     log.warn({ err, phone }, "classifyAndHandleImage: storage save failed, continuing without URL");
   }
 
-  const cancelPending = () =>
-    supabase
-      ?.from("scheduled_flow_messages")
-      .update({ status: "cancelled" })
-      .eq("organization_id", state.organizationId!)
-      .eq("phone", phone)
-      .eq("status", "pending");
+  const cancelPending = () => cancelJobsForPhone(state.organizationId!, phone);
 
   let ocrResult: Awaited<ReturnType<typeof runOcrWithFallback>>;
   try {

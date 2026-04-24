@@ -28,6 +28,7 @@ import { supabase } from "../db/supabase";
 import { fetchAdDetails } from "../meta/adDetails";
 import { validateWebhookSignature } from "./validateSignature";
 import { STAGES, FLOW_IN_PROGRESS_STAGES, conversationStageSchema } from "../stages";
+import { hasPendingJobs } from "../queue/scheduledMessages";
 
 function extractReferral(msg: WhatsAppMessage): WhatsAppReferral | null {
   const ref = (msg as unknown as { referral?: WhatsAppReferral }).referral;
@@ -272,15 +273,7 @@ export async function handleWebhook(c: Context) {
       msg.type === "text" ? matchesFlowTrigger(inboundText, runtimeFlow) : true;
 
     // Guard: don't restart a flow that still has pending scheduled steps being delivered
-    const pendingResult = supabase
-      ? await supabase
-          .from("scheduled_flow_messages")
-          .select("id", { count: "exact", head: true })
-          .eq("organization_id", organizationId)
-          .eq("phone", phone)
-          .eq("status", "pending")
-      : null;
-    const flowIsInProgress = (pendingResult?.count ?? 0) > 0;
+    const flowIsInProgress = await hasPendingJobs(organizationId, phone);
 
     // Starting a new session always requires an explicit trigger match.
     // no_match_behavior="trigger" only applies within an active session (unmatched messages

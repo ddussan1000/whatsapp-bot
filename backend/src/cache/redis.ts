@@ -34,7 +34,7 @@ class LRUMap<K, V> {
 const inMemory = new LRUMap<string, ConversationState>(10_000);
 const TTL_SECONDS = 3 * 24 * 3600;
 
-const redis =
+export const redis =
   env.REDIS_ENABLED === "true"
     ? new Redis(env.REDIS_URL, { maxRetriesPerRequest: 1, enableOfflineQueue: false })
     : null;

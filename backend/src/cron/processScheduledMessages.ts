@@ -1,17 +1,20 @@
 import { CronJob } from "cron";
 import { log } from "../logger";
-import { processScheduledMessages } from "../bot/flowEngine";
+import { processScheduledMessages } from "../queue/scheduledMessages";
+import { processDatabaseScheduledMessages } from "../bot/flowEngine";
 
 export function registerScheduledMessagesCron() {
   let running = false;
 
-  // Run every 10 seconds to respect sub-minute step delays
   const job = new CronJob(
-    "*/5 * * * * *",
+    "*/2 * * * * *",
     () => {
-      if (running) return; // skip if previous execution is still in progress
+      if (running) return;
       running = true;
-      processScheduledMessages()
+      Promise.all([
+        processScheduledMessages(),          // Redis worker (new)
+        processDatabaseScheduledMessages(),  // DB fallback for pre-migration rows
+      ])
         .catch((err) => log.error({ err }, "processScheduledMessages cron failed"))
         .finally(() => { running = false; });
     },
