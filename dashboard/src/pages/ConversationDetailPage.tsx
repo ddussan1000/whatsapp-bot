@@ -875,7 +875,7 @@ function ClientInfoModal({
                     </SelectItem>
                   ))}
                   {!knownStage && (
-                    <SelectItem value="" disabled>
+                    <SelectItem value={currentStage} disabled>
                       {currentStage}
                     </SelectItem>
                   )}
