@@ -111,20 +111,6 @@ export async function updateMessageDeliveryStatus(input: {
     .limit(1)
     .maybeSingle();
 
-  // Intento 2: fallback flexible (Meta a veces envía variaciones del ID)
-  if (!data?.id) {
-    const fallback = await supabase
-      .from("messages")
-      .select("id")
-      .match(input.organizationId ? { organization_id: input.organizationId } : {})
-      .ilike("meta_message_id", `%${input.metaMessageId}%`)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    data = fallback.data;
-    error = fallback.error;
-  }
-
   if (error || !data?.id) return;
 
   await supabase

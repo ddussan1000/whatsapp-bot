@@ -50,8 +50,8 @@ export async function scheduleJob(payload: ScheduledJobPayload): Promise<void> {
       pipeline.expire(phoneKey, JOB_TTL);
       await pipeline.exec();
 
-      // Audit row with redis_job_id so the DB cron ignores it
-      await supabase?.from("scheduled_flow_messages").insert({
+      // Audit row with redis_job_id so the DB cron ignores it (fire-and-forget)
+      supabase?.from("scheduled_flow_messages").insert({
         organization_id: payload.orgId,
         conversation_id: payload.conversationId,
         step_id: payload.stepId,
