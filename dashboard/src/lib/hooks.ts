@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "./api";
 import { supabase } from "./supabase";
 import type {
@@ -77,6 +82,7 @@ export function useConversationsQuery(params?: {
     queryKey: ["conversations", params],
     queryFn: () => api.getConversations(params),
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -108,6 +114,18 @@ export function useSendConversationMessageMutation(id: string) {
       api.sendConversationMessage(id, payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["conversation-messages", id] });
+      void qc.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+}
+
+export function useTriggerFlowMutation(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ flowId, stepId }: { flowId: string; stepId?: string }) =>
+      api.triggerFlow(id, flowId, stepId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["conversation", id] });
       void qc.invalidateQueries({ queryKey: ["conversations"] });
     },
   });

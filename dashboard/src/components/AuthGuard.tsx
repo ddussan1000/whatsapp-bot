@@ -31,7 +31,15 @@ export function AuthGuard({ children }: { children: ReactElement }) {
     });
     const { data: listener } =
       supabase?.auth.onAuthStateChange(async (event, session) => {
-        setAuthenticated(Boolean(session));
+        // Only explicitly mark as unauthenticated on real sign-out events.
+        // For TOKEN_REFRESHED and other events, trust the session value.
+        if (event === "SIGNED_OUT") {
+          setAuthenticated(false);
+          return;
+        }
+        if (session) {
+          setAuthenticated(true);
+        }
         if (event === "SIGNED_IN") {
           setActiveOrgId(null);
           queryClient.removeQueries({ queryKey: ["auth", "session"] });

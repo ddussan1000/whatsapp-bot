@@ -356,7 +356,9 @@ function StepConnector({
 
   return (
     <div className="flex flex-col items-center py-1">
-      <div className={`h-3 w-px ${overLimit ? "bg-destructive/50" : "bg-border"}`} />
+      <div
+        className={`h-3 w-px ${overLimit ? "bg-destructive/50" : "bg-border"}`}
+      />
       <div
         className={`group w-full max-w-[240px] rounded-lg border bg-card shadow-sm transition-shadow hover:shadow-md ${
           overLimit ? "border-destructive/60" : ""
@@ -378,7 +380,9 @@ function StepConnector({
                 overLimit ? "text-destructive" : "text-muted-foreground"
               }`}
             >
-              {overLimit ? `Acumulado: ${formatDuration(cumulativeDelay)}` : "Esperar"}
+              {overLimit
+                ? `Acumulado: ${formatDuration(cumulativeDelay)}`
+                : "Esperar"}
             </span>
             {editing ? (
               <div className="flex items-center gap-1">
@@ -433,7 +437,9 @@ function StepConnector({
           </div>
         </div>
       </div>
-      <div className={`h-3 w-px ${overLimit ? "bg-destructive/50" : "bg-border"}`} />
+      <div
+        className={`h-3 w-px ${overLimit ? "bg-destructive/50" : "bg-border"}`}
+      />
     </div>
   );
 }
@@ -1260,7 +1266,10 @@ export function FlowEditor({
       {/* Steps */}
       <div className="flex flex-col gap-0">
         {(() => {
-          const totalDelaySecs = draft.steps.reduce((sum, s) => sum + s.delaySeconds, 0);
+          const totalDelaySecs = draft.steps.reduce(
+            (sum, s) => sum + s.delaySeconds,
+            0
+          );
           const exceeds24h = totalDelaySecs > MAX_FLOW_DELAY_SECS;
           return (
             <div className="flex items-center justify-between px-1 pb-3">
@@ -1313,43 +1322,43 @@ export function FlowEditor({
                     .slice(0, i + 1)
                     .reduce((sum, s) => sum + s.delaySeconds, 0);
                   return (
-                  <SortableStepCard
-                    key={stepIds[i]}
-                    id={stepIds[i]}
-                    step={step}
-                    stepIndex={i}
-                    uploadTarget={uploadTarget}
-                    cumulativeDelay={cumulativeDelay}
-                    onUpdate={(s) => patchStep(i, s)}
-                    onDelete={() => deleteStep(i)}
-                    onAddMessage={() => addMessage(i)}
-                    onDeleteMessage={(j) => deleteMessage(i, j)}
-                    onMessageTypeChange={(j, type) =>
-                      patchMessage(i, j, {
-                        messageType: type,
-                        textContent: "",
-                        mediaUrl: "",
-                        filename: "",
-                        caption: "",
-                      })
-                    }
-                    onMessageTextChange={(j, text) =>
-                      patchMessage(i, j, { textContent: text })
-                    }
-                    onMessageCaptionChange={(j, caption) =>
-                      patchMessage(i, j, { caption })
-                    }
-                    onUploadClick={(j) => {
-                      setUploadTarget({ step: i, msg: j });
-                      setMediaPickerOpen(true);
-                    }}
-                    onDelayChange={(secs) =>
-                      patchStep(i, { delaySeconds: secs })
-                    }
-                    onReorderMessages={(from, to) =>
-                      reorderMessages(i, from, to)
-                    }
-                  />
+                    <SortableStepCard
+                      key={stepIds[i]}
+                      id={stepIds[i]}
+                      step={step}
+                      stepIndex={i}
+                      uploadTarget={uploadTarget}
+                      cumulativeDelay={cumulativeDelay}
+                      onUpdate={(s) => patchStep(i, s)}
+                      onDelete={() => deleteStep(i)}
+                      onAddMessage={() => addMessage(i)}
+                      onDeleteMessage={(j) => deleteMessage(i, j)}
+                      onMessageTypeChange={(j, type) =>
+                        patchMessage(i, j, {
+                          messageType: type,
+                          textContent: "",
+                          mediaUrl: "",
+                          filename: "",
+                          caption: "",
+                        })
+                      }
+                      onMessageTextChange={(j, text) =>
+                        patchMessage(i, j, { textContent: text })
+                      }
+                      onMessageCaptionChange={(j, caption) =>
+                        patchMessage(i, j, { caption })
+                      }
+                      onUploadClick={(j) => {
+                        setUploadTarget({ step: i, msg: j });
+                        setMediaPickerOpen(true);
+                      }}
+                      onDelayChange={(secs) =>
+                        patchStep(i, { delaySeconds: secs })
+                      }
+                      onReorderMessages={(from, to) =>
+                        reorderMessages(i, from, to)
+                      }
+                    />
                   );
                 })}
               </div>
@@ -1370,7 +1379,10 @@ export function FlowEditor({
       {/* Action bar */}
       <Separator />
       {(() => {
-        const totalDelaySecs = draft.steps.reduce((sum, s) => sum + s.delaySeconds, 0);
+        const totalDelaySecs = draft.steps.reduce(
+          (sum, s) => sum + s.delaySeconds,
+          0
+        );
         const exceeds24h = totalDelaySecs > MAX_FLOW_DELAY_SECS;
         return (
           <>

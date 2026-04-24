@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -234,15 +234,20 @@ export function ConversationsPage() {
 
   // Local input state — decoupled from URL so debounce works
   const [searchInput, setSearchInput] = useState(search);
+  // Track the last value pushed to the URL so the debounce doesn't fire on mount
+  const pushedSearchRef = useRef(search);
 
   // Sync input back when URL param is cleared externally (e.g. "Limpiar" button)
   useEffect(() => {
     setSearchInput(search);
+    pushedSearchRef.current = search;
   }, [search]);
 
-  // Push to URL only after 350ms of inactivity
+  // Push to URL only after 350ms of inactivity, and only when the search actually changed
   useEffect(() => {
+    if (searchInput === pushedSearchRef.current) return;
     const timer = setTimeout(() => {
+      pushedSearchRef.current = searchInput;
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);

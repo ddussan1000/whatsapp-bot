@@ -27,7 +27,10 @@ import { log } from "../logger";
 import { invalidateInstanceCache } from "../db/instances";
 import { fetchDailyAdSpend, MetaAdsError } from "../meta/adsInsights";
 import { getExternalAccounts, sendSheetEntry, ExternalReportingError } from "../external/reportingClient";
-import { conversationStageSchema, settableStageSchema } from "../stages";
+import { conversationStageSchema, settableStageSchema, STAGES } from "../stages";
+import { startAssignedFlow } from "../bot/flowEngine";
+import { cancelJobsForPhone } from "../queue/scheduledMessages";
+import { getState, setState } from "../cache/redis";
 
 // Converts a Meta daily date (YYYY-MM-DD) to the same bucket format the SQL RPC uses.
 // Postgres: day → YYYY-MM-DD | week → IYYY-"W"IW | month → YYYY-MM
@@ -4097,6 +4100,97 @@ dashboardApi.openapi(
       .eq("id", id)
       .eq("organization_id", orgId(c));
     if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true }, 200);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/conversations/{id}/trigger-flow",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+      body: {
+        required: true,
+        content: {
+          "application/json": { schema: z.object({ flowId: z.string().uuid(), stepId: z.string().uuid().optional() }) },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Flujo iniciado",
+        content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+      },
+      404: {
+        description: "Not found",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const { flowId, stepId } = c.req.valid("json");
+    const organization = orgId(c);
+
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("id, phone, whatsapp_instance_id, flow_id")
+      .eq("id", id)
+      .eq("organization_id", organization)
+      .maybeSingle();
+    if (!conv) return c.json({ error: "Conversación no encontrada" }, 404);
+
+    const { data: flow } = await supabase
+      .from("flows")
+      .select("id, name, organization_id")
+      .eq("id", flowId)
+      .eq("organization_id", organization)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!flow) return c.json({ error: "Flujo no encontrado o inactivo" }, 404);
+
+    let metaPhoneNumberId: string | null = null;
+    if (conv.whatsapp_instance_id) {
+      const { data: instance } = await supabase
+        .from("whatsapp_instances")
+        .select("phone_number_id")
+        .eq("id", conv.whatsapp_instance_id)
+        .eq("organization_id", organization)
+        .maybeSingle();
+      metaPhoneNumberId = instance?.phone_number_id ?? null;
+    }
+
+    await cancelJobsForPhone(organization, conv.phone);
+
+    const currentState = await getState(conv.phone, metaPhoneNumberId);
+    const nextState = {
+      ...currentState,
+      organizationId: organization,
+      id: conv.id,
+      flowId: flow.id,
+      flowName: flow.name,
+      whatsappInstanceId: conv.whatsapp_instance_id ?? currentState.whatsappInstanceId ?? null,
+      metaPhoneNumberId: metaPhoneNumberId ?? currentState.metaPhoneNumberId ?? null,
+      stage: STAGES.en_flujo,
+    };
+
+    const started = await startAssignedFlow(conv.phone, nextState, stepId);
+    if (!started) return c.json({ error: "No se pudo iniciar el flujo (sin pasos o paso no encontrado)" }, 500);
+
+    await setState(conv.phone, nextState, metaPhoneNumberId);
+
+    await supabase
+      .from("conversations")
+      .update({ stage: STAGES.en_flujo, flow_id: flow.id, updated_at: new Date().toISOString() })
+      .eq("id", conv.id);
+
     return c.json({ ok: true }, 200);
   },
 );

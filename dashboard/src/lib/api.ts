@@ -383,6 +383,17 @@ export const api = {
         return r.json() as Promise<{ ok: boolean }>;
       })
     ),
+  triggerFlow: (id: string, flowId: string, stepId?: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/conversations/${id}/trigger-flow`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ flowId, ...(stepId ? { stepId } : {}) }),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean }>;
+      })
+    ),
   getBotConfig: () => request<BotConfig>("/api/config/bot"),
   updateBotConfig: (payload: UpdateBotConfigBody) =>
     buildHeaders(true).then((headers) =>

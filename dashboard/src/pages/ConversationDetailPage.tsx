@@ -18,6 +18,7 @@ import {
   ThumbsUp,
   User,
   Video,
+  PlayCircle,
   Workflow,
   X,
 } from "lucide-react";
@@ -42,9 +43,12 @@ import {
 } from "../components/ui/select";
 import {
   useConversationQuery,
+  useFlowV2Query,
+  useFlowsV2Query,
   usePaymentsQuery,
   useSendConversationMessageMutation,
   useSendMediaFromLibraryMutation,
+  useTriggerFlowMutation,
   useUpdateConversationStageMutation,
   useUpdatePaymentAmountMutation,
   useUpdatePaymentStateMutation,
@@ -1096,11 +1100,18 @@ export function ConversationDetailPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
 
+  const [flowTriggerOpen, setFlowTriggerOpen] = useState(false);
+  const [selectedFlowId, setSelectedFlowId] = useState("");
+  const [selectedStepId, setSelectedStepId] = useState("");
+
   const { data: conversation, isLoading: convLoading } =
     useConversationQuery(id);
+  const { data: flows } = useFlowsV2Query();
+  const { data: selectedFlowDetail } = useFlowV2Query(selectedFlowId);
   const sendMutation = useSendConversationMessageMutation(id);
   const sendMediaMutation = useSendMediaFromLibraryMutation(id);
   const stageMutation = useUpdateConversationStageMutation(id);
+  const triggerFlowMutation = useTriggerFlowMutation(id);
 
   // Initial load
   useEffect(() => {
@@ -1271,6 +1282,19 @@ export function ConversationDetailPage() {
           <Button
             variant="ghost"
             size="icon-sm"
+            onClick={() => {
+              setSelectedFlowId("");
+              setFlowTriggerOpen(true);
+            }}
+            className="shrink-0 text-muted-foreground"
+            aria-label="Activar flujo manualmente"
+            title="Activar flujo manualmente"
+          >
+            <PlayCircle size={17} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setInfoOpen(true)}
             className="shrink-0 text-muted-foreground"
             aria-label="Ver detalles"
@@ -1382,6 +1406,88 @@ export function ConversationDetailPage() {
         onSelect={(result) => void onMediaSelected(result)}
         title="Enviar desde biblioteca"
       />
+
+      <Dialog open={flowTriggerOpen} onOpenChange={setFlowTriggerOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PlayCircle size={18} />
+              Activar flujo manualmente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 pt-1">
+            <p className="text-sm text-muted-foreground">
+              Selecciona el flujo que deseas enviar a este usuario. Esto
+              cancelará cualquier flujo activo y comenzará desde el paso 1.
+            </p>
+            <Select
+              value={selectedFlowId}
+              onValueChange={(v) => {
+                setSelectedFlowId(v);
+                setSelectedStepId("");
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Seleccionar flujo…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(flows ?? []).map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedFlowId && (
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Desde el paso
+                </label>
+                <Select
+                  value={selectedStepId}
+                  onValueChange={setSelectedStepId}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Paso 1 (inicio)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(selectedFlowDetail?.steps ?? [])
+                      .slice()
+                      .sort((a, b) => a.position - b.position)
+                      .map((s, i) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.label
+                            ? `Paso ${i + 1} — ${s.label}`
+                            : `Paso ${i + 1}`}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Button
+              disabled={!selectedFlowId || triggerFlowMutation.isPending}
+              onClick={() => {
+                triggerFlowMutation.mutate(
+                  {
+                    flowId: selectedFlowId,
+                    stepId: selectedStepId || undefined,
+                  },
+                  {
+                    onSuccess: () => {
+                      toast.success("Flujo activado correctamente");
+                      setFlowTriggerOpen(false);
+                    },
+                    onError: () => toast.error("No se pudo activar el flujo"),
+                  }
+                );
+              }}
+            >
+              {triggerFlowMutation.isPending ? "Activando…" : "Activar flujo"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ClientInfoModal
         open={infoOpen}

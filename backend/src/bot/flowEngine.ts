@@ -9,7 +9,6 @@ import { log } from "../logger";
 import { sendMessage } from "./sender";
 import { textMessage } from "./messages";
 import type { ConversationState } from "../types";
-import { STAGES, FLOW_IN_PROGRESS_STAGES } from "../stages";
 import { scheduleJob, cancelJobsForPhone } from "../queue/scheduledMessages";
 import type { ScheduledJobPayload } from "../queue/scheduledMessages";
 
@@ -154,18 +153,30 @@ export async function sendStepMessages(
 export async function startAssignedFlow(
   phone: string,
   state: ConversationState,
+  fromStepId?: string,
 ): Promise<boolean> {
   if (!supabase || !state.organizationId || !state.flowId) return false;
   const flow = await getFlowById(state.flowId, state.organizationId);
   if (!flow?.steps?.length) return false;
   const sorted = [...flow.steps].sort((a, b) => a.position - b.position);
 
+  // When starting from a specific step, slice from that step onwards.
+  // Cumulative delay resets to 0 so the first step in the slice sends immediately.
+  let steps = sorted;
+  if (fromStepId) {
+    const fromIndex = sorted.findIndex((s) => s.id === fromStepId);
+    if (fromIndex === -1) return false; // stepId not found — abort instead of defaulting
+    steps = sorted.slice(fromIndex);
+  }
+
+  if (!steps.length) return false;
+
   await cancelJobsForPhone(state.organizationId, phone);
 
   const now = Date.now();
   let cumulativeDelayMs = 0;
 
-  for (const step of sorted) {
+  for (const step of steps) {
     cumulativeDelayMs += step.delay_seconds * 1000;
 
     if (cumulativeDelayMs === 0) {
@@ -188,97 +199,10 @@ export async function startAssignedFlow(
   }
 
   log.info(
-    { flowId: flow.id, phone, steps: sorted.length, event: "flow.started" },
+    { flowId: flow.id, phone, steps: steps.length, fromStepId, event: "flow.started" },
     `Flow started: ${flow.name}`,
   );
 
   return true;
 }
 
-// ── DB-based scheduled message processor (legacy fallback) ───────────────────
-//
-// Processes old-style pending rows (redis_job_id IS NULL) that were created
-// before the Redis queue migration or when Redis was unavailable.
-// claim_scheduled_messages() only claims rows with redis_job_id IS NULL,
-// so this cron and the Redis worker never race on the same job.
-export async function processDatabaseScheduledMessages(): Promise<void> {
-  if (!supabase) return;
-
-  // Atomically claim due rows — concurrent instances will skip locked rows
-  const { data: claimed, error } = await supabase.rpc("claim_scheduled_messages", {
-    batch_limit: 50,
-  });
-
-  if (error) {
-    log.error({ err: error }, "processScheduledMessages: claim error");
-    return;
-  }
-
-  if (!claimed?.length) return;
-
-  log.info({ count: claimed.length }, "processScheduledMessages: processing batch");
-
-  for (const row of claimed) {
-    const sentAt = new Date().toISOString();
-    try {
-      const { data: step, error: stepErr } = await supabase
-        .from("flow_steps")
-        .select(
-          `id, flow_id, organization_id, position, delay_seconds, trigger_keywords, label,
-           messages:flow_step_messages(id, step_id, position, message_type, text_content, media_url, filename, caption)`,
-        )
-        .eq("id", row.step_id)
-        .maybeSingle();
-
-      if (stepErr || !step) {
-        log.warn({ stepId: row.step_id }, "processScheduledMessages: step not found");
-        await supabase
-          .from("scheduled_flow_messages")
-          .update({ status: "failed", sent_at: sentAt })
-          .eq("id", row.id);
-        continue;
-      }
-
-      const fakeState: ConversationState = {
-        stage: STAGES.en_flujo,
-        organizationId: row.organization_id,
-        id: row.conversation_id ?? null,
-        flowId: row.flow_id ?? null,
-        whatsappInstanceId: row.whatsapp_instance_id ?? null,
-        metaPhoneNumberId: row.meta_phone_number_id ?? null,
-        flowName: null,
-        history: [],
-      };
-
-      await sendStepMessages(step as FlowStep, row.phone, fakeState);
-
-      // Row was already claimed as 'sent' by the RPC; just record the timestamp
-      await supabase
-        .from("scheduled_flow_messages")
-        .update({ sent_at: sentAt })
-        .eq("id", row.id);
-
-      // If no more pending steps for this phone, mark conversation as flujo_terminado
-      const { count: remaining } = await supabase
-        .from("scheduled_flow_messages")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", row.organization_id)
-        .eq("phone", row.phone)
-        .eq("status", "pending");
-
-      if ((remaining ?? 0) === 0 && row.conversation_id) {
-        await supabase
-          .from("conversations")
-          .update({ stage: STAGES.flujo_terminado })
-          .eq("id", row.conversation_id)
-          .in("stage", FLOW_IN_PROGRESS_STAGES);
-      }
-    } catch (err) {
-      log.error({ err, rowId: row.id }, "processScheduledMessages: send error");
-      await supabase
-        .from("scheduled_flow_messages")
-        .update({ status: "failed", sent_at: sentAt })
-        .eq("id", row.id);
-    }
-  }
-}

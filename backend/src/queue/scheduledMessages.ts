@@ -111,41 +111,20 @@ export async function cancelJobsForPhone(orgId: string, phone: string): Promise<
       log.warn({ err }, "cancelJobsForPhone: Redis operation failed");
     }
   }
-
-  // Cancel any old-style (pre-migration) pending DB rows that have no redis_job_id
-  await supabase
-    ?.from("scheduled_flow_messages")
-    .update({ status: "cancelled" })
-    .eq("organization_id", orgId)
-    .eq("phone", phone)
-    .eq("status", "pending")
-    .is("redis_job_id", null);
 }
 
 // ── Status check ──────────────────────────────────────────────────────────────
 
 export async function hasPendingJobs(orgId: string, phone: string): Promise<boolean> {
   const r = redis;
-  if (r) {
-    try {
-      const count = await r.scard(`sched:phone:${orgId}:${phone}`);
-      if (count > 0) return true;
-      // count === 0: no Redis-managed jobs, fall through to check old-style DB rows
-    } catch (err) {
-      log.warn({ err }, "hasPendingJobs: Redis failed, falling back to DB");
-    }
+  if (!r) return false;
+  try {
+    const count = await r.scard(`sched:phone:${orgId}:${phone}`);
+    return count > 0;
+  } catch (err) {
+    log.warn({ err }, "hasPendingJobs: Redis failed");
+    return false;
   }
-
-  // Fallback: check for old-style (pre-migration) pending rows (transition period)
-  if (!supabase) return false;
-  const { count } = await supabase
-    .from("scheduled_flow_messages")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", orgId)
-    .eq("phone", phone)
-    .eq("status", "pending")
-    .is("redis_job_id", null);
-  return (count ?? 0) > 0;
 }
 
 // ── Worker ────────────────────────────────────────────────────────────────────

@@ -1,7 +1,6 @@
 import { CronJob } from "cron";
 import { log } from "../logger";
 import { processScheduledMessages } from "../queue/scheduledMessages";
-import { processDatabaseScheduledMessages } from "../bot/flowEngine";
 
 export function registerScheduledMessagesCron() {
   let running = false;
@@ -11,10 +10,7 @@ export function registerScheduledMessagesCron() {
     () => {
       if (running) return;
       running = true;
-      Promise.all([
-        processScheduledMessages(),          // Redis worker (new)
-        processDatabaseScheduledMessages(),  // DB fallback for pre-migration rows
-      ])
+      processScheduledMessages()
         .catch((err) => log.error({ err }, "processScheduledMessages cron failed"))
         .finally(() => { running = false; });
     },
