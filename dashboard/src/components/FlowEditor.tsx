@@ -16,6 +16,7 @@ import {
   Zap,
   Receipt,
   RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DndContext,
@@ -77,6 +78,20 @@ function extractTriggerWord(phrase: string): string {
       .trim()
       .split(/\s+/)[0] ?? ""
   );
+}
+
+const MAX_FLOW_DELAY_SECS = 86_400; // 24 horas
+
+function formatDuration(seconds: number): string {
+  if (seconds === 0) return "0 seg";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const parts: string[] = [];
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  if (s > 0 && h === 0) parts.push(`${s}s`);
+  return parts.join(" ");
 }
 
 type DelayUnit = "seg" | "min" | "hrs";
@@ -319,15 +334,18 @@ function StepConnector({
   delaySeconds,
   stepIndex,
   onChange,
+  cumulativeDelay = 0,
 }: {
   delaySeconds: number;
   stepIndex: number;
   onChange: (seconds: number) => void;
+  cumulativeDelay?: number;
 }) {
   const { value: dispValue, unit: dispUnit } = secondsToDisplay(delaySeconds);
   const [editing, setEditing] = useState(false);
   const [localVal, setLocalVal] = useState(String(dispValue));
   const [localUnit, setLocalUnit] = useState<DelayUnit>(dispUnit);
+  const overLimit = cumulativeDelay > MAX_FLOW_DELAY_SECS;
 
   const commit = () => {
     onChange(displayToSeconds(Number(localVal) || 0, localUnit));
@@ -338,15 +356,29 @@ function StepConnector({
 
   return (
     <div className="flex flex-col items-center py-1">
-      <div className="h-3 w-px bg-border" />
-      <div className="group w-full max-w-[220px] rounded-lg border bg-card shadow-sm transition-shadow hover:shadow-md">
+      <div className={`h-3 w-px ${overLimit ? "bg-destructive/50" : "bg-border"}`} />
+      <div
+        className={`group w-full max-w-[240px] rounded-lg border bg-card shadow-sm transition-shadow hover:shadow-md ${
+          overLimit ? "border-destructive/60" : ""
+        }`}
+      >
         <div className="flex items-center gap-2 px-3 py-2">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
-            <Clock size={12} />
+          <div
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+              overLimit
+                ? "bg-destructive/10 text-destructive"
+                : "bg-amber-500/10 text-amber-600"
+            }`}
+          >
+            {overLimit ? <AlertTriangle size={12} /> : <Clock size={12} />}
           </div>
           <div className="flex flex-1 flex-col gap-0.5 min-w-0">
-            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Esperar
+            <span
+              className={`text-[10px] font-medium uppercase tracking-wide ${
+                overLimit ? "text-destructive" : "text-muted-foreground"
+              }`}
+            >
+              {overLimit ? `Acumulado: ${formatDuration(cumulativeDelay)}` : "Esperar"}
             </span>
             {editing ? (
               <div className="flex items-center gap-1">
@@ -386,7 +418,11 @@ function StepConnector({
                 }}
                 className="flex items-center gap-1 text-left"
               >
-                <span className="text-base font-semibold text-foreground">
+                <span
+                  className={`text-base font-semibold ${
+                    overLimit ? "text-destructive" : "text-foreground"
+                  }`}
+                >
                   {delayLabel(delaySeconds)}
                 </span>
                 <span className="text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
@@ -397,7 +433,7 @@ function StepConnector({
           </div>
         </div>
       </div>
-      <div className="h-3 w-px bg-border" />
+      <div className={`h-3 w-px ${overLimit ? "bg-destructive/50" : "bg-border"}`} />
     </div>
   );
 }
@@ -409,6 +445,7 @@ function StepCard({
   stepIndex,
   uploadTarget,
   dragHandle,
+  cumulativeDelay,
   onUpdate,
   onDelete,
   onAddMessage,
@@ -424,6 +461,7 @@ function StepCard({
   stepIndex: number;
   uploadTarget: { step: number; msg: number } | null;
   dragHandle?: React.ReactNode;
+  cumulativeDelay?: number;
   onUpdate: (step: FlowEditorStep) => void;
   onDelete: () => void;
   onAddMessage: () => void;
@@ -458,6 +496,7 @@ function StepCard({
         delaySeconds={step.delaySeconds}
         stepIndex={stepIndex}
         onChange={onDelayChange}
+        cumulativeDelay={cumulativeDelay}
       />
 
       <div className="rounded-xl border bg-card shadow-sm">
@@ -1220,16 +1259,32 @@ export function FlowEditor({
 
       {/* Steps */}
       <div className="flex flex-col gap-0">
-        <div className="flex items-center justify-between px-1 pb-3">
-          <h3 className="text-base font-semibold">
-            Pasos del flow
-            {draft.steps.length > 0 && (
-              <span className="ml-2 font-normal text-muted-foreground">
-                ({draft.steps.length})
-              </span>
-            )}
-          </h3>
-        </div>
+        {(() => {
+          const totalDelaySecs = draft.steps.reduce((sum, s) => sum + s.delaySeconds, 0);
+          const exceeds24h = totalDelaySecs > MAX_FLOW_DELAY_SECS;
+          return (
+            <div className="flex items-center justify-between px-1 pb-3">
+              <h3 className="text-base font-semibold">
+                Pasos del flow
+                {draft.steps.length > 0 && (
+                  <span className="ml-2 font-normal text-muted-foreground">
+                    ({draft.steps.length})
+                  </span>
+                )}
+              </h3>
+              {totalDelaySecs > 0 && (
+                <span
+                  className={`flex items-center gap-1 text-xs font-medium ${
+                    exceeds24h ? "text-destructive" : "text-muted-foreground"
+                  }`}
+                >
+                  {exceeds24h && <AlertTriangle size={11} />}
+                  {formatDuration(totalDelaySecs)} total
+                </span>
+              )}
+            </div>
+          );
+        })()}
 
         {draft.steps.length === 0 ? (
           <div className="rounded-xl border border-dashed p-8 text-center">
@@ -1253,13 +1308,18 @@ export function FlowEditor({
               strategy={verticalListSortingStrategy}
             >
               <div className="flex flex-col">
-                {draft.steps.map((step, i) => (
+                {draft.steps.map((step, i) => {
+                  const cumulativeDelay = draft.steps
+                    .slice(0, i + 1)
+                    .reduce((sum, s) => sum + s.delaySeconds, 0);
+                  return (
                   <SortableStepCard
                     key={stepIds[i]}
                     id={stepIds[i]}
                     step={step}
                     stepIndex={i}
                     uploadTarget={uploadTarget}
+                    cumulativeDelay={cumulativeDelay}
                     onUpdate={(s) => patchStep(i, s)}
                     onDelete={() => deleteStep(i)}
                     onAddMessage={() => addMessage(i)}
@@ -1290,7 +1350,8 @@ export function FlowEditor({
                       reorderMessages(i, from, to)
                     }
                   />
-                ))}
+                  );
+                })}
               </div>
             </SortableContext>
           </DndContext>
@@ -1308,19 +1369,38 @@ export function FlowEditor({
 
       {/* Action bar */}
       <Separator />
-      <div className="flex flex-wrap items-center gap-2 pb-2">
-        <Button
-          onClick={() => onSave(draft)}
-          disabled={
-            savePending || !draft.name.trim() || !draft.triggerPhrase.trim()
-          }
-          loading={savePending}
-          loadingText="Guardando…"
-        >
-          {saveLabel}
-        </Button>
-        {renderActions?.({ draft, dirty, resetDraft })}
-      </div>
+      {(() => {
+        const totalDelaySecs = draft.steps.reduce((sum, s) => sum + s.delaySeconds, 0);
+        const exceeds24h = totalDelaySecs > MAX_FLOW_DELAY_SECS;
+        return (
+          <>
+            {exceeds24h && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <AlertTriangle size={14} className="shrink-0" />
+                El tiempo acumulado del flujo supera las 24 horas (
+                {formatDuration(totalDelaySecs)}). Reduce los delays para poder
+                guardar.
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2 pb-2">
+              <Button
+                onClick={() => onSave(draft)}
+                disabled={
+                  savePending ||
+                  !draft.name.trim() ||
+                  !draft.triggerPhrase.trim() ||
+                  exceeds24h
+                }
+                loading={savePending}
+                loadingText="Guardando…"
+              >
+                {saveLabel}
+              </Button>
+              {renderActions?.({ draft, dirty, resetDraft })}
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }

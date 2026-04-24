@@ -64,40 +64,50 @@ function orgId(c: any) {
   return id;
 }
 
-const UpsertFlowBodySchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(2),
-  triggerPhrase: z.string().min(1),
-  keywords: z.array(z.string()).default([]),
-  noMatchBehavior: z.enum(["trigger", "ignore"]).default("trigger"),
-  systemPrompt: z.string().nullable().optional(),
-  isActive: z.boolean().default(true),
-  sessionTimeoutHours: z.number().int().min(0).default(24),
-  messageOverrides: z.record(z.string(), z.string()).optional(),
-  steps: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        position: z.number(),
-        delaySeconds: z.number().default(0),
-        label: z.string().optional(),
-        messages: z
-          .array(
-            z.object({
-              id: z.string().optional(),
-              position: z.number(),
-              messageType: z.enum(["text", "image", "document", "video", "audio"]),
-              textContent: z.string().nullable().optional(),
-              mediaUrl: z.string().nullable().optional(),
-              filename: z.string().nullable().optional(),
-              caption: z.string().nullable().optional(),
-            }),
-          )
-          .default([]),
-      }),
-    )
-    .default([]),
-});
+const MAX_FLOW_DELAY_SECONDS = 86_400; // 24 horas
+
+const UpsertFlowBodySchema = z
+  .object({
+    id: z.string().optional(),
+    name: z.string().min(2),
+    triggerPhrase: z.string().min(1),
+    keywords: z.array(z.string()).default([]),
+    noMatchBehavior: z.enum(["trigger", "ignore"]).default("trigger"),
+    systemPrompt: z.string().nullable().optional(),
+    isActive: z.boolean().default(true),
+    sessionTimeoutHours: z.number().int().min(0).default(24),
+    messageOverrides: z.record(z.string(), z.string()).optional(),
+    steps: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          position: z.number(),
+          delaySeconds: z.number().min(0).default(0),
+          label: z.string().optional(),
+          messages: z
+            .array(
+              z.object({
+                id: z.string().optional(),
+                position: z.number(),
+                messageType: z.enum(["text", "image", "document", "video", "audio"]),
+                textContent: z.string().nullable().optional(),
+                mediaUrl: z.string().nullable().optional(),
+                filename: z.string().nullable().optional(),
+                caption: z.string().nullable().optional(),
+              }),
+            )
+            .default([]),
+        }),
+      )
+      .default([]),
+  })
+  .refine(
+    (data) => data.steps.reduce((sum, s) => sum + s.delaySeconds, 0) <= MAX_FLOW_DELAY_SECONDS,
+    {
+      message: "El tiempo acumulado de los pasos no puede superar las 24 horas",
+      path: ["steps"],
+    },
+  );
 
 export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
   dashboardApi.openapi(
