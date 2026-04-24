@@ -138,12 +138,17 @@ async function buildHeaders(
   let accessToken: string | undefined;
   try {
     const result = await getSessionWithTimeout();
-    accessToken =
-      (
-        result as {
-          data?: { session?: { access_token?: string } | null };
-        } | null
-      )?.data?.session?.access_token ?? undefined;
+    const session = result?.data?.session ?? null;
+    if (session) {
+      const now = Math.floor(Date.now() / 1000);
+      if ((session.expires_at ?? 0) - now < 60) {
+        // Token expired or expiring within 60s — force a refresh before sending
+        const { data } = await supabase!.auth.refreshSession();
+        accessToken = data.session?.access_token;
+      } else {
+        accessToken = session.access_token;
+      }
+    }
   } catch {
     // session timed out or errored — proceed without token (backend returns 401)
   }
@@ -155,12 +160,17 @@ async function buildHeaders(
   };
 }
 
-async function request<T>(path: string): Promise<T> {
+async function request<T>(path: string, isRetry = false): Promise<T> {
   const headers = await buildHeaders(true);
   const res = await fetch(`${API_URL}${path}`, {
     headers,
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
+  if (res.status === 401 && !isRetry) {
+    // Transient state during Supabase internal token refresh — force refresh and retry once
+    await supabase?.auth.refreshSession().catch(() => {});
+    return request<T>(path, true);
+  }
   if (!res.ok) await throwApiError(res);
   return (await res.json()) as T;
 }

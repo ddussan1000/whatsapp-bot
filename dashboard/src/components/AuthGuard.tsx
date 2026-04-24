@@ -47,9 +47,21 @@ export function AuthGuard({ children }: { children: ReactElement }) {
           }
         }
       }) ?? {};
+
+    // Proactively refresh the session when the tab regains focus so the token is
+    // fresh before React Query's refetchOnWindowFocus fires its parallel queries.
+    // This prevents the race condition where getSession() returns null/stale during
+    // Supabase's internal token refresh timer, causing transient 401 responses.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible" || !supabase) return;
+      supabase.auth.refreshSession().catch(() => {});
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       mounted = false;
       listener?.subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
