@@ -2,6 +2,7 @@ import Redis from "ioredis";
 import { env } from "../config/env";
 import { log } from "../logger";
 import type { ConversationState } from "../types";
+import { STAGES } from "../stages";
 
 class LRUMap<K, V> {
   private map = new Map<K, V>();
@@ -48,7 +49,7 @@ export async function getState(phone: string, metaPhoneNumberId?: string | null)
     return (
       inMemory.get(k) ?? {
         organizationId: "",
-        stage: "nuevo",
+        stage: STAGES.nuevo,
         flowId: null,
         flowName: null,
         history: [],
@@ -61,7 +62,7 @@ export async function getState(phone: string, metaPhoneNumberId?: string | null)
     ? (JSON.parse(raw) as ConversationState)
     : {
         organizationId: "",
-        stage: "nuevo",
+        stage: STAGES.nuevo,
         flowId: null,
         flowName: null,
         history: [],

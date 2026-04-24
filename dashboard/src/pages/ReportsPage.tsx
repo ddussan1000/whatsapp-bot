@@ -68,30 +68,7 @@ import {
   useUpdatePaymentAmountMutation,
   useUpdatePaymentStateMutation,
 } from "../lib/hooks";
-
-// ── Stage label normalization ─────────────────────────────────────────────
-
-const STAGE_LABELS: Record<string, string> = {
-  // current stages
-  en_flujo: "En flujo",
-  flujo_terminado: "Flujo terminado",
-  pago_confirmado: "Pago confirmado",
-  revision_manual: "Revisión manual",
-  // legacy stages kept for old data
-  flow_started: "En flujo",
-  confirmar_comprobante: "En revisión",
-  interesado: "Interesado",
-  listo_pagar: "Listo para pagar",
-  necesita_agente: "Necesita agente",
-  post_venta: "Post venta",
-};
-
-function stageLabel(stage: string): string {
-  return (
-    STAGE_LABELS[stage] ??
-    stage.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-  );
-}
+import { stageLabel } from "../lib/stages";
 
 function mergeFunnelByLabel(
   funnel: { stage: string; count: number }[]
@@ -287,8 +264,8 @@ export function ReportsPage() {
   // Export modal state
   const [exportOpen, setExportOpen] = useState(false);
   const [exportInstanceId, setExportInstanceId] = useState<string>("");
-  const [exportDate, setExportDate] = useState(
-    () => dateInputValue(new Date(Date.now() - 86400000))
+  const [exportDate, setExportDate] = useState(() =>
+    dateInputValue(new Date(Date.now() - 86400000))
   );
   const [exportAccountName, setExportAccountName] = useState<string>("");
   const [exportIncludeMetaSpend, setExportIncludeMetaSpend] = useState(false);
@@ -365,8 +342,9 @@ export function ReportsPage() {
   const selectedExportInstance = instances.find(
     (i) => i.id === exportInstanceId
   );
-  const { data: exportAccounts = [] } =
-    useInstanceExternalAccountsQuery(exportInstanceId || null);
+  const { data: exportAccounts = [] } = useInstanceExternalAccountsQuery(
+    exportInstanceId || null
+  );
   const exportToReporting = useExportToReportingMutation();
 
   return (
@@ -383,10 +361,7 @@ export function ReportsPage() {
             Exportar CSV
           </Button>
           {exportableInstances.length > 0 && (
-            <Button
-              size="sm"
-              onClick={() => setExportOpen(true)}
-            >
+            <Button size="sm" onClick={() => setExportOpen(true)}>
               <Send size={14} className="mr-1.5" />
               Exportar a Reportes
             </Button>
@@ -476,17 +451,32 @@ export function ReportsPage() {
           </Select>
 
           {/* Quick date presets */}
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 flex-wrap">
             <Button
               variant="outline"
               size="sm"
               className="h-9 text-xs"
               onClick={() => {
-                setFromDate(dateInputValue(new Date()));
-                setToDate(dateInputValue(new Date()));
+                const today = dateInputValue(new Date());
+                setFromDate(today);
+                setToDate(today);
               }}
             >
               Hoy
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs"
+              onClick={() => {
+                const yesterday = dateInputValue(
+                  new Date(Date.now() - 86400000)
+                );
+                setFromDate(yesterday);
+                setToDate(yesterday);
+              }}
+            >
+              Ayer
             </Button>
             <Button
               variant="outline"
@@ -499,7 +489,7 @@ export function ReportsPage() {
                 setToDate(dateInputValue(new Date()));
               }}
             >
-              7d
+              Últ. semana
             </Button>
             <Button
               variant="outline"
@@ -512,7 +502,20 @@ export function ReportsPage() {
                 setToDate(dateInputValue(new Date()));
               }}
             >
-              30d
+              1 mes
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs"
+              onClick={() => {
+                setFromDate(
+                  dateInputValue(new Date(Date.now() - 180 * 86400000))
+                );
+                setToDate(dateInputValue(new Date()));
+              }}
+            >
+              6 meses
             </Button>
           </div>
         </CardContent>
@@ -546,9 +549,9 @@ export function ReportsPage() {
 
           {displayCurrency === null && !loading && (
             <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
-              Monedas mixtas — las instancias usan distintas divisas. Los totales
-              agregados combinan monedas; filtra por instancia para ver ingresos
-              precisos.
+              Monedas mixtas — las instancias usan distintas divisas. Los
+              totales agregados combinan monedas; filtra por instancia para ver
+              ingresos precisos.
             </p>
           )}
 
@@ -945,10 +948,15 @@ export function ReportsPage() {
                                         }
                                       );
                                     } else {
-                                      toast.error("El monto debe ser un número positivo");
+                                      toast.error(
+                                        "El monto debe ser un número positivo"
+                                      );
                                     }
                                   }
-                                  if (e.key === "Escape" && !updatePaymentAmount.isPending)
+                                  if (
+                                    e.key === "Escape" &&
+                                    !updatePaymentAmount.isPending
+                                  )
                                     setEditingAmountId(null);
                                 }}
                               />
@@ -968,7 +976,9 @@ export function ReportsPage() {
                                       }
                                     );
                                   } else {
-                                    toast.error("El monto debe ser un número positivo");
+                                    toast.error(
+                                      "El monto debe ser un número positivo"
+                                    );
                                   }
                                 }}
                               >
@@ -986,7 +996,10 @@ export function ReportsPage() {
                             <div className="flex items-center gap-1.5 group/amount">
                               <span>
                                 {p.amount != null
-                                  ? money(p.amount, p.currency ?? displayCurrency ?? "COP")
+                                  ? money(
+                                      p.amount,
+                                      p.currency ?? displayCurrency ?? "COP"
+                                    )
                                   : "-"}
                               </span>
                               <button
@@ -1092,9 +1105,7 @@ export function ReportsPage() {
                     {
                       label: "ROAS",
                       value:
-                        kpis.roas != null
-                          ? `${kpis.roas.toFixed(2)}x`
-                          : "—",
+                        kpis.roas != null ? `${kpis.roas.toFixed(2)}x` : "—",
                     },
                   ].map((kpi) => (
                     <div
@@ -1130,7 +1141,10 @@ export function ReportsPage() {
                       },
                       {
                         label: "Ingresos ads",
-                        value: money(adTotals.revenue, displayCurrency ?? "COP"),
+                        value: money(
+                          adTotals.revenue,
+                          displayCurrency ?? "COP"
+                        ),
                       },
                       {
                         label: "Tasa conversion",
@@ -1147,13 +1161,13 @@ export function ReportsPage() {
                   </div>
 
                   <div className="grid gap-3 lg:grid-cols-2">
-                    <Card className="border-0 shadow-none">
-                      <CardHeader className="pb-2 px-0">
+                    <Card>
+                      <CardHeader className="pb-2">
                         <CardTitle className="text-base">
                           Comparativa por anuncio
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="px-0">
+                      <CardContent>
                         <ChartContainer
                           config={{
                             clicks: { label: "Clics", color: "#3b82f6" },
@@ -1200,13 +1214,13 @@ export function ReportsPage() {
                       </CardContent>
                     </Card>
 
-                    <Card className="border-0 shadow-none">
-                      <CardHeader className="pb-2 px-0">
+                    <Card>
+                      <CardHeader className="pb-2">
                         <CardTitle className="text-base">
                           Distribucion de clics
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="px-0">
+                      <CardContent>
                         <ChartContainer
                           config={{
                             clicks: { label: "Clics", color: "#8b5cf6" },
@@ -1360,7 +1374,9 @@ export function ReportsPage() {
 
             {exportInstanceId && (
               <div className="space-y-1.5">
-                <Label htmlFor="export-account">Cuenta en sistema externo</Label>
+                <Label htmlFor="export-account">
+                  Cuenta en sistema externo
+                </Label>
                 <Select
                   value={exportAccountName}
                   onValueChange={setExportAccountName}
@@ -1422,8 +1438,7 @@ export function ReportsPage() {
                     date: exportDate,
                     instance_id: exportInstanceId,
                     account_name: exportAccountName,
-                    currency:
-                      selectedExportInstance?.currency ?? "COP",
+                    currency: selectedExportInstance?.currency ?? "COP",
                     include_meta_spend: exportIncludeMetaSpend,
                   },
                   {
@@ -1439,9 +1454,7 @@ export function ReportsPage() {
                     },
                     onError: (err) => {
                       toast.error(
-                        err instanceof Error
-                          ? err.message
-                          : "Error al exportar"
+                        err instanceof Error ? err.message : "Error al exportar"
                       );
                     },
                   }

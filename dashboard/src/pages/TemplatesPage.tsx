@@ -195,7 +195,8 @@ function StepsModal({
                                 </p>
                               ) : m.filename ? (
                                 <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <Paperclip className="h-3.5 w-3.5 shrink-0" /> {m.filename}
+                                  <Paperclip className="h-3.5 w-3.5 shrink-0" />{" "}
+                                  {m.filename}
                                 </p>
                               ) : m.caption ? (
                                 <p className="text-sm text-muted-foreground italic">

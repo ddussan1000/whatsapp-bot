@@ -489,7 +489,9 @@ export function InstructionsPage() {
                 <span className="font-semibold">{t.type}</span>
                 <span className="flex items-center gap-1 text-muted-foreground">
                   Duración: {t.dur}
-                  {!t.warn && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
+                  {!t.warn && (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  )}
                 </span>
                 <span className="text-muted-foreground">{t.use}</span>
               </div>

@@ -5,6 +5,7 @@ import type { ConversationState } from "../types";
 import { getFlowById } from "../db/flows";
 import { getOrgAiConfig } from "../db/organizations";
 import { log } from "../logger";
+import { settableStageSchema } from "../stages";
 
 async function resolvePrompt(flowId: string | null, fallbackName: string | null): Promise<string> {
   if (flowId) {
@@ -49,5 +50,7 @@ export async function handleFlow(_type: string, phone: string, text: string, sta
   }
 
   await sendMessage(phone, textMessage(ai.reply ?? "Te respondo en breve."), ctx);
-  return { ...state, stage: ai.next_state ?? state.stage, flowName: state.flowName ?? null };
+  const parsed = settableStageSchema.safeParse(ai.next_state);
+  const nextStage = parsed.success ? parsed.data : state.stage;
+  return { ...state, stage: nextStage, flowName: state.flowName ?? null };
 }

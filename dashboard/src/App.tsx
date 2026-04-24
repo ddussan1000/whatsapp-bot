@@ -9,19 +9,55 @@ import { AuthGuard } from "./components/AuthGuard";
 import { AdminGuard } from "./components/AdminGuard";
 import { AdminLayout } from "./layout/AdminLayout";
 
-const HomePage = lazy(() => import("./pages/HomePage").then((m) => ({ default: m.HomePage })));
-const ConversationsPage = lazy(() => import("./pages/ConversationsPage").then((m) => ({ default: m.ConversationsPage })));
-const ConversationDetailPage = lazy(() => import("./pages/ConversationDetailPage").then((m) => ({ default: m.ConversationDetailPage })));
-const ReportsPage = lazy(() => import("./pages/ReportsPage").then((m) => ({ default: m.ReportsPage })));
-const OrganizationPage = lazy(() => import("./pages/OrganizationPage").then((m) => ({ default: m.OrganizationPage })));
-const FlowsPage = lazy(() => import("./pages/FlowsPage").then((m) => ({ default: m.FlowsPage })));
-const TemplatesPage = lazy(() => import("./pages/TemplatesPage").then((m) => ({ default: m.TemplatesPage })));
-const InstancesPage = lazy(() => import("./pages/InstancesPage").then((m) => ({ default: m.InstancesPage })));
-const InstanceCreatePage = lazy(() => import("./pages/InstanceCreatePage").then((m) => ({ default: m.InstanceCreatePage })));
-const MediaPage = lazy(() => import("./pages/MediaPage").then((m) => ({ default: m.MediaPage })));
-const ConfigPage = lazy(() => import("./pages/ConfigPage").then((m) => ({ default: m.ConfigPage })));
-const InstructionsPage = lazy(() => import("./pages/InstructionsPage").then((m) => ({ default: m.InstructionsPage })));
-const AdminPage = lazy(() => import("./pages/AdminPage").then((m) => ({ default: m.AdminPage })));
+const HomePage = lazy(() =>
+  import("./pages/HomePage").then((m) => ({ default: m.HomePage }))
+);
+const ConversationsPage = lazy(() =>
+  import("./pages/ConversationsPage").then((m) => ({
+    default: m.ConversationsPage,
+  }))
+);
+const ConversationDetailPage = lazy(() =>
+  import("./pages/ConversationDetailPage").then((m) => ({
+    default: m.ConversationDetailPage,
+  }))
+);
+const ReportsPage = lazy(() =>
+  import("./pages/ReportsPage").then((m) => ({ default: m.ReportsPage }))
+);
+const OrganizationPage = lazy(() =>
+  import("./pages/OrganizationPage").then((m) => ({
+    default: m.OrganizationPage,
+  }))
+);
+const FlowsPage = lazy(() =>
+  import("./pages/FlowsPage").then((m) => ({ default: m.FlowsPage }))
+);
+const TemplatesPage = lazy(() =>
+  import("./pages/TemplatesPage").then((m) => ({ default: m.TemplatesPage }))
+);
+const InstancesPage = lazy(() =>
+  import("./pages/InstancesPage").then((m) => ({ default: m.InstancesPage }))
+);
+const InstanceCreatePage = lazy(() =>
+  import("./pages/InstanceCreatePage").then((m) => ({
+    default: m.InstanceCreatePage,
+  }))
+);
+const MediaPage = lazy(() =>
+  import("./pages/MediaPage").then((m) => ({ default: m.MediaPage }))
+);
+const ConfigPage = lazy(() =>
+  import("./pages/ConfigPage").then((m) => ({ default: m.ConfigPage }))
+);
+const InstructionsPage = lazy(() =>
+  import("./pages/InstructionsPage").then((m) => ({
+    default: m.InstructionsPage,
+  }))
+);
+const AdminPage = lazy(() =>
+  import("./pages/AdminPage").then((m) => ({ default: m.AdminPage }))
+);
 
 function App() {
   return (

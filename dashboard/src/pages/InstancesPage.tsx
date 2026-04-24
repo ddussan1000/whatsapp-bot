@@ -237,11 +237,18 @@ function EditDialog({
   const externalReportingQ = useInstanceExternalReportingQuery(instance.id);
   const saveExternalReporting = useSaveInstanceExternalReportingMutation();
 
-  const [metaAdsAccountId, setMetaAdsAccountId] = useState(instance.meta_ads_account_id ?? "");
-  const [metaAdsValidation, setMetaAdsValidation] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [metaAdsAccountId, setMetaAdsAccountId] = useState(
+    instance.meta_ads_account_id ?? ""
+  );
+  const [metaAdsValidation, setMetaAdsValidation] = useState<{
+    ok: boolean;
+    error?: string;
+  } | null>(null);
 
   const [extReportingApiKey, setExtReportingApiKey] = useState("");
-  const [extReportingBaseUrlDraft, setExtReportingBaseUrlDraft] = useState<string | null>(null);
+  const [extReportingBaseUrlDraft, setExtReportingBaseUrlDraft] = useState<
+    string | null
+  >(null);
   const extReportingBaseUrl =
     extReportingBaseUrlDraft ?? externalReportingQ.data?.base_url ?? "";
   const [showExtApiKey, setShowExtApiKey] = useState(false);
@@ -586,8 +593,12 @@ function EditDialog({
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Usa el token de Meta de esta instancia. El token debe tener el permiso{" "}
-                <code className="rounded bg-muted px-1 font-mono text-[11px]">ads_read</code>.
+                Usa el token de Meta de esta instancia. El token debe tener el
+                permiso{" "}
+                <code className="rounded bg-muted px-1 font-mono text-[11px]">
+                  ads_read
+                </code>
+                .
               </p>
               <Field label="ID de cuenta publicitaria" hint="Ej: act_123456789">
                 <Input
@@ -622,7 +633,11 @@ function EditDialog({
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!metaAdsAccountId.trim() || saveMetaAds.isPending || validateMetaAds.isPending}
+                  disabled={
+                    !metaAdsAccountId.trim() ||
+                    saveMetaAds.isPending ||
+                    validateMetaAds.isPending
+                  }
                   loading={saveMetaAds.isPending}
                   loadingText="Guardando…"
                   onClick={() =>
@@ -640,14 +655,20 @@ function EditDialog({
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={!(instance.meta_ads_account_id || saveMetaAds.isSuccess) || validateMetaAds.isPending}
+                  disabled={
+                    !(instance.meta_ads_account_id || saveMetaAds.isSuccess) ||
+                    validateMetaAds.isPending
+                  }
                   loading={validateMetaAds.isPending}
                   loadingText="Verificando…"
                   onClick={() =>
                     validateMetaAds.mutate(instance.id, {
                       onSuccess: (res) => setMetaAdsValidation(res),
                       onError: (e) =>
-                        setMetaAdsValidation({ ok: false, error: (e as Error).message }),
+                        setMetaAdsValidation({
+                          ok: false,
+                          error: (e as Error).message,
+                        }),
                     })
                   }
                 >
@@ -675,7 +696,9 @@ function EditDialog({
                 <Field label="URL base" hint="Ej: https://mi-plataforma.com">
                   <Input
                     value={extReportingBaseUrl}
-                    onChange={(e) => setExtReportingBaseUrlDraft(e.target.value)}
+                    onChange={(e) =>
+                      setExtReportingBaseUrlDraft(e.target.value)
+                    }
                     placeholder="https://mi-plataforma.com"
                   />
                 </Field>
@@ -693,7 +716,9 @@ function EditDialog({
                       value={extReportingApiKey}
                       onChange={(e) => setExtReportingApiKey(e.target.value)}
                       placeholder={
-                        instance.external_reporting_configured ? "•••••• (configurada)" : "api_key…"
+                        instance.external_reporting_configured
+                          ? "•••••• (configurada)"
+                          : "api_key…"
                       }
                       className="flex-1 font-mono text-sm"
                     />
@@ -712,13 +737,17 @@ function EditDialog({
                   className="self-start"
                   disabled={
                     !extReportingBaseUrl.trim() ||
-                    (!extReportingApiKey.trim() && !instance.external_reporting_configured) ||
+                    (!extReportingApiKey.trim() &&
+                      !instance.external_reporting_configured) ||
                     saveExternalReporting.isPending
                   }
                   loading={saveExternalReporting.isPending}
                   loadingText="Guardando…"
                   onClick={() => {
-                    if (!extReportingApiKey.trim() && instance.external_reporting_configured) {
+                    if (
+                      !extReportingApiKey.trim() &&
+                      instance.external_reporting_configured
+                    ) {
                       toast.info("No hubo cambios en la API key");
                       return;
                     }
@@ -731,7 +760,8 @@ function EditDialog({
                         },
                       },
                       {
-                        onSuccess: () => toast.success("Configuración de reportes guardada"),
+                        onSuccess: () =>
+                          toast.success("Configuración de reportes guardada"),
                         onError: (e) => toast.error((e as Error).message),
                       }
                     );

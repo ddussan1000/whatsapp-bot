@@ -27,6 +27,7 @@ import { log } from "../logger";
 import { invalidateInstanceCache } from "../db/instances";
 import { fetchDailyAdSpend, MetaAdsError } from "../meta/adsInsights";
 import { getExternalAccounts, sendSheetEntry, ExternalReportingError } from "../external/reportingClient";
+import { conversationStageSchema, settableStageSchema } from "../stages";
 
 // Converts a Meta daily date (YYYY-MM-DD) to the same bucket format the SQL RPC uses.
 // Postgres: day → YYYY-MM-DD | week → IYYY-"W"IW | month → YYYY-MM
@@ -124,7 +125,7 @@ const ReportsGroupSchema = z.object({
   sales: z.number(),
 });
 const ReportsFunnelItemSchema = z.object({
-  stage: z.string(),
+  stage: conversationStageSchema,
   count: z.number(),
 });
 const ReportsTableItemSchema = z.object({
@@ -165,7 +166,7 @@ const ConversationSchema = z.object({
   id: z.string(),
   phone: z.string(),
   contact_name: z.string().nullable().optional(),
-  stage: z.string(),
+  stage: conversationStageSchema,
   flow_id: z.string().nullable().optional(),
   flow_name: z.string().nullable().optional(),
   started_at: z.string().nullable().optional(),
@@ -554,8 +555,13 @@ dashboardApi.openapi(
       const { data: adsInstances } = await instanceQuery;
 
       if (adsInstances && adsInstances.length > 0) {
-        const fromStr = fromDate.toISOString().slice(0, 10);
-        const toStr = toDate.toISOString().slice(0, 10);
+        // Use org timezone to get the correct local date string (sv-SE gives YYYY-MM-DD).
+        // Without this, end-of-day timestamps (e.g. 23:59 UTC-5 = 04:59 next day UTC) would
+        // produce a toStr one day ahead, inflating adSpendTotal with an extra day from Meta Ads.
+        const toLocalDateStr = (d: Date) =>
+          d.toLocaleDateString("sv-SE", { timeZone: timezone });
+        const fromStr = toLocalDateStr(fromDate);
+        const toStr = toLocalDateStr(toDate);
         const spendByDay = new Map<string, number>();
 
         await Promise.all(
@@ -4027,7 +4033,7 @@ dashboardApi.openapi(
       body: {
         required: true,
         content: {
-          "application/json": { schema: z.object({ stage: z.string() }) },
+          "application/json": { schema: z.object({ stage: settableStageSchema }) },
         },
       },
     },

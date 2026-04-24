@@ -936,10 +936,15 @@ function ClientInfoModal({
                                         }
                                       );
                                     } else {
-                                      toast.error("El monto debe ser un número positivo");
+                                      toast.error(
+                                        "El monto debe ser un número positivo"
+                                      );
                                     }
                                   }
-                                  if (e.key === "Escape" && !updatePaymentAmount.isPending)
+                                  if (
+                                    e.key === "Escape" &&
+                                    !updatePaymentAmount.isPending
+                                  )
                                     setEditingAmountId(null);
                                 }}
                                 autoFocus
@@ -960,7 +965,9 @@ function ClientInfoModal({
                                       }
                                     );
                                   } else {
-                                    toast.error("El monto debe ser un número positivo");
+                                    toast.error(
+                                      "El monto debe ser un número positivo"
+                                    );
                                   }
                                 }}
                               >

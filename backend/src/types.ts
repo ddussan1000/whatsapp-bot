@@ -39,10 +39,12 @@ export type WhatsAppMessage =
   | WhatsAppImageMessage
   | WhatsAppInteractiveMessage;
 
+import type { ConversationStage } from "./stages";
+
 export type ConversationState = {
   id?: string;
   organizationId: string;
-  stage: string;
+  stage: ConversationStage;
   flowId: string | null;
   flowName: string | null;
   whatsappInstanceId: string | null;

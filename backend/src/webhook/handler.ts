@@ -27,6 +27,7 @@ import { getActiveInstanceByPhoneNumberId } from "../db/instances";
 import { supabase } from "../db/supabase";
 import { fetchAdDetails } from "../meta/adDetails";
 import { validateWebhookSignature } from "./validateSignature";
+import { STAGES, FLOW_IN_PROGRESS_STAGES, conversationStageSchema } from "../stages";
 
 function extractReferral(msg: WhatsAppMessage): WhatsAppReferral | null {
   const ref = (msg as unknown as { referral?: WhatsAppReferral }).referral;
@@ -218,12 +219,12 @@ export async function handleWebhook(c: Context) {
 
     // Fall back to DB stage if Redis cache expired.
     // Also catches the case where Redis returned the default "nuevo" for an existing conversation.
-    if ((!state.stage || state.stage === "nuevo") && previous?.stage && previous.stage !== "nuevo") {
-      state.stage = previous.stage as string;
+    if ((!state.stage || state.stage === STAGES.nuevo) && previous?.stage && previous.stage !== STAGES.nuevo) {
+      state.stage = conversationStageSchema.catch(STAGES.nuevo).parse(previous.stage);
     }
 
     // Track if the user already has a confirmed payment, so a second receipt goes to manual review
-    const alreadyPaid = state.stage === "pago_confirmado";
+    const alreadyPaid = state.stage === STAGES.pago_confirmado;
 
     const referral = extractReferral(msg);
     const ctwaClid = referral?.ctwa_clid ?? null;
@@ -372,7 +373,7 @@ export async function handleWebhook(c: Context) {
         const fullFlow = await getFullFlow(runtimeFlow.id, organizationId);
         if (fullFlow?.steps?.length) {
           await startAssignedFlow(phone, nextState);
-          nextState = { ...nextState, stage: "en_flujo" };
+          nextState = { ...nextState, stage: STAGES.en_flujo };
         }
       }
     } else if (shouldStartFlow) {
@@ -380,7 +381,7 @@ export async function handleWebhook(c: Context) {
       const hasSteps = Boolean(fullFlow?.steps?.length);
       if (hasSteps) {
         await startAssignedFlow(phone, nextState);
-        nextState = { ...nextState, stage: "en_flujo" };
+        nextState = { ...nextState, stage: STAGES.en_flujo };
       } else {
         if (msg.type === "text" && text) {
           nextState = await handleFlow(type, phone, text, nextState);

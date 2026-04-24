@@ -9,6 +9,7 @@ import { log } from "../logger";
 import { sendMessage } from "./sender";
 import { textMessage } from "./messages";
 import type { ConversationState } from "../types";
+import { STAGES, FLOW_IN_PROGRESS_STAGES } from "../stages";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -244,7 +245,7 @@ export async function processScheduledMessages(): Promise<void> {
       }
 
       const fakeState: ConversationState = {
-        stage: "flow",
+        stage: STAGES.en_flujo,
         organizationId: row.organization_id,
         id: row.conversation_id ?? null,
         flowId: row.flow_id ?? null,
@@ -273,9 +274,9 @@ export async function processScheduledMessages(): Promise<void> {
       if ((remaining ?? 0) === 0 && row.conversation_id) {
         await supabase
           .from("conversations")
-          .update({ stage: "flujo_terminado" })
+          .update({ stage: STAGES.flujo_terminado })
           .eq("id", row.conversation_id)
-          .in("stage", ["en_flujo", "flow_started"]);
+          .in("stage", FLOW_IN_PROGRESS_STAGES);
       }
     } catch (err) {
       log.error({ err, rowId: row.id }, "processScheduledMessages: send error");

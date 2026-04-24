@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { StatusBadge } from "../components/StatusBadge";
 import type { Conversation } from "../types/api";
+import { ACTIVE_STAGE_OPTIONS } from "../lib/stages";
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -87,12 +88,7 @@ function timeAgo(iso?: string | null) {
   });
 }
 
-const STAGE_OPTIONS = [
-  { value: "en_flujo", label: "En flujo" },
-  { value: "flujo_terminado", label: "Flujo terminado" },
-  { value: "pago_confirmado", label: "Pago confirmado" },
-  { value: "revision_manual", label: "Revisión manual" },
-];
+const STAGE_OPTIONS = ACTIVE_STAGE_OPTIONS;
 
 // ── ConversationRow ───────────────────────────────────────────────────────
 
@@ -222,7 +218,6 @@ function ConversationRow({
           )}
         </div>
       </div>
-
     </div>
   );
 }
@@ -256,7 +251,7 @@ export function ConversationsPage() {
           next.delete("page");
           return next;
         },
-        { replace: true },
+        { replace: true }
       );
     }, 350);
     return () => clearTimeout(timer);

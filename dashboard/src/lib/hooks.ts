@@ -215,7 +215,11 @@ export function useMarkConversationReadMutation() {
 }
 
 export function useBotConfigQuery() {
-  return useQuery({ queryKey: ["bot-config"], queryFn: api.getBotConfig, staleTime: 60_000 });
+  return useQuery({
+    queryKey: ["bot-config"],
+    queryFn: api.getBotConfig,
+    staleTime: 60_000,
+  });
 }
 
 export function useUpdateBotConfigMutation() {
@@ -353,7 +357,11 @@ export function useFlowsQuery(params: {
 }
 
 export function useFlowsV2Query() {
-  return useQuery({ queryKey: ["flows-v2"], queryFn: api.getFlowsV2, staleTime: 60_000 });
+  return useQuery({
+    queryKey: ["flows-v2"],
+    queryFn: api.getFlowsV2,
+    staleTime: 60_000,
+  });
 }
 
 export function useFlowV2Query(id: string) {
@@ -436,7 +444,11 @@ export function useUpdateProductMutation() {
 }
 
 export function useInstancesQuery() {
-  return useQuery({ queryKey: ["instances"], queryFn: api.getInstances, staleTime: 60_000 });
+  return useQuery({
+    queryKey: ["instances"],
+    queryFn: api.getInstances,
+    staleTime: 60_000,
+  });
 }
 export function useWebhookConfigQuery() {
   return useQuery({
@@ -547,7 +559,9 @@ export function useSaveInstanceExternalReportingMutation() {
     }) => api.saveInstanceExternalReporting(id, payload),
     onSuccess: (_data, { id }) => {
       void qc.invalidateQueries({ queryKey: ["instances"] });
-      void qc.invalidateQueries({ queryKey: ["instances", id, "external-reporting"] });
+      void qc.invalidateQueries({
+        queryKey: ["instances", id, "external-reporting"],
+      });
     },
   });
 }

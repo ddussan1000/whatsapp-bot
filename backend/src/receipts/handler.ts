@@ -8,6 +8,7 @@ import { insertPayment } from "../db/payments";
 import { updateMessageMediaUrl } from "../db/messages";
 import { supabase } from "../db/supabase";
 import { log } from "../logger";
+import { STAGES } from "../stages";
 
 const DEFAULT_RECEIPT_REJECTED_MESSAGE =
   "No pudimos validar tu comprobante. Un agente lo revisara manualmente y te informara.";
@@ -174,7 +175,7 @@ export async function classifyAndHandleImage(
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
     return {
       handled: true,
-      state: { ...state, stage: "revision_manual" },
+      state: { ...state, stage: STAGES.revision_manual },
     };
   }
 
@@ -212,7 +213,7 @@ export async function classifyAndHandleImage(
     );
     await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: "revision_manual" } };
+    return { handled: true, state: { ...state, stage: STAGES.revision_manual } };
   }
 
   if (receiptDate && !isWithin24Hours) {
@@ -222,7 +223,7 @@ export async function classifyAndHandleImage(
     );
     await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: "revision_manual" } };
+    return { handled: true, state: { ...state, stage: STAGES.revision_manual } };
   }
 
   if (!receiptDate && amount) {
@@ -246,7 +247,7 @@ export async function classifyAndHandleImage(
     });
     await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: "revision_manual" } };
+    return { handled: true, state: { ...state, stage: STAGES.revision_manual } };
   }
 
   // Valid receipt (amount + date within 24h).
@@ -273,7 +274,7 @@ export async function classifyAndHandleImage(
     await cancelPending();
     const { highAmountMessage } = await getReceiptMessages(state.organizationId, state.flowId);
     await sendMessage(phone, textMessage(highAmountMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: "revision_manual" } };
+    return { handled: true, state: { ...state, stage: STAGES.revision_manual } };
   }
 
   // If the conversation already has a confirmed payment, treat as manual review
@@ -299,7 +300,7 @@ export async function classifyAndHandleImage(
     });
     await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: "revision_manual" } };
+    return { handled: true, state: { ...state, stage: STAGES.revision_manual } };
   }
 
   log.info(
@@ -327,7 +328,7 @@ export async function classifyAndHandleImage(
   });
   await cancelPending();
   await sendMessage(phone, textMessage(confirmedMessage), msgCtx(state));
-  return { handled: true, state: { ...state, stage: "pago_confirmado" } };
+  return { handled: true, state: { ...state, stage: STAGES.pago_confirmado } };
 }
 
 /** @deprecated Use classifyAndHandleImage instead */
