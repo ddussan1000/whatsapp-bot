@@ -33,6 +33,26 @@ export function DateRangePicker({
   numberOfMonths = 2,
 }: DateRangePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const [internalRange, setInternalRange] = React.useState<
+    DateRange | undefined
+  >(value);
+
+  React.useEffect(() => {
+    if (!open) setInternalRange(value);
+  }, [value, open]);
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) setInternalRange(value);
+    setOpen(isOpen);
+  };
+
+  const handleSelect = (range: DateRange | undefined) => {
+    setInternalRange(range);
+    if (range?.from && range?.to) {
+      onChange(range);
+      setOpen(false);
+    }
+  };
 
   const label = React.useMemo(() => {
     if (!value?.from) return null;
@@ -41,7 +61,7 @@ export function DateRangePicker({
   }, [value]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -60,11 +80,8 @@ export function DateRangePicker({
         <Calendar
           mode="range"
           resetOnSelect
-          selected={value}
-          onSelect={(range) => {
-            onChange(range);
-            if (range?.from && range?.to) setOpen(false);
-          }}
+          selected={internalRange}
+          onSelect={handleSelect}
           numberOfMonths={numberOfMonths}
           toDate={toDate}
           locale={es}
