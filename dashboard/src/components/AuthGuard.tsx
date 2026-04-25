@@ -37,6 +37,17 @@ export function AuthGuard({ children }: { children: ReactElement }) {
           setAuthenticated(false);
           return;
         }
+        if (event === "TOKEN_REFRESHED" && session) {
+          // Token was silently refreshed — recover any queries that failed with 401
+          queryClient.refetchQueries({
+            predicate: (query) => {
+              if (query.state.status !== "error") return false;
+              const status = (query.state.error as { status?: number })?.status;
+              return status === 401;
+            },
+          });
+          return;
+        }
         if (session) {
           setAuthenticated(true);
         }
