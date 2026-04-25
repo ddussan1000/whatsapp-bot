@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { Check, Pencil, Send, X } from "lucide-react";
+import { Check, Pencil, RefreshCw, Send, X } from "lucide-react";
+import type { DateRange } from "react-day-picker";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   Area,
@@ -54,7 +56,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -65,9 +66,14 @@ import {
   useInstancesQuery,
   useReportsQuery,
   usePaymentsQuery,
+  useSyncMetaSpendMutation,
   useUpdatePaymentAmountMutation,
   useUpdatePaymentStateMutation,
 } from "../lib/hooks";
+import {
+  DateRangePicker,
+  DatePicker,
+} from "../components/ui/date-range-picker";
 import { stageLabel } from "../lib/stages";
 
 function mergeFunnelByLabel(
@@ -196,10 +202,12 @@ function paymentStateColor(state: string | null | undefined): string {
 
 export function ReportsPage() {
   const now = new Date();
-  const [fromDate, setFromDate] = useState(
-    dateInputValue(new Date(now.getTime() - 7 * 86400000))
-  );
-  const [toDate, setToDate] = useState(dateInputValue(now));
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: new Date(now.getTime() - 7 * 86400000),
+    to: now,
+  });
+  const fromDate = dateInputValue(dateRange.from);
+  const toDate = dateInputValue(dateRange.to);
   const [instanceId, setInstanceId] = useState<string>("all");
   const [flowId, setFlowId] = useState<string>("all");
   const [granularity, setGranularity] = useState<"day" | "week" | "month">(
@@ -264,11 +272,20 @@ export function ReportsPage() {
   // Export modal state
   const [exportOpen, setExportOpen] = useState(false);
   const [exportInstanceId, setExportInstanceId] = useState<string>("");
-  const [exportDate, setExportDate] = useState(() =>
-    dateInputValue(new Date(Date.now() - 86400000))
+  const [exportDate, setExportDate] = useState<Date | undefined>(
+    new Date(Date.now() - 86400000)
   );
   const [exportAccountName, setExportAccountName] = useState<string>("");
   const [exportIncludeMetaSpend, setExportIncludeMetaSpend] = useState(false);
+
+  // Sync Meta Ad Spend modal state
+  const [syncOpen, setSyncOpen] = useState(false);
+  const [syncInstanceId, setSyncInstanceId] = useState<string>("");
+  const [syncDateRange, setSyncDateRange] = useState<DateRange | undefined>({
+    from: new Date(now.getTime() - 7 * 86400000),
+    to: now,
+  });
+  const syncMetaSpend = useSyncMetaSpendMutation();
 
   const loading = isLoading || isFetching;
 
@@ -346,6 +363,7 @@ export function ReportsPage() {
     exportInstanceId || null
   );
   const exportToReporting = useExportToReportingMutation();
+  const metaAdsInstances = instances.filter((i) => i.meta_ads_account_id);
 
   return (
     <section className="flex flex-col gap-3 p-3 sm:gap-4 sm:p-6">
@@ -378,21 +396,14 @@ export function ReportsPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           {/* Date range */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <input
-              type="date"
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-            />
-            <span className="text-muted-foreground text-xs">—</span>
-            <input
-              type="date"
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-            />
-          </div>
+          <DateRangePicker
+            value={dateRange}
+            onChange={(range) => {
+              if (range?.from && range?.to)
+                setDateRange({ from: range.from, to: range.to });
+            }}
+            toDate={new Date()}
+          />
 
           <Select
             value={instanceId}
@@ -457,9 +468,8 @@ export function ReportsPage() {
               size="sm"
               className="h-9 text-xs"
               onClick={() => {
-                const today = dateInputValue(new Date());
-                setFromDate(today);
-                setToDate(today);
+                const today = new Date();
+                setDateRange({ from: today, to: today });
               }}
             >
               Hoy
@@ -469,11 +479,8 @@ export function ReportsPage() {
               size="sm"
               className="h-9 text-xs"
               onClick={() => {
-                const yesterday = dateInputValue(
-                  new Date(Date.now() - 86400000)
-                );
-                setFromDate(yesterday);
-                setToDate(yesterday);
+                const yesterday = new Date(Date.now() - 86400000);
+                setDateRange({ from: yesterday, to: yesterday });
               }}
             >
               Ayer
@@ -482,12 +489,12 @@ export function ReportsPage() {
               variant="outline"
               size="sm"
               className="h-9 text-xs"
-              onClick={() => {
-                setFromDate(
-                  dateInputValue(new Date(Date.now() - 7 * 86400000))
-                );
-                setToDate(dateInputValue(new Date()));
-              }}
+              onClick={() =>
+                setDateRange({
+                  from: new Date(Date.now() - 7 * 86400000),
+                  to: new Date(),
+                })
+              }
             >
               Últ. semana
             </Button>
@@ -495,12 +502,12 @@ export function ReportsPage() {
               variant="outline"
               size="sm"
               className="h-9 text-xs"
-              onClick={() => {
-                setFromDate(
-                  dateInputValue(new Date(Date.now() - 30 * 86400000))
-                );
-                setToDate(dateInputValue(new Date()));
-              }}
+              onClick={() =>
+                setDateRange({
+                  from: new Date(Date.now() - 30 * 86400000),
+                  to: new Date(),
+                })
+              }
             >
               1 mes
             </Button>
@@ -508,16 +515,32 @@ export function ReportsPage() {
               variant="outline"
               size="sm"
               className="h-9 text-xs"
-              onClick={() => {
-                setFromDate(
-                  dateInputValue(new Date(Date.now() - 180 * 86400000))
-                );
-                setToDate(dateInputValue(new Date()));
-              }}
+              onClick={() =>
+                setDateRange({
+                  from: new Date(Date.now() - 180 * 86400000),
+                  to: new Date(),
+                })
+              }
             >
               6 meses
             </Button>
           </div>
+
+          {metaAdsInstances.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs ml-auto"
+              onClick={() => {
+                setSyncInstanceId(metaAdsInstances[0].id);
+                setSyncDateRange({ from: dateRange.from, to: dateRange.to });
+                setSyncOpen(true);
+              }}
+            >
+              <RefreshCw className="size-3.5 mr-1.5" />
+              Sincronizar Meta Ads
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -1362,13 +1385,12 @@ export function ReportsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="export-date">Fecha</Label>
-              <Input
-                id="export-date"
-                type="date"
-                className="h-9 text-sm"
+              <Label>Fecha</Label>
+              <DatePicker
                 value={exportDate}
-                onChange={(e) => setExportDate(e.target.value)}
+                onChange={setExportDate}
+                toDate={new Date()}
+                className="w-full"
               />
             </div>
 
@@ -1435,7 +1457,7 @@ export function ReportsPage() {
               onClick={() => {
                 exportToReporting.mutate(
                   {
-                    date: exportDate,
+                    date: exportDate ? format(exportDate, "yyyy-MM-dd") : "",
                     instance_id: exportInstanceId,
                     account_name: exportAccountName,
                     currency: selectedExportInstance?.currency ?? "COP",
@@ -1462,6 +1484,103 @@ export function ReportsPage() {
               }}
             >
               Exportar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Sync Meta Ad Spend Modal ──────────────────────────────────────── */}
+      <Dialog
+        open={syncOpen}
+        onOpenChange={(open) => {
+          setSyncOpen(open);
+          if (!open) syncMetaSpend.reset();
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sincronizar gasto de Meta Ads</DialogTitle>
+            <DialogDescription>
+              Descarga el gasto diario de Meta Ads para el rango seleccionado y
+              lo guarda en la base de datos. Los días ya sincronizados se
+              actualizan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {metaAdsInstances.length > 1 && (
+              <div className="space-y-1.5">
+                <Label>Instancia</Label>
+                <Select
+                  value={syncInstanceId}
+                  onValueChange={setSyncInstanceId}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Seleccionar instancia…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {metaAdsInstances.map((i) => (
+                      <SelectItem key={i.id} value={i.id}>
+                        {i.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label>Rango de fechas</Label>
+              <DateRangePicker
+                value={syncDateRange}
+                onChange={setSyncDateRange}
+                toDate={new Date()}
+                numberOfMonths={1}
+                className="w-full"
+              />
+            </div>
+            {syncMetaSpend.isSuccess && (
+              <p className="text-sm text-green-600">
+                {syncMetaSpend.data.synced}{" "}
+                {syncMetaSpend.data.synced === 1
+                  ? "día sincronizado"
+                  : "días sincronizados"}{" "}
+                correctamente.
+              </p>
+            )}
+            {syncMetaSpend.isError && (
+              <p className="text-sm text-destructive">
+                {syncMetaSpend.error instanceof Error
+                  ? syncMetaSpend.error.message
+                  : "Error al sincronizar"}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSyncOpen(false)}
+              disabled={syncMetaSpend.isPending}
+            >
+              Cerrar
+            </Button>
+            <Button
+              disabled={
+                !syncInstanceId ||
+                !syncDateRange?.from ||
+                !syncDateRange?.to ||
+                syncMetaSpend.isPending
+              }
+              loading={syncMetaSpend.isPending}
+              onClick={() => {
+                if (!syncDateRange?.from || !syncDateRange?.to) return;
+                syncMetaSpend.mutate({
+                  instanceId: syncInstanceId,
+                  from: format(syncDateRange.from, "yyyy-MM-dd"),
+                  to: format(syncDateRange.to, "yyyy-MM-dd"),
+                });
+              }}
+            >
+              <RefreshCw className="size-3.5 mr-1.5" />
+              Sincronizar
             </Button>
           </DialogFooter>
         </DialogContent>

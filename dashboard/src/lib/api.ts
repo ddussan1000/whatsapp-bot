@@ -63,6 +63,14 @@ import type {
   CreateInstanceResponse,
   MetaStatusResponse,
   ReconfigureMetaResult,
+  OkResponse,
+  SyncMetaSpendBody,
+  SyncMetaSpendResponse,
+  ValidateAiResponse,
+  ValidateMetaAdsResponse,
+  ExternalReportingConfig,
+  ExternalAccountsResponse,
+  ExportToReportingResponse,
 } from "../types/api";
 import { supabase } from "./supabase";
 
@@ -265,7 +273,7 @@ export const api = {
         body: JSON.stringify({ stage }),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   sendConversationMessage: (id: string, payload: SendConversationMessageBody) =>
@@ -359,7 +367,7 @@ export const api = {
         body: JSON.stringify({ state }),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   updatePaymentAmount: (id: string, amount: number, currency?: string) =>
@@ -370,7 +378,7 @@ export const api = {
         body: JSON.stringify({ amount, ...(currency ? { currency } : {}) }),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   markConversationRead: (id: string) =>
@@ -380,7 +388,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   triggerFlow: (id: string, flowId: string, stepId?: string) =>
@@ -391,7 +399,7 @@ export const api = {
         body: JSON.stringify({ flowId, ...(stepId ? { stepId } : {}) }),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   getBotConfig: () => request<BotConfig>("/api/config/bot"),
@@ -418,7 +426,7 @@ export const api = {
         body: JSON.stringify(payload),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean; error?: string }>;
+        return r.json() as Promise<ValidateAiResponse>;
       })
     ),
   getFlowTemplates: () => request<FlowTemplate[]>("/api/flow-templates"),
@@ -440,7 +448,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   getSession: () => fetchSessionResolved(),
@@ -476,7 +484,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   getCampaigns: () => request<Campaign[]>("/api/campaigns"),
@@ -522,7 +530,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   assignFlowToInstance: (instanceId: string, flowId: string | null) =>
@@ -533,7 +541,7 @@ export const api = {
         body: JSON.stringify({ flowId }),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   getFlows: (params: { campaignId?: string; productId?: string }) => {
@@ -648,7 +656,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   getInstanceMetaStatus: (id: string) =>
@@ -761,7 +769,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
 
@@ -806,7 +814,7 @@ export const api = {
       fetch(`${API_URL}/api/media/${id}`, { method: "DELETE", headers }).then(
         (r) => {
           if (!r.ok) return throwApiError(r);
-          return r.json() as Promise<{ ok: boolean }>;
+          return r.json() as Promise<OkResponse>;
         }
       )
     ),
@@ -846,7 +854,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
 
@@ -880,7 +888,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
 
@@ -893,7 +901,7 @@ export const api = {
         body: JSON.stringify({ account_id: accountId }),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   validateInstanceMetaAds: (id: string) =>
@@ -903,11 +911,22 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean; error?: string }>;
+        return r.json() as Promise<ValidateMetaAdsResponse>;
+      })
+    ),
+  syncMetaAdSpend: (id: string, payload: SyncMetaSpendBody) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/instances/${id}/meta-ads/sync-spend`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<SyncMetaSpendResponse>;
       })
     ),
   getInstanceExternalReporting: (id: string) =>
-    request<{ configured: boolean; base_url: string | null }>(
+    request<ExternalReportingConfig>(
       `/api/instances/${id}/external-reporting`
     ),
   saveInstanceExternalReporting: (
@@ -921,11 +940,11 @@ export const api = {
         body: JSON.stringify(payload),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
   getInstanceExternalAccounts: (id: string) =>
-    request<Array<{ account_name: string; has_sheet: boolean }>>(
+    request<ExternalAccountsResponse>(
       `/api/instances/${id}/external-accounts`
     ),
   exportToReporting: (payload: {
@@ -942,7 +961,7 @@ export const api = {
         body: JSON.stringify(payload),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean; warnings: string[] }>;
+        return r.json() as Promise<ExportToReportingResponse>;
       })
     ),
 
@@ -976,7 +995,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean }>;
+        return r.json() as Promise<OkResponse>;
       })
     ),
 };

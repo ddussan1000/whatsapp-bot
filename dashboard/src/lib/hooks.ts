@@ -285,6 +285,18 @@ export function useDeleteFlowTemplateMutation() {
   });
 }
 
+export function useSyncMetaSpendMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { instanceId: string; from: string; to: string }) =>
+      api.syncMetaAdSpend(payload.instanceId, {
+        from: payload.from,
+        to: payload.to,
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["stats", "reports"] }),
+  });
+}
+
 export function useSessionQuery() {
   return useQuery({ queryKey: ["auth", "session"], queryFn: api.getSession });
 }

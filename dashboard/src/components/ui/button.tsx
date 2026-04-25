@@ -32,13 +32,12 @@ function Button({
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       disabled={isDisabled}
-      aria-busy={loading || undefined}
       {...props}
     >
       {loading ? (
         <>
-          <Loader2 className="size-4 animate-spin" />
-          <span>{loadingText ?? children}</span>
+          <Loader2 className="animate-spin" />
+          {loadingText ?? children}
         </>
       ) : (
         children
@@ -47,4 +46,4 @@ function Button({
   );
 }
 
-export { Button };
+export { Button, buttonVariants };
