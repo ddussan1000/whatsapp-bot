@@ -594,7 +594,6 @@ dashboardApi.openapi(
 );
 
 const AdReferralItemSchema = z.object({
-  sourceId: z.string().nullable(),
   headline: z.string().nullable(),
   clicks: z.number(),
   uniqueLeads: z.number(),
@@ -709,7 +708,6 @@ dashboardApi.openapi(
     }
 
     type AdGroup = {
-      sourceId: string | null;
       headline: string | null;
       // phones that clicked in the selected period (for uniqueLeads metric)
       periodPhones: Set<string>;
@@ -720,17 +718,16 @@ dashboardApi.openapi(
 
     const byAd = new Map<string, AdGroup>();
     for (const click of clicks ?? []) {
-      const key = click.source_id ?? "__none__";
-      let group = byAd.get(key);
+      const label = (click.ad_name as string | null) ?? click.headline ?? click.source_id ?? "__none__";
+      let group = byAd.get(label);
       if (!group) {
         group = {
-          sourceId: click.source_id,
-          headline: (click.ad_name as string | null) ?? click.headline,
+          headline: label === "__none__" ? null : label,
           periodPhones: new Set(),
           attributionPhones: new Set(),
           clicks: 0,
         };
-        byAd.set(key, group);
+        byAd.set(label, group);
       }
       group.attributionPhones.add(click.phone);
       // Only count clicks and leads that fall within the selected period
@@ -749,7 +746,6 @@ dashboardApi.openapi(
     }
 
     const items: Array<{
-      sourceId: string | null;
       headline: string | null;
       clicks: number;
       uniqueLeads: number;
@@ -781,7 +777,6 @@ dashboardApi.openapi(
       }
       const uniqueLeads = group.periodPhones.size;
       items.push({
-        sourceId: group.sourceId,
         headline: group.headline,
         clicks: group.clicks,
         uniqueLeads,

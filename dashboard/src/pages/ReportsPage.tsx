@@ -1289,7 +1289,6 @@ export function ReportsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Anuncio</TableHead>
-                        <TableHead>ID fuente</TableHead>
                         <TableHead className="text-right">Clics</TableHead>
                         <TableHead className="text-right">Leads</TableHead>
                         <TableHead className="text-right">
@@ -1301,12 +1300,9 @@ export function ReportsPage() {
                     </TableHeader>
                     <TableBody>
                       {adItems.map((item, idx) => (
-                        <TableRow key={item.sourceId ?? idx}>
+                        <TableRow key={item.headline ?? idx}>
                           <TableCell className="font-medium max-w-50 truncate">
                             {item.headline || "-"}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground max-w-30 truncate">
-                            {item.sourceId || "-"}
                           </TableCell>
                           <TableCell className="text-right">
                             {item.clicks.toLocaleString("es-CO")}
@@ -1328,7 +1324,7 @@ export function ReportsPage() {
                       {adItems.length === 0 && (
                         <TableRow>
                           <TableCell
-                            colSpan={7}
+                            colSpan={6}
                             className="text-center text-muted-foreground"
                           >
                             No hay datos de anuncios para este periodo.
