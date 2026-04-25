@@ -39,6 +39,10 @@ const envSchema = z.object({
   OCR_PROVIDER: z.enum(["tesseract", "gemini", "auto"]).default("auto"),
   /** Gemini model used for OCR. */
   GEMINI_OCR_MODEL: z.string().default("gemini-2.5-flash-lite"),
+  /** Direct PostgreSQL connection via PgBouncer (transaction mode, port 6543).
+   *  Format: postgresql://postgres.[ref]:[pass]@aws-0-[region].pooler.supabase.com:6543/postgres
+   *  Leave empty to use PostgREST (supabase-js) for all queries. */
+  DATABASE_URL_DIRECT: z.string().default(""),
 });
 
 export const env = envSchema.parse(process.env);

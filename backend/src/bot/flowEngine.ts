@@ -11,6 +11,10 @@ import { textMessage } from "./messages";
 import type { ConversationState } from "../types";
 import { scheduleJob, cancelJobsForPhone } from "../queue/scheduledMessages";
 import type { ScheduledJobPayload } from "../queue/scheduledMessages";
+import { getCached, setCached } from "../cache/redis";
+
+const FULL_FLOW_TTL = 3600;
+export const fullFlowCacheKey = (flowId: string) => `flow:full:${flowId}`;
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -56,6 +60,9 @@ export type FlowDefinition = {
 export async function getFlowById(flowId: string, organizationId: string): Promise<FlowDefinition | null> {
   if (!supabase) return null;
 
+  const cached = await getCached<FlowDefinition>(fullFlowCacheKey(flowId));
+  if (cached) return cached;
+
   const { data, error } = await supabase
     .from("flows")
     .select(
@@ -74,6 +81,7 @@ export async function getFlowById(flowId: string, organizationId: string): Promi
     log.error({ err: error }, "flowEngine: error fetching flow");
     return null;
   }
+  if (data) await setCached(fullFlowCacheKey(flowId), data, FULL_FLOW_TTL);
   return (data as FlowDefinition | null) ?? null;
 }
 

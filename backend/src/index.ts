@@ -12,6 +12,8 @@ import { registerPurgeReceiptsCron } from "./cron/purgeReceipts";
 import { registerPurgeMessagesCron } from "./cron/purgeOldMessages";
 import { dashboardApi } from "./api/dashboard";
 import { globalRateLimiter, mutationRateLimiter, webhookRateLimiter } from "./middleware/rateLimiter";
+import { startMessageWorker } from "./workers/messageWorker";
+import { sql } from "./db/postgres";
 
 const app = new OpenAPIHono();
 app.doc("/openapi.json", {
@@ -86,10 +88,22 @@ app.use("/api/*", async (c, next) => {
 });
 app.route("/api", dashboardApi);
 
+const messageWorker = startMessageWorker();
 registerDailyReportCron();
 registerScheduledMessagesCron();
 registerPurgeReceiptsCron();
 registerPurgeMessagesCron();
+
+process.on("SIGTERM", async () => {
+  log.info("SIGTERM: cerrando worker y conexiones...");
+  try {
+    await messageWorker?.close();
+    await sql?.end();
+  } catch (err) {
+    log.error({ err }, "SIGTERM: error durante shutdown");
+  }
+  process.exit(0);
+});
 
 serve(
   {

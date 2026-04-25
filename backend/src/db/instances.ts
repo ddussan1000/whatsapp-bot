@@ -25,15 +25,24 @@ async function decryptInstance(data: WhatsAppInstance | null): Promise<WhatsAppI
   };
 }
 
+const instanceByOrgKey = (orgId: string, phoneNumberId: string) => `instance:org:${orgId}:pn:${phoneNumberId}`;
+
 export async function getInstanceByPhoneNumberId(organizationId: string, phoneNumberId: string) {
   if (!supabase) return null;
+  const cached = await getCached<WhatsAppInstance>(instanceByOrgKey(organizationId, phoneNumberId));
+  if (cached) return decryptInstance(cached);
   const { data } = await supabase
     .from("whatsapp_instances")
     .select(INSTANCE_SELECT)
     .eq("organization_id", organizationId)
     .eq("phone_number_id", phoneNumberId)
     .maybeSingle<WhatsAppInstance>();
+  if (data) await setCached(instanceByOrgKey(organizationId, phoneNumberId), data);
   return decryptInstance(data ?? null);
+}
+
+export async function invalidateInstanceCacheByOrg(orgId: string, phoneNumberId: string) {
+  await deleteCached(instanceByOrgKey(orgId, phoneNumberId));
 }
 
 const instanceKey = (phoneNumberId: string) => `instance:pn:${phoneNumberId}`;

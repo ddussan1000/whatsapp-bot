@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getCached, setCached, deleteCached } from "../cache/redis";
 
 export type OrgAiConfig = {
   ai_enabled: boolean;
@@ -8,6 +9,17 @@ export type OrgAiConfig = {
   ai_system_prompt: string | null;
 };
 
+type OrgAiConfigRaw = {
+  ai_enabled: boolean | null;
+  ai_provider: string | null;
+  ai_api_key: string | null; // encrypted
+  ai_model: string | null;
+  ai_system_prompt: string | null;
+};
+
+const ORG_AI_TTL = 3600;
+const orgAiKey = (orgId: string) => `org:ai:${orgId}`;
+
 export async function getOrgAiConfig(organizationId: string): Promise<OrgAiConfig> {
   const defaults: OrgAiConfig = {
     ai_enabled: true,
@@ -16,6 +28,19 @@ export async function getOrgAiConfig(organizationId: string): Promise<OrgAiConfi
     ai_model: null,
     ai_system_prompt: null,
   };
+
+  const { safeDecrypt } = await import("../crypto/encrypt");
+
+  const cached = await getCached<OrgAiConfigRaw>(orgAiKey(organizationId));
+  if (cached) {
+    return {
+      ai_enabled: cached.ai_enabled ?? true,
+      ai_provider: (cached.ai_provider as OrgAiConfig["ai_provider"]) ?? null,
+      ai_api_key: await safeDecrypt(cached.ai_api_key),
+      ai_model: cached.ai_model ?? null,
+      ai_system_prompt: cached.ai_system_prompt ?? null,
+    };
+  }
 
   if (!supabase) return defaults;
 
@@ -27,7 +52,7 @@ export async function getOrgAiConfig(organizationId: string): Promise<OrgAiConfi
 
   if (!data) return defaults;
 
-  const { safeDecrypt } = await import("../crypto/encrypt");
+  await setCached(orgAiKey(organizationId), data, ORG_AI_TTL);
 
   return {
     ai_enabled: (data.ai_enabled as boolean) ?? true,
@@ -36,4 +61,8 @@ export async function getOrgAiConfig(organizationId: string): Promise<OrgAiConfi
     ai_model: (data.ai_model as string | null) ?? null,
     ai_system_prompt: (data.ai_system_prompt as string | null) ?? null,
   };
+}
+
+export async function invalidateOrgAiConfig(organizationId: string) {
+  await deleteCached(orgAiKey(organizationId));
 }

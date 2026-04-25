@@ -53,7 +53,10 @@ export async function getFlowById(flowId: string) {
 }
 
 export async function invalidateFlowCache(flowId: string) {
-  await deleteCached(flowKey(flowId));
+  await Promise.all([
+    deleteCached(flowKey(flowId)),
+    deleteCached(`flow:full:${flowId}`),
+  ]);
 }
 
 export async function findFlowByCtwaClid(organizationId: string, ctwaClid: string) {

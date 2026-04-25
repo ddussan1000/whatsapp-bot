@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { sql as pgSql } from "./postgres";
 import { log } from "../logger";
 
 export type MessageDirection = "inbound" | "outbound";
@@ -34,8 +35,31 @@ async function getLatestConversationIdByPhone(phone: string, organizationId: str
 }
 
 export async function insertMessageLog(input: MessageInput) {
-  if (!supabase || !input.organizationId) return;
+  if (!input.organizationId) return;
   const conversationId = input.conversationId ?? (await getLatestConversationIdByPhone(input.phone, input.organizationId));
+  const payloadValue = input.skipPayload ? null : (input.payload ?? null);
+
+  // Fast path: direct postgres via PgBouncer
+  if (pgSql) {
+    try {
+      await pgSql`
+        INSERT INTO messages
+          (organization_id, conversation_id, whatsapp_instance_id, flow_id, phone,
+           direction, message_type, text_body, media_url, payload, meta_message_id)
+        VALUES
+          (${input.organizationId}, ${conversationId ?? null}, ${input.whatsappInstanceId ?? null},
+           ${input.flowId ?? null}, ${input.phone}, ${input.direction}, ${input.messageType},
+           ${input.textBody ?? null}, ${input.mediaUrl ?? null},
+           ${payloadValue ? pgSql.json(payloadValue as Parameters<typeof pgSql.json>[0]) : null}, ${input.metaMessageId ?? null})
+      `;
+      return;
+    } catch (err) {
+      log.warn({ err }, "insertMessageLog: postgres.js falló, fallback a supabase");
+    }
+  }
+
+  // Fallback: PostgREST
+  if (!supabase) return;
   const { error } = await supabase.from("messages").insert({
     organization_id: input.organizationId,
     conversation_id: conversationId,
@@ -46,7 +70,7 @@ export async function insertMessageLog(input: MessageInput) {
     message_type: input.messageType,
     text_body: input.textBody ?? null,
     media_url: input.mediaUrl ?? null,
-    payload: input.skipPayload ? null : (input.payload ?? null),
+    payload: payloadValue,
     meta_message_id: input.metaMessageId ?? null,
   });
   if (error) {
