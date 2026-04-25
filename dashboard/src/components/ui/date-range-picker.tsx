@@ -59,6 +59,7 @@ export function DateRangePicker({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="range"
+          resetOnSelect
           selected={value}
           onSelect={(range) => {
             onChange(range);
