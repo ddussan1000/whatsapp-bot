@@ -546,56 +546,44 @@ dashboardApi.openapi(
       table: { items: [], page, pageSize, total: 0 },
     };
 
-    // Enrich with Meta Ads spend (best-effort — never fails the request)
+    // Enrich with Meta Ads spend from cached DB table (populated via sync endpoint).
+    // Reading from DB avoids live Meta API calls on every page load, which was causing
+    // Meta to invalidate permanent tokens due to excessive request volume.
     try {
-      let instanceQuery = supabase
-        .from("whatsapp_instances")
-        .select("meta_token, meta_ads_account_id")
+      const toLocalDateStr = (d: Date) =>
+        d.toLocaleDateString("sv-SE", { timeZone: timezone });
+      const fromStr = toLocalDateStr(fromDate);
+      const toStr = toLocalDateStr(toDate);
+
+      let spendQuery = supabase
+        .from("meta_ad_spend")
+        .select("date, amount, currency")
         .eq("organization_id", organizationId)
-        .eq("is_active", true)
-        .not("meta_ads_account_id", "is", null);
-      if (instanceIds.length > 0) instanceQuery = instanceQuery.in("id", instanceIds);
-      const { data: adsInstances } = await instanceQuery;
+        .gte("date", fromStr)
+        .lte("date", toStr);
+      if (instanceIds.length > 0) spendQuery = spendQuery.in("instance_id", instanceIds);
+      const { data: spendRows } = await spendQuery;
 
-      if (adsInstances && adsInstances.length > 0) {
-        // Use org timezone to get the correct local date string (sv-SE gives YYYY-MM-DD).
-        // Without this, end-of-day timestamps (e.g. 23:59 UTC-5 = 04:59 next day UTC) would
-        // produce a toStr one day ahead, inflating adSpendTotal with an extra day from Meta Ads.
-        const toLocalDateStr = (d: Date) =>
-          d.toLocaleDateString("sv-SE", { timeZone: timezone });
-        const fromStr = toLocalDateStr(fromDate);
-        const toStr = toLocalDateStr(toDate);
+      if (spendRows && spendRows.length > 0) {
         const spendByDay = new Map<string, number>();
-
-        await Promise.all(
-          adsInstances.map(async (inst) => {
-            if (!inst.meta_token || !inst.meta_ads_account_id) return;
-            const token = await safeDecrypt(inst.meta_token);
-            if (!token) return;
-            const rows = await fetchDailyAdSpend(token, inst.meta_ads_account_id, fromStr, toStr);
-            for (const row of rows) {
-              spendByDay.set(row.date, (spendByDay.get(row.date) ?? 0) + row.spend);
-            }
-          }),
-        );
-
-        if (spendByDay.size > 0) {
-          // Aggregate daily Meta spend into the same bucket format as the SQL timeseries
-          const spendByBucket = new Map<string, number>();
-          for (const [date, spend] of spendByDay) {
-            const bucket = metaDateToBucket(date, granularity);
-            spendByBucket.set(bucket, (spendByBucket.get(bucket) ?? 0) + spend);
-          }
-
-          const adSpendTotal = [...spendByDay.values()].reduce((a, b) => a + b, 0);
-          const roas = adSpendTotal > 0 ? reports.kpis.revenueTotal / adSpendTotal : null;
-          reports.kpis = { ...reports.kpis, adSpendTotal, roas };
-
-          reports.timeseries = reports.timeseries.map((point: { bucket: string; revenue: number; sales: number; conversations: number }) => ({
-            ...point,
-            adSpend: spendByBucket.get(point.bucket) ?? 0,
-          }));
+        for (const row of spendRows) {
+          spendByDay.set(row.date, (spendByDay.get(row.date) ?? 0) + Number(row.amount));
         }
+
+        const spendByBucket = new Map<string, number>();
+        for (const [date, spend] of spendByDay) {
+          const bucket = metaDateToBucket(date, granularity);
+          spendByBucket.set(bucket, (spendByBucket.get(bucket) ?? 0) + spend);
+        }
+
+        const adSpendTotal = [...spendByDay.values()].reduce((a, b) => a + b, 0);
+        const roas = adSpendTotal > 0 ? reports.kpis.revenueTotal / adSpendTotal : null;
+        reports.kpis = { ...reports.kpis, adSpendTotal, roas };
+
+        reports.timeseries = reports.timeseries.map((point: { bucket: string; revenue: number; sales: number; conversations: number }) => ({
+          ...point,
+          adSpend: spendByBucket.get(point.bucket) ?? 0,
+        }));
       }
     } catch (_err) {
       // Ad spend is optional — don't fail the entire request
@@ -2525,6 +2513,91 @@ dashboardApi.openapi(
       const msg = err instanceof MetaAdsError ? err.message : "Error al conectar con Meta Ads";
       return c.json({ ok: false, error: msg }, 200);
     }
+  },
+);
+
+// ── POST /instances/{id}/meta-ads/sync-spend ──────────────────────────────────
+// Fetches daily ad spend from Meta API for the given date range and upserts it
+// into the meta_ad_spend cache table. Call this manually instead of hitting
+// Meta on every dashboard load.
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/instances/{id}/meta-ads/sync-spend",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato YYYY-MM-DD"),
+              to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato YYYY-MM-DD"),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Días sincronizados",
+        content: {
+          "application/json": {
+            schema: z.object({ synced: z.number(), from: z.string(), to: z.string() }),
+          },
+        },
+      },
+      400: { description: "Sin configuración", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const organizationId = orgId(c);
+    const { id } = c.req.valid("param");
+    const { from, to } = c.req.valid("json");
+
+    const { data: inst, error: instErr } = await supabase
+      .from("whatsapp_instances")
+      .select("meta_token, meta_ads_account_id")
+      .eq("id", id)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    if (instErr) return c.json({ error: instErr.message }, 500);
+    if (!inst) return c.json({ error: "Instancia no encontrada" }, 400);
+    if (!inst.meta_ads_account_id) return c.json({ error: "Configura el ID de cuenta publicitaria primero" }, 400);
+    if (!inst.meta_token) return c.json({ error: "Esta instancia no tiene token de Meta configurado" }, 400);
+
+    const token = await safeDecrypt(inst.meta_token);
+    if (!token) return c.json({ error: "No se pudo leer el token de Meta" }, 400);
+
+    let rows: { date: string; spend: number; currency: string }[];
+    try {
+      const raw = await fetchDailyAdSpend(token, inst.meta_ads_account_id, from, to);
+      rows = raw.map((r) => ({ date: r.date, spend: r.spend, currency: r.currency ?? "USD" }));
+    } catch (err) {
+      const msg = err instanceof MetaAdsError ? err.message : "Error al obtener datos de Meta Ads";
+      return c.json({ error: msg }, 400);
+    }
+
+    if (rows.length > 0) {
+      const upsertRows = rows.map((r) => ({
+        organization_id: organizationId,
+        instance_id: id,
+        date: r.date,
+        amount: r.spend,
+        currency: r.currency,
+        synced_at: new Date().toISOString(),
+      }));
+      const { error: upsertErr } = await supabase
+        .from("meta_ad_spend")
+        .upsert(upsertRows, { onConflict: "organization_id,instance_id,date" });
+      if (upsertErr) return c.json({ error: upsertErr.message }, 500);
+    }
+
+    return c.json({ synced: rows.length, from, to }, 200);
   },
 );
 
