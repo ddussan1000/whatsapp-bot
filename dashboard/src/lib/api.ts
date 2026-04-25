@@ -166,7 +166,9 @@ async function getValidAccessToken(): Promise<string | undefined> {
         .refreshSession()
         .then(({ data }) => data.session?.access_token ?? undefined)
         .catch(() => undefined)
-        .finally(() => { activeRefresh = null; });
+        .finally(() => {
+          activeRefresh = null;
+        });
     }
     return activeRefresh;
   } catch {
@@ -415,6 +417,16 @@ export const api = {
         method: "POST",
         headers,
         body: JSON.stringify({ flowId, ...(stepId ? { stepId } : {}) }),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<OkResponse>;
+      })
+    ),
+  stopFlow: (id: string) =>
+    buildHeaders(false).then((headers) =>
+      fetch(`${API_URL}/api/conversations/${id}/stop-flow`, {
+        method: "POST",
+        headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
         return r.json() as Promise<OkResponse>;
@@ -944,9 +956,7 @@ export const api = {
       })
     ),
   getInstanceExternalReporting: (id: string) =>
-    request<ExternalReportingConfig>(
-      `/api/instances/${id}/external-reporting`
-    ),
+    request<ExternalReportingConfig>(`/api/instances/${id}/external-reporting`),
   saveInstanceExternalReporting: (
     id: string,
     payload: { api_key: string; base_url: string }
@@ -962,9 +972,7 @@ export const api = {
       })
     ),
   getInstanceExternalAccounts: (id: string) =>
-    request<ExternalAccountsResponse>(
-      `/api/instances/${id}/external-accounts`
-    ),
+    request<ExternalAccountsResponse>(`/api/instances/${id}/external-accounts`),
   exportToReporting: (payload: {
     date: string;
     instance_id: string;

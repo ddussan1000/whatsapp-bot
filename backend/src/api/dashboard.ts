@@ -4270,6 +4270,72 @@ dashboardApi.openapi(
 
 dashboardApi.openapi(
   createRoute({
+    method: "post",
+    path: "/conversations/{id}/stop-flow",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "Flujo detenido",
+        content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+      },
+      404: {
+        description: "Not found",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const organization = orgId(c);
+
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("id, phone, whatsapp_instance_id")
+      .eq("id", id)
+      .eq("organization_id", organization)
+      .maybeSingle();
+    if (!conv) return c.json({ error: "Conversación no encontrada" }, 404);
+
+    let metaPhoneNumberId: string | null = null;
+    if (conv.whatsapp_instance_id) {
+      const { data: instance } = await supabase
+        .from("whatsapp_instances")
+        .select("phone_number_id")
+        .eq("id", conv.whatsapp_instance_id)
+        .eq("organization_id", organization)
+        .maybeSingle();
+      metaPhoneNumberId = instance?.phone_number_id ?? null;
+    }
+
+    await cancelJobsForPhone(organization, conv.phone);
+
+    const currentState = await getState(conv.phone, metaPhoneNumberId);
+    await setState(conv.phone, {
+      ...currentState,
+      flowId: null,
+      flowName: null,
+      stage: STAGES.flujo_terminado,
+    }, metaPhoneNumberId);
+
+    await supabase
+      .from("conversations")
+      .update({ stage: STAGES.flujo_terminado, flow_id: null, updated_at: new Date().toISOString() })
+      .eq("id", conv.id);
+
+    return c.json({ ok: true }, 200);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
     method: "get",
     path: "/conversations/{id}/messages",
     request: {

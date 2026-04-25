@@ -19,6 +19,7 @@ import {
   User,
   Video,
   PlayCircle,
+  StopCircle,
   Workflow,
   X,
 } from "lucide-react";
@@ -48,6 +49,7 @@ import {
   usePaymentsQuery,
   useSendConversationMessageMutation,
   useSendMediaFromLibraryMutation,
+  useStopFlowMutation,
   useTriggerFlowMutation,
   useUpdateConversationStageMutation,
   useUpdatePaymentAmountMutation,
@@ -1112,6 +1114,7 @@ export function ConversationDetailPage() {
   const sendMediaMutation = useSendMediaFromLibraryMutation(id);
   const stageMutation = useUpdateConversationStageMutation(id);
   const triggerFlowMutation = useTriggerFlowMutation(id);
+  const stopFlowMutation = useStopFlowMutation(id);
 
   // Initial load
   useEffect(() => {
@@ -1292,6 +1295,24 @@ export function ConversationDetailPage() {
           >
             <PlayCircle size={17} />
           </Button>
+          {conversation?.stage === "en_flujo" && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={stopFlowMutation.isPending}
+              onClick={() => {
+                stopFlowMutation.mutate(undefined, {
+                  onSuccess: () => toast.success("Flujo detenido"),
+                  onError: () => toast.error("No se pudo detener el flujo"),
+                });
+              }}
+              className="shrink-0 text-muted-foreground hover:text-destructive"
+              aria-label="Detener flujo"
+              title="Detener flujo activo"
+            >
+              <StopCircle size={17} />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon-sm"

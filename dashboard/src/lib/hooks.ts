@@ -131,6 +131,17 @@ export function useTriggerFlowMutation(id: string) {
   });
 }
 
+export function useStopFlowMutation(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.stopFlow(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["conversation", id] });
+      void qc.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+}
+
 export function useUpdateConversationStageMutation(id: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -293,7 +304,8 @@ export function useSyncMetaSpendMutation() {
         from: payload.from,
         to: payload.to,
       }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["stats", "reports"] }),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["stats", "reports"] }),
   });
 }
 

@@ -437,15 +437,33 @@ export type OrgRole = SessionInfo["role"];
 /** Respuesta genérica `{ ok: boolean }` compartida entre varios endpoints. */
 export type OkResponse = { ok: boolean };
 
-export type SyncMetaSpendBody = JsonRequest<"/api/instances/{id}/meta-ads/sync-spend", "post">;
-export type SyncMetaSpendResponse = Json200<"/api/instances/{id}/meta-ads/sync-spend", "post">;
+export type SyncMetaSpendBody = JsonRequest<
+  "/api/instances/{id}/meta-ads/sync-spend",
+  "post"
+>;
+export type SyncMetaSpendResponse = Json200<
+  "/api/instances/{id}/meta-ads/sync-spend",
+  "post"
+>;
 
 export type ValidateAiResponse = Json200<"/api/config/bot/validate-ai", "post">;
-export type ValidateMetaAdsResponse = Json200<"/api/instances/{id}/meta-ads/validate", "post">;
-export type ExternalReportingConfig = Json200<"/api/instances/{id}/external-reporting", "get">;
-export type ExternalAccountsResponse = Json200<"/api/instances/{id}/external-accounts", "get">;
+export type ValidateMetaAdsResponse = Json200<
+  "/api/instances/{id}/meta-ads/validate",
+  "post"
+>;
+export type ExternalReportingConfig = Json200<
+  "/api/instances/{id}/external-reporting",
+  "get"
+>;
+export type ExternalAccountsResponse = Json200<
+  "/api/instances/{id}/external-accounts",
+  "get"
+>;
 export type ExternalAccountItem = ArrayElement<ExternalAccountsResponse>;
-export type ExportToReportingResponse = Json200<"/api/reports/export-to-reporting", "post">;
+export type ExportToReportingResponse = Json200<
+  "/api/reports/export-to-reporting",
+  "post"
+>;
 
 // ── Flow engine types (not in generated OpenAPI yet) ──────────────────────
 

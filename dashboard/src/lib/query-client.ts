@@ -36,7 +36,9 @@ function refetchAuthErrors() {
 document.addEventListener("visibilitychange", async () => {
   if (document.visibilityState !== "visible") return;
   if (supabase) {
-    const { data } = await supabase.auth.refreshSession().catch(() => ({ data: null }));
+    const { data } = await supabase.auth
+      .refreshSession()
+      .catch(() => ({ data: null }));
     if (data?.session) refetchAuthErrors();
   }
 });
