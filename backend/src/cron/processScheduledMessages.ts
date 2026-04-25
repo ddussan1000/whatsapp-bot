@@ -17,6 +17,7 @@ export function registerScheduledMessagesCron() {
 
       // Distributed lock: only one instance processes at a time
       if (redis) {
+        if (redis.status !== "ready") { running = false; return; }
         const acquired = await redis.set(CRON_LOCK_KEY, "1", "EX", CRON_LOCK_TTL, "NX");
         if (!acquired) {
           running = false;

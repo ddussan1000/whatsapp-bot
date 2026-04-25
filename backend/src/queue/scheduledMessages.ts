@@ -217,7 +217,7 @@ async function processJob(payload: ScheduledJobPayload): Promise<void> {
 
 export async function processScheduledMessages(): Promise<void> {
   const r = redis;
-  if (!r) return;
+  if (!r || r.status !== "ready") return;
 
   const nowMs = Date.now();
 
