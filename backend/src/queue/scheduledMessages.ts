@@ -17,7 +17,7 @@ import { supabase } from "../db/supabase";
 import { log } from "../logger";
 import { STAGES, FLOW_IN_PROGRESS_STAGES } from "../stages";
 import type { ConversationState } from "../types";
-import { sendStepMessages } from "../bot/flowEngine";
+import { sendStepMessages, getFlowById } from "../bot/flowEngine";
 import type { FlowStep } from "../bot/flowEngine";
 
 const QUEUE_KEY = "sched:queue";
@@ -146,31 +146,52 @@ async function processJob(payload: ScheduledJobPayload): Promise<void> {
     }
   }
 
-  const { data: step, error: stepErr } = await supabase
-    .from("flow_steps")
-    .select(
-      `id, flow_id, organization_id, position, delay_seconds, trigger_keywords, label,
-       messages:flow_step_messages(id, step_id, position, message_type, text_content, media_url, filename, caption)`,
-    )
-    .eq("id", payload.stepId)
-    .maybeSingle();
-
   const phoneKey = `sched:phone:${payload.orgId}:${payload.phone}`;
   const sentAt = new Date().toISOString();
 
-  if (stepErr || !step) {
-    log.warn({ stepId: payload.stepId, jobId: payload.id }, "processJob: step not found, marking failed");
-    const p = r.pipeline();
-    p.srem(phoneKey, payload.id);
-    p.del(`sched:job:${payload.id}`);
-    await p.exec();
-    Promise.resolve(
-      supabase
-        .from("scheduled_flow_messages")
-        .update({ status: "failed", sent_at: sentAt })
-        .eq("redis_job_id", payload.id),
-    ).catch(() => {});
-    return;
+  // Use cached flow to avoid a Supabase hit on every scheduled message.
+  // Falls back to a direct DB query only if the flow isn't cached or has no flowId.
+  let step: FlowStep | null = null;
+
+  if (payload.flowId) {
+    const flow = await getFlowById(payload.flowId, payload.orgId);
+    step = (flow?.steps?.find((s) => s.id === payload.stepId) as FlowStep | undefined) ?? null;
+  }
+
+  if (!step) {
+    // Flow not in cache or no flowId — fall back to direct DB query
+    const { data, error: stepErr } = await supabase
+      .from("flow_steps")
+      .select(
+        `id, flow_id, organization_id, position, delay_seconds, trigger_keywords, label,
+         messages:flow_step_messages(id, step_id, position, message_type, text_content, media_url, filename, caption)`,
+      )
+      .eq("id", payload.stepId)
+      .maybeSingle();
+
+    if (stepErr) {
+      // Supabase error — re-enqueue instead of dropping the job permanently
+      log.warn({ stepId: payload.stepId, jobId: payload.id, err: stepErr }, "processJob: Supabase error, re-enqueueing in 30s");
+      await r.zadd(QUEUE_KEY, Date.now() + 30_000, payload.id);
+      return;
+    }
+
+    if (!data) {
+      log.warn({ stepId: payload.stepId, jobId: payload.id }, "processJob: step not found, marking failed");
+      const p = r.pipeline();
+      p.srem(phoneKey, payload.id);
+      p.del(`sched:job:${payload.id}`);
+      await p.exec();
+      Promise.resolve(
+        supabase
+          .from("scheduled_flow_messages")
+          .update({ status: "failed", sent_at: sentAt })
+          .eq("redis_job_id", payload.id),
+      ).catch(() => {});
+      return;
+    }
+
+    step = data as FlowStep;
   }
 
   const fakeState: ConversationState = {

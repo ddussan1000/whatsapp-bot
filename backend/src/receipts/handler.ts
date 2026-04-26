@@ -15,13 +15,10 @@ const DEFAULT_RECEIPT_REJECTED_MESSAGE =
   "No pudimos validar tu comprobante. Un agente lo revisara manualmente y te informara.";
 const DEFAULT_RECEIPT_CONFIRMED_MESSAGE =
   "¡Gracias! Recibimos tu pago correctamente.";
-const DEFAULT_HIGH_AMOUNT_MESSAGE =
-  "Recibimos tu comprobante. Por el monto, un agente lo revisara manualmente y te confirmara.";
 
 type ReceiptMessages = {
   rejectedMessage: string;
   confirmedMessage: string;
-  highAmountMessage: string;
 };
 
 function pick(value: unknown, fallback: string): string {
@@ -38,7 +35,6 @@ async function getReceiptMessages(
     return {
       rejectedMessage: DEFAULT_RECEIPT_REJECTED_MESSAGE,
       confirmedMessage: DEFAULT_RECEIPT_CONFIRMED_MESSAGE,
-      highAmountMessage: DEFAULT_HIGH_AMOUNT_MESSAGE,
     };
   }
 
@@ -70,10 +66,6 @@ async function getReceiptMessages(
     confirmedMessage: pick(
       flowOverrides.receiptConfirmedMessage,
       pick(orgCfg.receiptConfirmedMessage, DEFAULT_RECEIPT_CONFIRMED_MESSAGE),
-    ),
-    highAmountMessage: pick(
-      flowOverrides.receiptHighAmountMessage,
-      pick(orgCfg.receiptHighAmountMessage, DEFAULT_HIGH_AMOUNT_MESSAGE),
     ),
   };
 }
@@ -267,8 +259,7 @@ export async function classifyAndHandleImage(
       meta_message_id: metaMessageId,
     });
     await cancelPending();
-    const { highAmountMessage } = await getReceiptMessages(state.organizationId, state.flowId);
-    await sendMessage(phone, textMessage(highAmountMessage), msgCtx(state));
+    await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
     return { handled: true, state: { ...state, stage: STAGES.revision_manual } };
   }
 
