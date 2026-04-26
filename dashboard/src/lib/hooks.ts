@@ -326,8 +326,9 @@ export function useSupabaseUser() {
   return useQuery({
     queryKey: ["supabase", "user"],
     queryFn: async () => {
-      const { data } = (await supabase?.auth.getUser()) ?? {};
-      return data?.user ?? null;
+      // getSession reads from localStorage (no network). getUser() always hits /auth/v1/user.
+      const { data } = (await supabase?.auth.getSession()) ?? {};
+      return data?.session?.user ?? null;
     },
     staleTime: 1000 * 60 * 5,
   });

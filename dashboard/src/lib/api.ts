@@ -129,48 +129,15 @@ export function setActiveOrgId(id: string | null): void {
 
 const REQUEST_TIMEOUT_MS = 20_000;
 
-/** Supabase getSession with a hard timeout to avoid hanging all requests. */
-async function getSessionWithTimeout() {
-  if (!supabase) return null;
-  return Promise.race([
-    supabase.auth.getSession(),
-    new Promise<null>((_, reject) =>
-      setTimeout(() => reject(new Error("getSession timeout")), 5_000)
-    ),
-  ]);
-}
-
-// Single shared promise for any in-flight refresh. Prevents N concurrent requests
-// from each triggering their own refreshSession() call when the token is expired —
-// they all wait for the same refresh and get the new token together.
-let activeRefresh: Promise<string | undefined> | null = null;
-
+// getSession() reads from localStorage — no network call.
+// autoRefreshToken:true in the Supabase client handles token refresh internally
+// with its own deduplication. Calling refreshSession() manually in parallel
+// consumes the single-use refresh token and corrupts the session.
 async function getValidAccessToken(): Promise<string | undefined> {
   if (!supabase) return undefined;
-  // If a refresh is already running, share it instead of starting a new one
-  if (activeRefresh) return activeRefresh;
-
   try {
-    const result = await getSessionWithTimeout();
-    const session = result?.data?.session ?? null;
-    if (!session) return undefined;
-
-    const now = Math.floor(Date.now() / 1000);
-    if ((session.expires_at ?? 0) - now >= 60) {
-      return session.access_token;
-    }
-
-    // Token expired or expiring — start one shared refresh (double-check after the await)
-    if (!activeRefresh) {
-      activeRefresh = supabase.auth
-        .refreshSession()
-        .then(({ data }) => data.session?.access_token ?? undefined)
-        .catch(() => undefined)
-        .finally(() => {
-          activeRefresh = null;
-        });
-    }
-    return activeRefresh;
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? undefined;
   } catch {
     return undefined;
   }
@@ -195,8 +162,8 @@ async function request<T>(path: string, isRetry = false): Promise<T> {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (res.status === 401 && !isRetry) {
-    // Token was valid when we sent but server rejected it (clock skew / just expired)
-    // — let buildHeaders refresh and retry once
+    // Token expired or rejected — force SDK refresh (SDK deduplicates concurrent calls)
+    await supabase?.auth.refreshSession().catch(() => {});
     return request<T>(path, true);
   }
   if (!res.ok) await throwApiError(res);

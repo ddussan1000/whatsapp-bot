@@ -38,7 +38,8 @@ export function AuthGuard({ children }: { children: ReactElement }) {
           return;
         }
         if (event === "TOKEN_REFRESHED" && session) {
-          // Token was silently refreshed — recover any queries that failed with 401
+          // Token refreshed — invalidate user data and recover queries that failed with 401
+          void queryClient.invalidateQueries({ queryKey: ["supabase", "user"] });
           queryClient.refetchQueries({
             predicate: (query) => {
               if (query.state.status !== "error") return false;
