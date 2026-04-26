@@ -66,3 +66,18 @@ export async function getActiveInstanceByPhoneNumberId(phoneNumberId: string) {
 export async function invalidateInstanceCache(phoneNumberId: string) {
   await deleteCached(instanceKey(phoneNumberId));
 }
+
+const instanceByIdKey = (instanceId: string) => `instance:id:${instanceId}`;
+
+export async function getInstanceById(instanceId: string) {
+  if (!supabase) return null;
+  const cached = await getCached<WhatsAppInstance>(instanceByIdKey(instanceId));
+  if (cached) return decryptInstance(cached);
+  const { data } = await supabase
+    .from("whatsapp_instances")
+    .select(INSTANCE_SELECT)
+    .eq("id", instanceId)
+    .maybeSingle<WhatsAppInstance>();
+  if (data) await setCached(instanceByIdKey(instanceId), data);
+  return decryptInstance(data ?? null);
+}

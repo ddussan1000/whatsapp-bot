@@ -1,6 +1,6 @@
 import { log } from "../logger";
 import { insertMessageLog } from "../db/messages";
-import { getInstanceByPhoneNumberId } from "../db/instances";
+import { getInstanceByPhoneNumberId, getInstanceById } from "../db/instances";
 
 export async function sendMessage(
   to: string,
@@ -17,12 +17,22 @@ export async function sendMessage(
 ) {
   const organizationId = ctx?.organizationId ?? null;
   const metaPhoneNumberId = ctx?.metaPhoneNumberId ?? null;
+  const whatsappInstanceId = ctx?.whatsappInstanceId ?? null;
 
   let resolvedPhoneNumberId = "";
   let resolvedToken = "";
 
   if (organizationId && metaPhoneNumberId) {
     const instance = await getInstanceByPhoneNumberId(organizationId, metaPhoneNumberId);
+    if (instance?.meta_token) {
+      resolvedPhoneNumberId = instance.phone_number_id;
+      resolvedToken = instance.meta_token;
+    }
+  }
+
+  // Fallback: look up by instance ID when metaPhoneNumberId is missing or lookup failed
+  if ((!resolvedToken || !resolvedPhoneNumberId) && whatsappInstanceId) {
+    const instance = await getInstanceById(whatsappInstanceId);
     if (instance?.meta_token) {
       resolvedPhoneNumberId = instance.phone_number_id;
       resolvedToken = instance.meta_token;
