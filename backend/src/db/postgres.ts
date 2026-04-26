@@ -9,6 +9,7 @@ export const sql = env.DATABASE_URL_DIRECT
       max: 10,
       idle_timeout: 20,
       connect_timeout: 10,
+      prepare: false, // required for PgBouncer transaction mode (port 6543)
       onnotice: () => {},
     })
   : null;
