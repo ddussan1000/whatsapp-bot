@@ -4590,6 +4590,101 @@ dashboardApi.openapi(
 
 dashboardApi.openapi(
   createRoute({
+    method: "post",
+    path: "/payments",
+    request: {
+      headers: AuthHeaderSchema,
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              conversation_id: z.string().nullable().optional(),
+              phone: z.string().min(1),
+              flow_id: z.string().nullable().optional(),
+              whatsapp_instance_id: z.string().nullable().optional(),
+              amount: z.number().positive(),
+              currency: z.string().default("COP"),
+              receipt_date: z.string().nullable().optional(),
+              state: z
+                .enum(["pending_manual_review", "validated", "rejected"])
+                .default("validated"),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Pago creado",
+        content: {
+          "application/json": {
+            schema: z.object({ ok: z.boolean(), id: z.string() }),
+          },
+        },
+      },
+      400: {
+        description: "Datos inválidos",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const {
+      conversation_id,
+      phone,
+      flow_id,
+      whatsapp_instance_id,
+      amount,
+      currency,
+      receipt_date,
+      state,
+    } = c.req.valid("json");
+    const organization = orgId(c);
+
+    const payload: Record<string, unknown> = {
+      organization_id: organization,
+      phone,
+      amount,
+      currency,
+      state,
+      product: null,
+      receipt_url: null,
+      meta_message_id: null,
+    };
+    if (conversation_id !== undefined) payload.conversation_id = conversation_id;
+    if (flow_id !== undefined) payload.flow_id = flow_id;
+    if (whatsapp_instance_id !== undefined)
+      payload.whatsapp_instance_id = whatsapp_instance_id;
+    if (receipt_date !== undefined) payload.receipt_date = receipt_date;
+
+    const { data, error } = await supabase
+      .from("payments")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (error) return c.json({ error: error.message }, 500);
+
+    if (state === "validated") {
+      await supabase
+        .from("payments")
+        .update({ validated_at: new Date().toISOString() })
+        .eq("id", data.id)
+        .eq("organization_id", organization);
+    }
+
+    return c.json({ ok: true, id: data.id as string }, 201);
+  },
+);
+
+dashboardApi.openapi(
+  createRoute({
     method: "get",
     path: "/payments",
     request: {

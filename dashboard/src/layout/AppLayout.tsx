@@ -15,6 +15,7 @@ import {
   Settings2,
   ChevronsUpDown,
   Zap,
+  CreditCard,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ModeToggle } from "../components/mode-toggle";
@@ -76,6 +77,7 @@ type NavItem = { to: string; label: string; icon: React.ElementType };
 const operationsLinks: NavItem[] = [
   { to: "/", label: "Resumen", icon: LayoutDashboard },
   { to: "/conversations", label: "Conversaciones", icon: MessagesSquare },
+  { to: "/payments", label: "Pagos", icon: CreditCard },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
 ];
 

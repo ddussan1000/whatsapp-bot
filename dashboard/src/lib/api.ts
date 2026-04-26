@@ -354,6 +354,26 @@ export const api = {
         return r.json() as Promise<SendMessageResponse>;
       })
     ),
+  createPayment: (data: {
+    conversation_id?: string | null;
+    phone: string;
+    flow_id?: string | null;
+    whatsapp_instance_id?: string | null;
+    amount: number;
+    currency?: string;
+    receipt_date?: string | null;
+    state?: string;
+  }) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/payments`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(data),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean; id: string }>;
+      })
+    ),
   getPayments: (params?: {
     page?: number;
     pageSize?: number;

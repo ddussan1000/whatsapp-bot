@@ -235,6 +235,15 @@ export function useUpdatePaymentAmountMutation() {
   });
 }
 
+export function useCreatePaymentMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Parameters<typeof api.createPayment>[0]) =>
+      api.createPayment(data),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["payments"] }),
+  });
+}
+
 export function useMarkConversationReadMutation() {
   const qc = useQueryClient();
   return useMutation({

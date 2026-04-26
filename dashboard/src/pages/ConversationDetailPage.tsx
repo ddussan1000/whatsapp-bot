@@ -44,6 +44,7 @@ import {
 } from "../components/ui/select";
 import {
   useConversationQuery,
+  useCreatePaymentMutation,
   useFlowV2Query,
   useFlowsV2Query,
   usePaymentsQuery,
@@ -789,8 +790,13 @@ function ClientInfoModal({
   const knownStage = STAGE_OPTIONS.some((o) => o.value === currentStage);
   const updatePaymentState = useUpdatePaymentStateMutation();
   const updatePaymentAmount = useUpdatePaymentAmountMutation();
+  const createPayment = useCreatePaymentMutation();
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
   const [amountDraft, setAmountDraft] = useState("");
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [newAmount, setNewAmount] = useState("");
+  const [newCurrency, setNewCurrency] = useState("COP");
+  const [newState, setNewState] = useState("validated");
   const { data: paymentsData } = usePaymentsQuery(
     conversation?.phone
       ? { phone: conversation.phone, pageSize: 20 }
@@ -905,60 +911,52 @@ function ClientInfoModal({
             </div>
 
             {/* Payments */}
-            {payments.length > 0 && (
-              <>
-                <div className="h-px bg-border" />
-                <div className="flex flex-col gap-3">
+            <>
+              <div className="h-px bg-border" />
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Pagos ({payments.length})
+                    Pagos{payments.length > 0 ? ` (${payments.length})` : ""}
                   </p>
-                  {payments.map((p) => (
-                    <div
-                      key={p.id}
-                      className="rounded-xl border bg-muted/20 p-3 flex flex-col gap-2"
+                  {!showAddPayment && (
+                    <button
+                      className="text-xs text-primary hover:opacity-70"
+                      onClick={() => {
+                        setNewAmount("");
+                        setNewCurrency("COP");
+                        setNewState("validated");
+                        setShowAddPayment(true);
+                      }}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                          {editingAmountId === p.id ? (
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="number"
-                                min={1}
-                                className="h-7 w-28 rounded-md border bg-background px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-                                value={amountDraft}
-                                disabled={updatePaymentAmount.isPending}
-                                onChange={(e) => setAmountDraft(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    const v = parseFloat(amountDraft);
-                                    if (!isNaN(v) && v > 0) {
-                                      updatePaymentAmount.mutate(
-                                        { id: p.id, amount: v },
-                                        {
-                                          onSuccess: () => {
-                                            setEditingAmountId(null);
-                                            toast.success("Monto actualizado");
-                                          },
-                                        }
-                                      );
-                                    } else {
-                                      toast.error(
-                                        "El monto debe ser un número positivo"
-                                      );
-                                    }
-                                  }
-                                  if (
-                                    e.key === "Escape" &&
-                                    !updatePaymentAmount.isPending
-                                  )
-                                    setEditingAmountId(null);
-                                }}
-                                autoFocus
-                              />
-                              <button
-                                className="text-primary hover:opacity-70 disabled:opacity-40"
-                                disabled={updatePaymentAmount.isPending}
-                                onClick={() => {
+                      + Agregar pago
+                    </button>
+                  )}
+                </div>
+
+                {payments.length === 0 && !showAddPayment && (
+                  <p className="text-xs text-muted-foreground">
+                    No hay pagos registrados.
+                  </p>
+                )}
+
+                {payments.map((p) => (
+                  <div
+                    key={p.id}
+                    className="rounded-xl border bg-muted/20 p-3 flex flex-col gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        {editingAmountId === p.id ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min={1}
+                              className="h-7 w-28 rounded-md border bg-background px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                              value={amountDraft}
+                              disabled={updatePaymentAmount.isPending}
+                              onChange={(e) => setAmountDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
                                   const v = parseFloat(amountDraft);
                                   if (!isNaN(v) && v > 0) {
                                     updatePaymentAmount.mutate(
@@ -975,85 +973,202 @@ function ClientInfoModal({
                                       "El monto debe ser un número positivo"
                                     );
                                   }
-                                }}
-                              >
-                                <Check size={14} />
-                              </button>
-                              <button
-                                className="text-muted-foreground hover:opacity-70 disabled:opacity-40"
-                                disabled={updatePaymentAmount.isPending}
-                                onClick={() => setEditingAmountId(null)}
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <span className="font-semibold text-sm">
-                                {p.amount != null
-                                  ? new Intl.NumberFormat("es-CO", {
-                                      style: "currency",
-                                      currency: p.currency ?? "COP",
-                                      maximumFractionDigits: 0,
-                                    }).format(p.amount)
-                                  : "Sin monto"}
-                              </span>
-                              <button
-                                className="text-muted-foreground hover:text-foreground"
-                                onClick={() => {
-                                  setAmountDraft(String(p.amount ?? ""));
-                                  setEditingAmountId(p.id);
-                                }}
-                              >
-                                <Pencil size={11} />
-                              </button>
-                            </div>
-                          )}
-                          {p.receipt_date && (
-                            <span className="text-xs text-muted-foreground">
-                              {formatDateTime(p.receipt_date)}
+                                }
+                                if (
+                                  e.key === "Escape" &&
+                                  !updatePaymentAmount.isPending
+                                )
+                                  setEditingAmountId(null);
+                              }}
+                              autoFocus
+                            />
+                            <button
+                              className="text-primary hover:opacity-70 disabled:opacity-40"
+                              disabled={updatePaymentAmount.isPending}
+                              onClick={() => {
+                                const v = parseFloat(amountDraft);
+                                if (!isNaN(v) && v > 0) {
+                                  updatePaymentAmount.mutate(
+                                    { id: p.id, amount: v },
+                                    {
+                                      onSuccess: () => {
+                                        setEditingAmountId(null);
+                                        toast.success("Monto actualizado");
+                                      },
+                                    }
+                                  );
+                                } else {
+                                  toast.error(
+                                    "El monto debe ser un número positivo"
+                                  );
+                                }
+                              }}
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              className="text-muted-foreground hover:opacity-70 disabled:opacity-40"
+                              disabled={updatePaymentAmount.isPending}
+                              onClick={() => setEditingAmountId(null)}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold text-sm">
+                              {p.amount != null
+                                ? new Intl.NumberFormat("es-CO", {
+                                    style: "currency",
+                                    currency: p.currency ?? "COP",
+                                    maximumFractionDigits: 0,
+                                  }).format(p.amount)
+                                : "Sin monto"}
                             </span>
-                          )}
-                        </div>
-                        <PaymentStateLabel state={p.state ?? ""} />
+                            <button
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setAmountDraft(String(p.amount ?? ""));
+                                setEditingAmountId(p.id);
+                              }}
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          </div>
+                        )}
+                        {p.receipt_date && (
+                          <span className="text-xs text-muted-foreground">
+                            {formatDateTime(p.receipt_date)}
+                          </span>
+                        )}
                       </div>
-                      {(p as unknown as { receipt_url?: string | null })
-                        .receipt_url && (
-                        <a
-                          href={
-                            (p as unknown as { receipt_url?: string })
-                              .receipt_url
-                          }
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-primary underline underline-offset-2 truncate"
-                        >
-                          Ver comprobante
-                        </a>
-                      )}
-                      <Select
-                        value={p.state ?? undefined}
-                        onValueChange={(v) =>
-                          updatePaymentState.mutate({ id: p.id, state: v })
+                      <PaymentStateLabel state={p.state ?? ""} />
+                    </div>
+                    {(p as unknown as { receipt_url?: string | null })
+                      .receipt_url && (
+                      <a
+                        href={
+                          (p as unknown as { receipt_url?: string })
+                            .receipt_url
                         }
-                        disabled={updatePaymentState.isPending}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-primary underline underline-offset-2 truncate"
                       >
-                        <SelectTrigger className="h-8 text-xs bg-background">
+                        Ver comprobante
+                      </a>
+                    )}
+                    <Select
+                      value={p.state ?? undefined}
+                      onValueChange={(v) =>
+                        updatePaymentState.mutate({ id: p.id, state: v })
+                      }
+                      disabled={updatePaymentState.isPending}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_STATE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+
+                {showAddPayment && (
+                  <div className="rounded-xl border bg-muted/20 p-3 flex flex-col gap-3">
+                    <p className="text-xs font-medium">Nuevo pago</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        placeholder="Monto"
+                        className="h-8 flex-1 rounded-md border bg-background px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                        value={newAmount}
+                        disabled={createPayment.isPending}
+                        onChange={(e) => setNewAmount(e.target.value)}
+                      />
+                      <Select
+                        value={newCurrency}
+                        onValueChange={setNewCurrency}
+                        disabled={createPayment.isPending}
+                      >
+                        <SelectTrigger className="h-8 w-24 text-xs bg-background">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {PAYMENT_STATE_OPTIONS.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                              {o.label}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="COP">COP</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="EUR">EUR</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
+                    <Select
+                      value={newState}
+                      onValueChange={setNewState}
+                      disabled={createPayment.isPending}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="validated">Validado</SelectItem>
+                        <SelectItem value="pending_manual_review">
+                          Revisión manual
+                        </SelectItem>
+                        <SelectItem value="rejected">Rechazado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs flex-1"
+                        disabled={createPayment.isPending}
+                        onClick={() => {
+                          const v = parseFloat(newAmount);
+                          if (isNaN(v) || v <= 0) {
+                            toast.error("El monto debe ser un número positivo");
+                            return;
+                          }
+                          createPayment.mutate(
+                            {
+                              phone: conversation!.phone,
+                              conversation_id: conversation!.id,
+                              flow_id: conversation!.flow_id ?? null,
+                              whatsapp_instance_id: null,
+                              amount: v,
+                              currency: newCurrency,
+                              state: newState,
+                            },
+                            {
+                              onSuccess: () => {
+                                setShowAddPayment(false);
+                                toast.success("Pago registrado");
+                              },
+                            }
+                          );
+                        }}
+                      >
+                        Guardar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs flex-1"
+                        disabled={createPayment.isPending}
+                        onClick={() => setShowAddPayment(false)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
 
             {/* Ad source */}
             {ad && (

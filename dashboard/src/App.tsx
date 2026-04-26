@@ -58,6 +58,9 @@ const InstructionsPage = lazy(() =>
 const AdminPage = lazy(() =>
   import("./pages/AdminPage").then((m) => ({ default: m.AdminPage }))
 );
+const PaymentsPage = lazy(() =>
+  import("./pages/PaymentsPage").then((m) => ({ default: m.PaymentsPage }))
+);
 
 function App() {
   return (
@@ -92,6 +95,7 @@ function App() {
               path="/conversations/:id"
               element={<ConversationDetailPage />}
             />
+            <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/organization" element={<OrganizationPage />} />
             <Route path="/flows" element={<FlowsPage />} />
