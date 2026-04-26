@@ -431,11 +431,13 @@ dashboardApi.openapi(
       .select("timezone")
       .eq("id", orgId(c))
       .maybeSingle();
+    const todayStart = todayStartIso(org?.timezone ?? "America/Bogota");
     const { data, error } = await supabase
       .from("payments")
       .select("amount, product")
       .eq("organization_id", orgId(c))
-      .gte("validated_at", todayStartIso(org?.timezone ?? "America/Bogota"));
+      .eq("state", "validated")
+      .or(`receipt_date.gte.${todayStart},and(receipt_date.is.null,validated_at.gte.${todayStart})`);
     if (error) return c.json({ error: error.message }, 500);
     const total = (data ?? []).reduce(
       (sum, row) => sum + Number(row.amount ?? 0),
@@ -750,8 +752,8 @@ dashboardApi.openapi(
       .eq("organization_id", org)
       .eq("whatsapp_instance_id", instance_id)
       .eq("state", "validated")
-      .gte("validated_at", dayStart)
-      .lte("validated_at", dayEnd);
+      .or(`receipt_date.gte.${dayStart},and(receipt_date.is.null,validated_at.gte.${dayStart})`)
+      .or(`receipt_date.lte.${dayEnd},and(receipt_date.is.null,validated_at.lte.${dayEnd})`);
 
     if (payErr) return c.json({ error: payErr.message }, 500);
 
@@ -3749,18 +3751,18 @@ dashboardApi.openapi(
     const { from, to } = c.req.valid("query");
     let query = supabase
       .from("payments")
-      .select("validated_at, amount")
+      .select("receipt_date, validated_at, amount")
       .eq("organization_id", orgId(c))
+      .eq("state", "validated")
       .order("validated_at", { ascending: true });
-    if (from) query = query.gte("validated_at", from);
-    if (to) query = query.lte("validated_at", to);
+    if (from) query = query.or(`receipt_date.gte.${from},and(receipt_date.is.null,validated_at.gte.${from})`);
+    if (to) query = query.or(`receipt_date.lte.${to},and(receipt_date.is.null,validated_at.lte.${to})`);
     const { data, error } = await query;
     if (error) return c.json({ error: error.message }, 500);
     const grouped = new Map<string, number>();
     for (const row of data ?? []) {
-      const date = new Date(String(row.validated_at))
-        .toISOString()
-        .slice(0, 10);
+      const rawDate = (row.receipt_date as string | null) ?? String(row.validated_at);
+      const date = new Date(rawDate).toISOString().slice(0, 10);
       grouped.set(date, (grouped.get(date) ?? 0) + Number(row.amount ?? 0));
     }
     return c.json(
