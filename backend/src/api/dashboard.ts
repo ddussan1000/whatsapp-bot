@@ -134,6 +134,7 @@ const ReportsFunnelItemSchema = z.object({
 const ReportsTableItemSchema = z.object({
   paymentId: z.string(),
   validatedAt: z.string().nullable().optional(),
+  receiptDate: z.string().nullable().optional(),
   amount: z.number(),
   currency: z.string().nullable().optional(),
   phone: z.string(),
@@ -199,6 +200,7 @@ const PaymentSchema = z.object({
   receipt_date: z.string().nullable().optional(),
   state: z.enum(PAYMENT_STATES).nullable().optional(),
   validated_at: z.string().nullable().optional(),
+  conversation_id: z.string().nullable().optional(),
 });
 const ChatMessageSchema = z.object({
   id: z.string(),
@@ -3766,7 +3768,9 @@ dashboardApi.openapi(
       grouped.set(date, (grouped.get(date) ?? 0) + Number(row.amount ?? 0));
     }
     return c.json(
-      Array.from(grouped.entries()).map(([date, total]) => ({ date, total })),
+      Array.from(grouped.entries())
+        .map(([date, total]) => ({ date, total }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
       200,
     );
   },
@@ -4745,7 +4749,7 @@ dashboardApi.openapi(
     const organization = orgId(c);
 
     const selectCols = [
-      "id, phone, flow_id, whatsapp_instance_id, amount, currency, receipt_date, state, validated_at",
+      "id, phone, flow_id, whatsapp_instance_id, amount, currency, receipt_date, state, validated_at, conversation_id",
       "flows(name)",
       "whatsapp_instances(label)",
     ].join(", ");
@@ -4759,8 +4763,8 @@ dashboardApi.openapi(
     if (state) query = query.eq("state", state);
     if (flowId) query = query.eq("flow_id", flowId);
     if (instanceId) query = query.eq("whatsapp_instance_id", instanceId);
-    if (fromDate) query = query.gte("validated_at", fromDate);
-    if (toDate) query = query.lte("validated_at", toDate);
+    if (fromDate) query = query.or(`receipt_date.gte.${fromDate},and(receipt_date.is.null,validated_at.gte.${fromDate})`);
+    if (toDate) query = query.or(`receipt_date.lte.${toDate},and(receipt_date.is.null,validated_at.lte.${toDate})`);
     if (phone) query = query.eq("phone", phone);
 
     const { data, error } = await query;
@@ -4774,8 +4778,8 @@ dashboardApi.openapi(
     if (flowId) countQuery = countQuery.eq("flow_id", flowId);
     if (instanceId)
       countQuery = countQuery.eq("whatsapp_instance_id", instanceId);
-    if (fromDate) countQuery = countQuery.gte("validated_at", fromDate);
-    if (toDate) countQuery = countQuery.lte("validated_at", toDate);
+    if (fromDate) countQuery = countQuery.or(`receipt_date.gte.${fromDate},and(receipt_date.is.null,validated_at.gte.${fromDate})`);
+    if (toDate) countQuery = countQuery.or(`receipt_date.lte.${toDate},and(receipt_date.is.null,validated_at.lte.${toDate})`);
     if (phone) countQuery = countQuery.eq("phone", phone);
     const { count } = await countQuery;
 
@@ -4794,6 +4798,7 @@ dashboardApi.openapi(
       receipt_date: (p.receipt_date as string | null) ?? null,
       state: (p.state as (typeof PAYMENT_STATES)[number] | null) ?? null,
       validated_at: (p.validated_at as string | null) ?? null,
+      conversation_id: (p.conversation_id as string | null) ?? null,
     }));
 
     return c.json({ items, page, pageSize, total: count ?? items.length }, 200);

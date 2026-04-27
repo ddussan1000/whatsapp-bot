@@ -1169,6 +1169,7 @@ export interface paths {
                 items: {
                   paymentId: string;
                   validatedAt?: string | null;
+                  receiptDate?: string | null;
                   amount: number;
                   currency?: string | null;
                   phone: string;
@@ -4779,6 +4780,7 @@ export interface paths {
                   | "rejected"
                   | null;
                 validated_at?: string | null;
+                conversation_id?: string | null;
               }[];
               page: number;
               pageSize: number;
@@ -4800,7 +4802,72 @@ export interface paths {
       };
     };
     put?: never;
-    post?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          authorization: string;
+          "x-organization-id"?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            conversation_id?: string | null;
+            phone: string;
+            flow_id?: string | null;
+            whatsapp_instance_id?: string | null;
+            amount: number;
+            /** @default COP */
+            currency?: string;
+            receipt_date?: string | null;
+            /**
+             * @default validated
+             * @enum {string}
+             */
+            state?: "pending_manual_review" | "validated" | "rejected";
+          };
+        };
+      };
+      responses: {
+        /** @description Pago creado */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              ok: boolean;
+              id: string;
+            };
+          };
+        };
+        /** @description Datos inválidos */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;

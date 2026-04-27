@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,6 +7,7 @@ import {
   ArrowUp,
   ArrowDown,
   MoreHorizontal,
+  MessageSquare,
 } from "lucide-react";
 import {
   useReactTable,
@@ -67,7 +68,10 @@ function formatDate(iso: string | null | undefined) {
   });
 }
 
-function formatCurrency(amount: number | null | undefined, currency: string | null | undefined) {
+function formatCurrency(
+  amount: number | null | undefined,
+  currency: string | null | undefined
+) {
   if (amount == null) return "—";
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -80,6 +84,7 @@ function formatCurrency(amount: number | null | undefined, currency: string | nu
 
 export function PaymentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState(searchParams.get("phone") ?? "");
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,9 +210,7 @@ export function PaymentsPage() {
     {
       accessorKey: "state",
       header: "Estado",
-      cell: ({ row }) => (
-        <PaymentStateBadge state={row.original.state ?? ""} />
-      ),
+      cell: ({ row }) => <PaymentStateBadge state={row.original.state ?? ""} />,
     },
     {
       accessorKey: "receipt_date",
@@ -254,6 +257,16 @@ export function PaymentsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {p.conversation_id && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    navigate(`/conversations/${p.conversation_id}`)
+                  }
+                >
+                  <MessageSquare size={14} />
+                  Ver conversación
+                </DropdownMenuItem>
+              )}
               {p.state !== "validated" && (
                 <DropdownMenuItem
                   onClick={() =>
@@ -364,11 +377,7 @@ export function PaymentsPage() {
             updateParam("sortDir", sortDir === "asc" ? "desc" : "asc")
           }
         >
-          {sortDir === "asc" ? (
-            <ArrowUp size={14} />
-          ) : (
-            <ArrowDown size={14} />
-          )}
+          {sortDir === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
           {sortDir === "asc" ? "Ascendente" : "Descendente"}
         </Button>
       </div>

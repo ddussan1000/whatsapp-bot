@@ -319,7 +319,7 @@ export function ReportsPage() {
     const lines = rows.map((r) =>
       [
         r.paymentId,
-        r.validatedAt ?? "",
+        r.receiptDate ?? r.validatedAt ?? "",
         String(r.amount),
         r.currency ?? "",
         r.phone,
@@ -937,10 +937,10 @@ export function ReportsPage() {
                     payments.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell>
-                          {p.validated_at
-                            ? new Date(p.validated_at).toLocaleString("es-CO")
-                            : p.receipt_date
-                              ? new Date(p.receipt_date).toLocaleString("es-CO")
+                          {p.receipt_date
+                            ? new Date(p.receipt_date).toLocaleString("es-CO")
+                            : p.validated_at
+                              ? new Date(p.validated_at).toLocaleString("es-CO")
                               : "-"}
                         </TableCell>
                         <TableCell>{p.phone}</TableCell>

@@ -136,7 +136,9 @@ const REQUEST_TIMEOUT_MS = 20_000;
 async function getValidAccessToken(): Promise<string | undefined> {
   if (!supabase) return undefined;
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     return session?.access_token ?? undefined;
   } catch {
     return undefined;

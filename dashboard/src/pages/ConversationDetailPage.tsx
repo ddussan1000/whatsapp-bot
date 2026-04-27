@@ -1048,8 +1048,7 @@ function ClientInfoModal({
                       .receipt_url && (
                       <a
                         href={
-                          (p as unknown as { receipt_url?: string })
-                            .receipt_url
+                          (p as unknown as { receipt_url?: string }).receipt_url
                         }
                         target="_blank"
                         rel="noreferrer"
