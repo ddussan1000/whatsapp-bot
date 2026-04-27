@@ -337,8 +337,13 @@ export function PaymentsPage() {
         <Select
           value={stateFilter || "all"}
           onValueChange={(v) => {
-            updateParam("state", v === "all" ? null : v);
-            updateParam("page", "1");
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              if (v === "all") next.delete("state");
+              else next.set("state", v);
+              next.set("page", "1");
+              return next;
+            });
           }}
         >
           <SelectTrigger className="h-9 w-44">
@@ -356,8 +361,12 @@ export function PaymentsPage() {
         <Select
           value={sortBy}
           onValueChange={(v) => {
-            updateParam("sortBy", v);
-            updateParam("page", "1");
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              next.set("sortBy", v);
+              next.set("page", "1");
+              return next;
+            });
           }}
         >
           <SelectTrigger className="h-9 w-44">
