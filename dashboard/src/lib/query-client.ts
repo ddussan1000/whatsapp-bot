@@ -31,14 +31,13 @@ function refetchAuthErrors() {
   });
 }
 
-// Refresh the Supabase session when the tab becomes visible, then recover any
-// queries that failed with 401 while the token was expired.
+// On tab focus: getSession() waits for any in-flight SDK refresh (via internal lock)
+// before returning. If the session is alive, recover any queries that errored with 401
+// while the token was expired. Never call refreshSession() manually — it bypasses the
+// lock and races with autoRefreshToken, corrupting the single-use refresh token.
 document.addEventListener("visibilitychange", async () => {
   if (document.visibilityState !== "visible") return;
-  if (supabase) {
-    const { data } = await supabase.auth
-      .refreshSession()
-      .catch(() => ({ data: null }));
-    if (data?.session) refetchAuthErrors();
-  }
+  if (!supabase) return;
+  const { data } = await supabase.auth.getSession().catch(() => ({ data: null }));
+  if (data?.session) refetchAuthErrors();
 });

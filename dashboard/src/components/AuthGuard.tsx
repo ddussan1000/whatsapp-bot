@@ -38,15 +38,14 @@ export function AuthGuard({ children }: { children: ReactElement }) {
           return;
         }
         if (event === "TOKEN_REFRESHED" && session) {
-          // Token refreshed — invalidate user data and recover queries that failed with 401
-          void queryClient.invalidateQueries({
-            queryKey: ["supabase", "user"],
-          });
-          queryClient.refetchQueries({
+          // Refetch any query that failed with 401 while the old token was expired.
+          // This is the recovery path for mid-session token rotation.
+          void queryClient.invalidateQueries({ queryKey: ["supabase", "user"] });
+          void queryClient.refetchQueries({
             predicate: (query) => {
               if (query.state.status !== "error") return false;
-              const status = (query.state.error as { status?: number })?.status;
-              return status === 401;
+              const err = query.state.error as { status?: number } | null;
+              return err?.status === 401;
             },
           });
           return;

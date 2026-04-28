@@ -164,8 +164,14 @@ async function request<T>(path: string, isRetry = false): Promise<T> {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (res.status === 401 && !isRetry) {
-    // Token expired or rejected — force SDK refresh (SDK deduplicates concurrent calls)
-    await supabase?.auth.refreshSession().catch(() => {});
+    // getSession() goes through the SDK's internal lock — if a token refresh is
+    // in flight, this call waits for it to complete before returning.
+    // Never call refreshSession() manually: it bypasses the lock and races with
+    // autoRefreshToken, consuming the single-use refresh token.
+    const { data } = await supabase!.auth
+      .getSession()
+      .catch(() => ({ data: { session: null } }));
+    if (!data.session) await throwApiError(res);
     return request<T>(path, true);
   }
   if (!res.ok) await throwApiError(res);
