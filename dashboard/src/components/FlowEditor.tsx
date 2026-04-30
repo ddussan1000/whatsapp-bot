@@ -998,8 +998,9 @@ export function FlowEditor({
             setUploadTarget(null);
           }}
           allowedType={currentTargetType}
-          onSelect={(result) => {
-            if (uploadTarget) {
+          onSelect={(results) => {
+            const result = results[0];
+            if (result && uploadTarget) {
               patchMessage(uploadTarget.step, uploadTarget.msg, {
                 mediaUrl: result.url,
                 filename: result.filename,

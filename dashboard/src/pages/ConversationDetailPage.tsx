@@ -1330,20 +1330,27 @@ export function ConversationDetailPage() {
     });
   };
 
-  const onMediaSelected = async (result: MediaPickerResult) => {
-    setMediaPickerOpen(false);
-    await sendMediaMutation.mutateAsync({
-      url: result.url,
-      filename: result.filename,
-      mimeType: result.mimeType,
-    });
-    const res = await api.getConversationMessages(id, 1, PAGE_SIZE, true);
-    setMessages([...res.items].reverse());
-    setTotal(res.total);
-    requestAnimationFrame(() => {
-      const el = chatWindowRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
-    });
+  const onMediaSelected = async (results: MediaPickerResult[]) => {
+    try {
+      for (const result of results) {
+        await sendMediaMutation.mutateAsync({
+          url: result.url,
+          filename: result.filename,
+          mimeType: result.mimeType,
+        });
+      }
+      const res = await api.getConversationMessages(id, 1, PAGE_SIZE, true);
+      setMessages([...res.items].reverse());
+      setTotal(res.total);
+      requestAnimationFrame(() => {
+        const el = chatWindowRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    } catch {
+      toast.error("Error al enviar uno o más archivos");
+    } finally {
+      setMediaPickerOpen(false);
+    }
   };
 
   const adSource = conversation?.ad_source;

@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "../config/env";
 
 function getClient() {
@@ -94,31 +94,3 @@ export async function uploadReceiptAssetR2(params: {
   return uploadToR2({ key, buffer: params.buffer, contentType: params.contentType ?? "image/jpeg" });
 }
 
-export async function purgeOldReceiptsR2(bucket: string, retentionDays: number): Promise<void> {
-  const client = getClient();
-  const cutoff = new Date(Date.now() - retentionDays * 86400000);
-  let continuationToken: string | undefined;
-
-  do {
-    const res = await client.send(
-      new ListObjectsV2Command({
-        Bucket: bucket,
-        Prefix: "",
-        ContinuationToken: continuationToken,
-        MaxKeys: 1000,
-      }),
-    );
-
-    const toDelete = (res.Contents ?? [])
-      .filter((obj) => obj.Key && obj.LastModified && obj.LastModified < cutoff)
-      .map((obj) => ({ Key: obj.Key! }));
-
-    if (toDelete.length > 0) {
-      await client.send(
-        new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: toDelete, Quiet: true } }),
-      );
-    }
-
-    continuationToken = res.NextContinuationToken;
-  } while (continuationToken);
-}

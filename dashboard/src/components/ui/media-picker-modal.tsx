@@ -131,7 +131,7 @@ export type MediaPickerResult = {
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSelect: (result: MediaPickerResult) => void;
+  onSelect: (results: MediaPickerResult[]) => void;
   /** If set, only shows media of this type */
   allowedType?: "image" | "video" | "document" | "audio";
   title?: string;
@@ -148,7 +148,7 @@ export function MediaPickerModal({
     allowedType ?? "all"
   );
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const mediaQuery = useOrgMediaQuery({
     mediaType: typeFilter !== "all" ? typeFilter : undefined,
@@ -162,12 +162,12 @@ export function MediaPickerModal({
     return item.original_name.toLowerCase().includes(search.toLowerCase());
   });
 
-  const selectedItem = items.find((i) => i.id === selectedId) ?? null;
+  const selectedItems = (mediaQuery.data?.items ?? []).filter((i) => selectedIds.has(i.id));
 
   const handleUpload = async (file: File) => {
     try {
       const result = await upload.mutateAsync(file);
-      setSelectedId(result.media.id);
+      setSelectedIds((prev) => new Set([...prev, result.media.id]));
       toast.success("Archivo subido");
     } catch {
       toast.error("No se pudo subir el archivo");
@@ -175,19 +175,21 @@ export function MediaPickerModal({
   };
 
   const handleConfirm = () => {
-    if (!selectedItem) return;
-    onSelect({
-      url: selectedItem.public_url,
-      filename: selectedItem.original_name,
-      mediaType: selectedItem.media_type,
-      mimeType: selectedItem.mime_type,
-    });
-    setSelectedId(null);
+    if (selectedItems.length === 0) return;
+    onSelect(
+      selectedItems.map((item) => ({
+        url: item.public_url,
+        filename: item.original_name,
+        mediaType: item.media_type,
+        mimeType: item.mime_type,
+      }))
+    );
+    setSelectedIds(new Set());
     onClose();
   };
 
   const handleClose = () => {
-    setSelectedId(null);
+    setSelectedIds(new Set());
     onClose();
   };
 
@@ -229,7 +231,7 @@ export function MediaPickerModal({
                 <button
                   key={t}
                   type="button"
-                  onClick={() => setTypeFilter(t)}
+                  onClick={() => { setTypeFilter(t); setSelectedIds(new Set()); }}
                   className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                     typeFilter === t
                       ? "bg-primary text-primary-foreground"
@@ -331,9 +333,13 @@ export function MediaPickerModal({
                 <MediaCard
                   key={item.id}
                   item={item}
-                  selected={selectedId === item.id}
+                  selected={selectedIds.has(item.id)}
                   onSelect={() =>
-                    setSelectedId((prev) => (prev === item.id ? null : item.id))
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+                      next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+                      return next;
+                    })
                   }
                 />
               ))}
@@ -344,16 +350,16 @@ export function MediaPickerModal({
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-border px-5 py-3">
           <p className="text-xs text-muted-foreground">
-            {selectedItem
-              ? `Seleccionado: ${selectedItem.original_name}`
+            {selectedItems.length > 0
+              ? `${selectedItems.length} seleccionado${selectedItems.length !== 1 ? "s" : ""}`
               : `${items.length} archivo${items.length !== 1 ? "s" : ""}`}
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleClose}>
               Cancelar
             </Button>
-            <Button size="sm" disabled={!selectedItem} onClick={handleConfirm}>
-              Usar este archivo
+            <Button size="sm" disabled={selectedItems.length === 0} onClick={handleConfirm}>
+              {selectedItems.length > 1 ? `Enviar ${selectedItems.length} archivos` : "Usar este archivo"}
             </Button>
           </div>
         </div>
