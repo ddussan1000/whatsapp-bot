@@ -19,6 +19,7 @@ import {
   User,
   Video,
   PlayCircle,
+  RefreshCw,
   StopCircle,
   Workflow,
   X,
@@ -1219,6 +1220,7 @@ export function ConversationDetailPage() {
   const [flowTriggerOpen, setFlowTriggerOpen] = useState(false);
   const [selectedFlowId, setSelectedFlowId] = useState("");
   const [selectedStepId, setSelectedStepId] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const { data: conversation, isLoading: convLoading } =
     useConversationQuery(id);
@@ -1353,6 +1355,24 @@ export function ConversationDetailPage() {
     }
   };
 
+  const refreshMessages = async () => {
+    setRefreshing(true);
+    try {
+      const res = await api.getConversationMessages(id, 1, PAGE_SIZE, true);
+      setMessages([...res.items].reverse());
+      setTotal(res.total);
+      setPage(1);
+      requestAnimationFrame(() => {
+        const el = chatWindowRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    } catch {
+      toast.error("No se pudo actualizar los mensajes");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const adSource = conversation?.ad_source;
 
   return (
@@ -1434,6 +1454,17 @@ export function ConversationDetailPage() {
               <StopCircle size={17} />
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => void refreshMessages()}
+            disabled={refreshing}
+            className="shrink-0 text-muted-foreground"
+            aria-label="Actualizar mensajes"
+            title="Actualizar mensajes"
+          >
+            <RefreshCw size={17} className={refreshing ? "animate-spin" : ""} />
+          </Button>
           <Button
             variant="ghost"
             size="icon-sm"

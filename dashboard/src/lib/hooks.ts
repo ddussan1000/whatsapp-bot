@@ -81,7 +81,7 @@ export function useConversationsQuery(params?: {
   return useQuery({
     queryKey: ["conversations", params],
     queryFn: () => api.getConversations(params),
-    staleTime: 30_000,
+    staleTime: 120_000,
     placeholderData: keepPreviousData,
   });
 }
@@ -91,7 +91,7 @@ export function useConversationQuery(id: string) {
     queryKey: ["conversation", id],
     queryFn: () => api.getConversationById(id),
     enabled: Boolean(id),
-    staleTime: 30_000,
+    staleTime: 120_000,
   });
 }
 
@@ -206,7 +206,7 @@ export function usePaymentsQuery(params?: {
   return useQuery({
     queryKey: ["payments", params],
     queryFn: () => api.getPayments(params),
-    staleTime: 30_000,
+    staleTime: 120_000,
   });
 }
 
