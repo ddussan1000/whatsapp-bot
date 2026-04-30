@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../db/supabase";
 import { env } from "../config/env";
@@ -58,10 +59,33 @@ function getDbForSession(token: string): SupabaseClient | null {
   });
 }
 
+// Cache resolved sessions to avoid 3 Supabase round-trips per request.
+// TTL 60s: role/org changes take effect within 1 minute. Side-effect: a revoked
+// JWT (password change, forced sign-out) remains valid in the cache until expiry —
+// acceptable tradeoff for this app's threat model.
+const SESSION_CACHE_TTL_MS = 60_000;
+const sessionCache = new Map<string, { session: RequestSession; expiresAt: number }>();
+
+function tokenCacheKey(token: string, orgHeader: string): string {
+  // Hash the JWT so raw tokens never appear in memory snapshots or debug output.
+  const hash = createHash("sha256").update(token).digest("hex");
+  return `${hash}:${orgHeader}`;
+}
+
 export async function resolveSession(c: Context): Promise<RequestSession | null> {
   if (!supabase) return null;
   const token = parseBearerToken(c.req.header("authorization"));
   if (!token) return null;
+
+  // Skip cache for dashboard secret — it's a static token with no JWT expiry.
+  const isDashboardSecret = env.DASHBOARD_SECRET && token === env.DASHBOARD_SECRET;
+  const orgHeader = c.req.header("x-organization-id")?.trim() || "";
+
+  if (!isDashboardSecret) {
+    const cacheKey = tokenCacheKey(token, orgHeader);
+    const cached = sessionCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.session;
+  }
 
   if (env.DASHBOARD_SECRET && token === env.DASHBOARD_SECRET) {
     const { data: fallbackMembership } = await supabase
@@ -100,24 +124,24 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
   if (isPlatformAdmin && requestedOrg) {
     const { data: org } = await db.from("organizations").select("id").eq("id", requestedOrg).maybeSingle();
     if (org) {
-      return {
+      return cacheAndReturn(token, orgHeader, {
         userId: user.id,
         email: user.email ?? null,
         organizationId: requestedOrg,
         role: "owner",
         isPlatformAdmin: true,
-      };
+      });
     }
     // RLS en organizations solo permite ver filas donde el usuario es miembro; un platform admin
     // puede no aparecer en organization_members y el SELECT devuelve vacío. Confiar en el UUID del header.
     if (isUuidString(requestedOrg)) {
-      return {
+      return cacheAndReturn(token, orgHeader, {
         userId: user.id,
         email: user.email ?? null,
         organizationId: requestedOrg.trim(),
         role: "owner",
         isPlatformAdmin: true,
-      };
+      });
     }
   }
 
@@ -191,22 +215,35 @@ export async function resolveSession(c: Context): Promise<RequestSession | null>
 
   if (!membership) {
     if (isPlatformAdmin) {
-      return {
+      return cacheAndReturn(token, orgHeader, {
         userId: user.id,
         email: user.email ?? null,
         organizationId: null,
         role: "owner",
         isPlatformAdmin: true,
-      };
+      });
     }
     return null;
   }
 
-  return {
+  return cacheAndReturn(token, orgHeader, {
     userId: user.id,
     email: user.email ?? null,
     organizationId: membership.organization_id,
     role: membership.role,
     isPlatformAdmin,
-  };
+  });
+}
+
+function cacheAndReturn(token: string, orgHeader: string, session: RequestSession): RequestSession {
+  const cacheKey = tokenCacheKey(token, orgHeader);
+  sessionCache.set(cacheKey, { session, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
+  // Evict stale entries to prevent unbounded growth (runs only on cache writes).
+  if (sessionCache.size >= 500) {
+    const now = Date.now();
+    for (const [k, v] of sessionCache) {
+      if (v.expiresAt <= now) sessionCache.delete(k);
+    }
+  }
+  return session;
 }
