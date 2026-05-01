@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FlowEditor } from "@/components/FlowEditor";
-import type { FlowEditorDraft } from "@/components/FlowEditor";
+import { FlowCanvas } from "@/components/FlowCanvas";
+import type { FlowEditorDraft } from "@/components/FlowCanvas";
 import { emptyDraft } from "@/lib/flowUtils";
 import type { FlowV2 } from "@/types/api";
 import {
@@ -58,6 +58,7 @@ function toDraft(flow?: FlowV2): FlowEditorDraft {
             position: m.position,
             messageType: m.message_type,
             textContent: m.text_content ?? "",
+            textVariants: m.text_variants ?? [],
             mediaUrl: m.media_url ?? "",
             filename: m.filename ?? "",
             caption: m.caption ?? "",
@@ -274,6 +275,7 @@ export function FlowsPage() {
           position: j,
           messageType: m.messageType,
           textContent: m.textContent || null,
+          textVariants: m.textVariants?.filter(Boolean) ?? [],
           mediaUrl: m.mediaUrl || null,
           filename: m.filename || null,
           caption: m.caption || null,
@@ -405,8 +407,8 @@ export function FlowsPage() {
         </div>
 
         {/* ── Right: editor ── */}
-        <div className="overflow-y-auto">
-          <FlowEditor
+        <div className="overflow-hidden">
+          <FlowCanvas
             key={editorKey}
             initialDraft={currentDraft}
             onSave={handleSave}
