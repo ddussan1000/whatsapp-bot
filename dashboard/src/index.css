@@ -106,23 +106,33 @@ body {
   min-height: 100vh;
 }
 
-/* React Flow controls — dark mode theming */
-.react-flow__controls-button {
-  background: hsl(var(--card)) !important;
-  border-color: hsl(var(--border)) !important;
-  color: hsl(var(--foreground)) !important;
-}
-.react-flow__controls-button:hover {
-  background: hsl(var(--muted)) !important;
-}
-.react-flow__controls-button svg {
-  fill: hsl(var(--foreground)) !important;
-}
+/* React Flow controls — theme-aware */
 .react-flow__controls {
   box-shadow: none !important;
-  border: 1px solid hsl(var(--border)) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 0.5rem !important;
   overflow: hidden;
+  background: var(--card) !important;
+}
+.react-flow__controls-button {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+  fill: var(--foreground) !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--muted) !important;
+}
+.react-flow__controls-button svg {
+  max-width: 12px;
+  max-height: 12px;
+  fill: var(--foreground) !important;
+}
+.react-flow__controls-button svg path,
+.react-flow__controls-button svg rect,
+.react-flow__controls-button svg polygon,
+.react-flow__controls-button svg circle {
+  fill: var(--foreground) !important;
 }
 
 /* Cursor y affordance en elementos interactivos (incluye lo que el reset de Tailwind deja en default) */
