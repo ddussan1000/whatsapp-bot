@@ -235,6 +235,14 @@ export function useUpdatePaymentAmountMutation() {
   });
 }
 
+export function useDeletePaymentMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deletePayment(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["payments"] }),
+  });
+}
+
 export function useCreatePaymentMutation() {
   const qc = useQueryClient();
   return useMutation({

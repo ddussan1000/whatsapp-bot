@@ -396,6 +396,16 @@ export const api = {
         return r.json() as Promise<OkResponse>;
       })
     ),
+  deletePayment: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/payments/${id}`, {
+        method: "DELETE",
+        headers,
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<OkResponse>;
+      })
+    ),
   markConversationRead: (id: string) =>
     buildHeaders(true).then((headers) =>
       fetch(`${API_URL}/api/conversations/${id}/read`, {

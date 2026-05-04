@@ -4910,6 +4910,54 @@ dashboardApi.openapi(
   },
 );
 
+dashboardApi.openapi(
+  createRoute({
+    method: "delete",
+    path: "/payments/{id}",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "Pago eliminado",
+        content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+      },
+      404: {
+        description: "No encontrado",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+      500: {
+        description: "Error",
+        content: { "application/json": { schema: ErrorSchema } },
+      },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const organization = orgId(c);
+
+    const { data: existing } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("id", id)
+      .eq("organization_id", organization)
+      .maybeSingle();
+
+    if (!existing) return c.json({ error: "Pago no encontrado" }, 404);
+
+    const { error } = await supabase
+      .from("payments")
+      .delete()
+      .eq("id", id)
+      .eq("organization_id", organization);
+
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true }, 200);
+  },
+);
+
 const DEFAULT_BOT_CONFIG = {
   systemPrompt: "Eres un asistente de ventas por WhatsApp.",
   keywords: "precio,pago,producto,ayuda",

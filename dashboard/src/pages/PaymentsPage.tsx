@@ -6,8 +6,12 @@ import {
   ChevronsUpDown,
   ArrowUp,
   ArrowDown,
-  MoreHorizontal,
   MessageSquare,
+  Pencil,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Trash2,
 } from "lucide-react";
 import {
   useReactTable,
@@ -15,10 +19,17 @@ import {
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { usePaymentsQuery, useUpdatePaymentStateMutation } from "../lib/hooks";
+import { toast } from "sonner";
+import {
+  usePaymentsQuery,
+  useUpdatePaymentStateMutation,
+  useUpdatePaymentAmountMutation,
+  useDeletePaymentMutation,
+} from "../lib/hooks";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -27,11 +38,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import type { Payment } from "../types/api";
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -133,6 +146,15 @@ export function PaymentsPage() {
   });
 
   const updatePaymentState = useUpdatePaymentStateMutation();
+  const updatePaymentAmount = useUpdatePaymentAmountMutation();
+  const deletePayment = useDeletePaymentMutation();
+
+  // Edit amount dialog
+  const [editPayment, setEditPayment] = useState<Payment | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+
+  // Delete confirm dialog
+  const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
 
   const totalPages = data ? Math.ceil(data.total / 20) : 1;
 
@@ -250,56 +272,82 @@ export function PaymentsPage() {
       cell: ({ row }) => {
         const p = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal size={14} />
+          <div className="flex items-center gap-0.5">
+            {p.conversation_id && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title="Ver conversación"
+                onClick={() => navigate(`/conversations/${p.conversation_id}`)}
+              >
+                <MessageSquare size={13} />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {p.conversation_id && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    navigate(`/conversations/${p.conversation_id}`)
-                  }
-                >
-                  <MessageSquare size={14} />
-                  Ver conversación
-                </DropdownMenuItem>
-              )}
-              {p.state !== "validated" && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    updatePaymentState.mutate({ id: p.id, state: "validated" })
-                  }
-                >
-                  Marcar como validado
-                </DropdownMenuItem>
-              )}
-              {p.state !== "pending_manual_review" && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    updatePaymentState.mutate({
-                      id: p.id,
-                      state: "pending_manual_review",
-                    })
-                  }
-                >
-                  Marcar como pendiente
-                </DropdownMenuItem>
-              )}
-              {p.state !== "rejected" && (
-                <DropdownMenuItem
-                  className="text-red-600"
-                  onClick={() =>
-                    updatePaymentState.mutate({ id: p.id, state: "rejected" })
-                  }
-                >
-                  Marcar como rechazado
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Editar monto"
+              onClick={() => {
+                setEditPayment(p);
+                setEditAmount(String(p.amount ?? ""));
+              }}
+            >
+              <Pencil size={13} />
+            </Button>
+            {p.state !== "validated" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-green-600 hover:text-green-600"
+                title="Marcar como validado"
+                onClick={() =>
+                  updatePaymentState.mutate({ id: p.id, state: "validated" })
+                }
+              >
+                <CheckCircle2 size={13} />
+              </Button>
+            )}
+            {p.state !== "pending_manual_review" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-amber-500 hover:text-amber-500"
+                title="Marcar como pendiente"
+                onClick={() =>
+                  updatePaymentState.mutate({
+                    id: p.id,
+                    state: "pending_manual_review",
+                  })
+                }
+              >
+                <Clock size={13} />
+              </Button>
+            )}
+            {p.state !== "rejected" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-red-500 hover:text-red-500"
+                title="Marcar como rechazado"
+                onClick={() =>
+                  updatePaymentState.mutate({ id: p.id, state: "rejected" })
+                }
+              >
+                <XCircle size={13} />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              title="Eliminar pago"
+              onClick={() => setDeletePaymentId(p.id)}
+            >
+              <Trash2 size={13} />
+            </Button>
+          </div>
         );
       },
     },
@@ -479,6 +527,99 @@ export function PaymentsPage() {
           </div>
         </div>
       )}
+
+      {/* Edit amount dialog */}
+      <Dialog open={!!editPayment} onOpenChange={(o) => { if (!o) { setEditPayment(null); setEditAmount(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar monto</DialogTitle>
+            <DialogDescription>
+              Actualiza el monto del pago de {editPayment?.phone}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-1.5 py-2">
+            <Label htmlFor="edit-amount">Monto ({editPayment?.currency ?? "COP"})</Label>
+            <Input
+              id="edit-amount"
+              type="number"
+              min={0}
+              value={editAmount}
+              onChange={(e) => setEditAmount(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && editPayment) {
+                  const num = Number(editAmount);
+                  if (!num || num <= 0) return;
+                  updatePaymentAmount.mutate(
+                    { id: editPayment.id, amount: num },
+                    {
+                      onSuccess: () => {
+                        toast.success("Monto actualizado");
+                        setEditPayment(null);
+                      },
+                    }
+                  );
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPayment(null)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={updatePaymentAmount.isPending || !editAmount || Number(editAmount) <= 0}
+              onClick={() => {
+                if (!editPayment) return;
+                const num = Number(editAmount);
+                if (!num || num <= 0) return;
+                updatePaymentAmount.mutate(
+                  { id: editPayment.id, amount: num },
+                  {
+                    onSuccess: () => {
+                      toast.success("Monto actualizado");
+                      setEditPayment(null);
+                    },
+                  }
+                );
+              }}
+            >
+              {updatePaymentAmount.isPending ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={!!deletePaymentId} onOpenChange={(o) => { if (!o) setDeletePaymentId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar pago</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer. El registro de pago será eliminado permanentemente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletePaymentId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deletePayment.isPending}
+              onClick={() => {
+                if (!deletePaymentId) return;
+                deletePayment.mutate(deletePaymentId, {
+                  onSuccess: () => {
+                    toast.success("Pago eliminado");
+                    setDeletePaymentId(null);
+                  },
+                });
+              }}
+            >
+              {deletePayment.isPending ? "Eliminando…" : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
