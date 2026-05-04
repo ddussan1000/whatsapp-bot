@@ -61,6 +61,12 @@ const AdminPage = lazy(() =>
 const PaymentsPage = lazy(() =>
   import("./pages/PaymentsPage").then((m) => ({ default: m.PaymentsPage }))
 );
+const FlowDetailPage = lazy(() =>
+  import("./pages/FlowDetailPage").then((m) => ({ default: m.FlowDetailPage }))
+);
+const FlowEditPage = lazy(() =>
+  import("./pages/FlowEditPage").then((m) => ({ default: m.FlowEditPage }))
+);
 
 function App() {
   return (
@@ -99,6 +105,9 @@ function App() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/organization" element={<OrganizationPage />} />
             <Route path="/flows" element={<FlowsPage />} />
+            <Route path="/flows/new" element={<FlowEditPage />} />
+            <Route path="/flows/:flowId" element={<FlowDetailPage />} />
+            <Route path="/flows/:flowId/edit" element={<FlowEditPage />} />
             <Route path="/templates" element={<TemplatesPage />} />
             <Route path="/instances" element={<InstancesPage />} />
             <Route path="/instances/create" element={<InstanceCreatePage />} />
