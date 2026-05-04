@@ -226,7 +226,7 @@ export const api = {
     state?: string;
     search?: string;
     fromAd?: boolean;
-    adSourceId?: string;
+    adName?: string;
     flowId?: string;
     hasUnread?: boolean;
     page?: number;
@@ -238,7 +238,7 @@ export const api = {
     if (params?.state) q.set("state", params.state);
     if (params?.search) q.set("search", params.search);
     if (params?.fromAd) q.set("fromAd", "true");
-    if (params?.adSourceId) q.set("adSourceId", params.adSourceId);
+    if (params?.adName) q.set("adName", params.adName);
     if (params?.flowId) q.set("flowId", params.flowId);
     if (params?.hasUnread) q.set("hasUnread", "true");
     if (params?.page) q.set("page", String(params.page));

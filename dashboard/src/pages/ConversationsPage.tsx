@@ -319,7 +319,7 @@ export function ConversationsPage() {
     search: search || undefined,
     state: stateFilter !== "all" ? stateFilter : undefined,
     flowId: flowFilter !== "all" ? flowFilter : undefined,
-    adSourceId: adFilter !== "all" && adFilter !== "any" ? adFilter : undefined,
+    adName: adFilter !== "all" && adFilter !== "any" ? adFilter : undefined,
     fromAd: adFilter === "any" ? true : undefined,
     hasUnread: hasUnread || undefined,
     sortBy: "updated_at",
@@ -518,10 +518,10 @@ export function ConversationsPage() {
             >
               <SelectTrigger
                 id="conv-ad"
-                className="h-9 text-sm"
+                className="h-9 text-sm w-full"
                 aria-label="Filtrar por anuncio"
               >
-                <SelectValue placeholder="Todos" />
+                <SelectValue placeholder="Todos" className="truncate" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
@@ -534,8 +534,15 @@ export function ConversationsPage() {
                   </SelectItem>
                 )}
                 {filters?.ads.map((a) => (
-                  <SelectItem key={a.source_id} value={a.source_id}>
-                    {a.ad_name ?? a.campaign_name ?? a.source_id}
+                  <SelectItem key={a.ad_name} value={a.ad_name}>
+                    <div className="flex flex-col min-w-0 max-w-[220px]">
+                      <span className="truncate">{a.ad_name}</span>
+                      {a.campaign_name && (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {a.campaign_name}
+                        </span>
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

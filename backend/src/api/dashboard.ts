@@ -3782,8 +3782,7 @@ const ConversationFiltersSchema = z.object({
   flows: z.array(z.object({ id: z.string(), name: z.string() })),
   ads: z.array(
     z.object({
-      source_id: z.string(),
-      ad_name: z.string().nullable(),
+      ad_name: z.string(),
       campaign_name: z.string().nullable(),
     }),
   ),
@@ -3826,32 +3825,13 @@ dashboardApi.openapi(
       flows = (flowRows ?? []).map((r) => ({ id: r.id, name: r.name }));
     }
 
-    // Distinct ads that have click logs — prefer non-null ad_name when a
-    // source_id appears multiple times (first record may predate enrichment)
+    // Distinct ads grouped by ad_name — dedup done in DB via get_conversation_filter_ads
     const { data: adRows } = await supabase
-      .from("ad_click_logs")
-      .select("source_id, ad_name, campaign_name")
-      .eq("organization_id", organization)
-      .not("source_id", "is", null)
-      .limit(50000);
+      .rpc("get_conversation_filter_ads", { p_org_id: organization });
 
-    const seenAds = new Map<
-      string,
-      { ad_name: string | null; campaign_name: string | null }
-    >();
-    for (const r of adRows ?? []) {
-      if (!r.source_id) continue;
-      const existing = seenAds.get(r.source_id as string);
-      if (!existing || (existing.ad_name === null && r.ad_name != null)) {
-        seenAds.set(r.source_id as string, {
-          ad_name: r.ad_name as string | null,
-          campaign_name: r.campaign_name as string | null,
-        });
-      }
-    }
-    const ads = Array.from(seenAds.entries()).map(([source_id, meta]) => ({
-      source_id,
-      ...meta,
+    const ads = (adRows ?? []).map((r) => ({
+      ad_name: r.ad_name as string,
+      campaign_name: r.campaign_name as string | null,
     }));
 
     return c.json({ flows, ads }, 200);
@@ -3868,7 +3848,7 @@ dashboardApi.openapi(
         state: z.string().optional(),
         search: z.string().optional(),
         fromAd: z.coerce.boolean().optional(),
-        adSourceId: z.string().optional(),
+        adName: z.string().optional(),
         flowId: z.string().optional(),
         hasUnread: z.coerce.boolean().optional(),
         page: z.coerce.number().default(1),
@@ -3897,7 +3877,7 @@ dashboardApi.openapi(
       state,
       search,
       fromAd,
-      adSourceId,
+      adName,
       flowId,
       hasUnread,
       page,
@@ -3907,16 +3887,16 @@ dashboardApi.openapi(
     const organization = orgId(c);
 
     const { data, error } = await supabase.rpc("get_conversations_list", {
-      p_org_id:       organization,
-      p_state:        state        ?? null,
-      p_search:       search       ?? null,
-      p_flow_id:      flowId       ?? null,
-      p_from_ad:      fromAd       ?? false,
-      p_ad_source_id: adSourceId   ?? null,
-      p_has_unread:   hasUnread    ?? false,
-      p_page:         page,
-      p_page_size:    pageSize,
-      p_sort_dir:     sortDir,
+      p_org_id:     organization,
+      p_state:      state     ?? null,
+      p_search:     search    ?? null,
+      p_flow_id:    flowId    ?? null,
+      p_from_ad:    fromAd    ?? false,
+      p_ad_name:    adName    ?? null,
+      p_has_unread: hasUnread ?? false,
+      p_page:       page,
+      p_page_size:  pageSize,
+      p_sort_dir:   sortDir,
     });
     if (error) return c.json({ error: error.message }, 500);
     return c.json(data ?? { items: [], page, pageSize, total: 0 }, 200);

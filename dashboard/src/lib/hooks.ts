@@ -70,7 +70,7 @@ export function useConversationsQuery(params?: {
   state?: string;
   search?: string;
   fromAd?: boolean;
-  adSourceId?: string;
+  adName?: string;
   flowId?: string;
   hasUnread?: boolean;
   page?: number;
