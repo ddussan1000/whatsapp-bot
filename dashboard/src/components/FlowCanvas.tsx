@@ -42,6 +42,7 @@ type Props = {
   onDirtyChange?: (dirty: boolean) => void;
   onDraftChange?: (draft: FlowEditorDraft) => void;
   renderActions?: (ctx: FlowEditorActionsContext) => React.ReactNode;
+  readOnly?: boolean;
 };
 
 function FlowCanvasInner({
@@ -54,6 +55,7 @@ function FlowCanvasInner({
   onDirtyChange,
   onDraftChange,
   renderActions,
+  readOnly = false,
 }: Props) {
   const [draft, setDraftRaw] = useState<FlowEditorDraft>(initialDraft);
   const [dirty, setDirtyRaw] = useState(false);
@@ -179,11 +181,13 @@ function FlowCanvasInner({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Config panel */}
-      <FlowConfigPanel
-        draft={draft}
-        onChange={patch}
-        showPaymentConfig={showPaymentConfig}
-      />
+      {!readOnly && (
+        <FlowConfigPanel
+          draft={draft}
+          onChange={patch}
+          showPaymentConfig={showPaymentConfig}
+        />
+      )}
 
       {/* Canvas + right panel */}
       <div className="flex min-h-0 flex-1">
@@ -194,8 +198,11 @@ function FlowCanvasInner({
             edges={edges}
             nodeTypes={NODE_TYPES}
             edgeTypes={EDGE_TYPES}
-            onNodeClick={onNodeClick}
-            onPaneClick={() => selectNode(null)}
+            onNodeClick={readOnly ? undefined : onNodeClick}
+            onPaneClick={readOnly ? undefined : () => selectNode(null)}
+            nodesDraggable={!readOnly}
+            nodesConnectable={!readOnly}
+            elementsSelectable={!readOnly}
             fitView
             fitViewOptions={{ padding: 0.4 }}
             minZoom={0.2}
@@ -212,25 +219,31 @@ function FlowCanvasInner({
             <MiniMap
               nodeStrokeWidth={3}
               className="!rounded-lg !border !border-border !bg-card"
+              nodeColor={(node) => {
+                if (node.type === 'startNode') return 'hsl(var(--primary))';
+                return 'hsl(var(--muted-foreground))';
+              }}
             />
             <Controls className="!rounded-lg !border-border !bg-card" showInteractive={false} />
           </ReactFlow>
 
           {/* Floating add-step button */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-20 flex justify-center">
-            <button
-              type="button"
-              className="pointer-events-auto flex items-center gap-2 rounded-xl border-2 border-dashed border-primary/30 bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm transition-colors hover:border-primary/60 hover:text-foreground"
-              onClick={addStep}
-            >
-              <Plus size={14} />
-              Agregar paso
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-20 flex justify-center">
+              <button
+                type="button"
+                className="pointer-events-auto flex items-center gap-2 rounded-xl border-2 border-dashed border-primary/30 bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm transition-colors hover:border-primary/60 hover:text-foreground"
+                onClick={addStep}
+              >
+                <Plus size={14} />
+                Agregar paso
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right panel */}
-        {selectedStepIndex !== null && (
+        {!readOnly && selectedStepIndex !== null && (
           <FlowRightPanel
             draft={draft}
             stepIndex={selectedStepIndex}
@@ -258,22 +271,26 @@ function FlowCanvasInner({
       </div>
 
       {/* Action bar */}
-      <Separator />
-      <div className="flex shrink-0 flex-wrap items-center gap-2 p-3">
-        {exceeds24h && (
-          <div className="flex items-center gap-1.5 text-sm text-destructive">
-            <AlertTriangle size={13} />
-            El tiempo acumulado supera 24h. Reduce los delays para guardar.
+      {!readOnly && (
+        <>
+          <Separator />
+          <div className="flex shrink-0 flex-wrap items-center gap-2 p-3">
+            {exceeds24h && (
+              <div className="flex items-center gap-1.5 text-sm text-destructive">
+                <AlertTriangle size={13} />
+                El tiempo acumulado supera 24h. Reduce los delays para guardar.
+              </div>
+            )}
+            <Button
+              onClick={() => onSave(draft)}
+              disabled={savePending || !canSave}
+            >
+              {savePending ? "Guardando…" : saveLabel}
+            </Button>
+            {renderActions?.({ draft, dirty, resetDraft })}
           </div>
-        )}
-        <Button
-          onClick={() => onSave(draft)}
-          disabled={savePending || !canSave}
-        >
-          {savePending ? "Guardando…" : saveLabel}
-        </Button>
-        {renderActions?.({ draft, dirty, resetDraft })}
-      </div>
+        </>
+      )}
 
       {/* Media picker */}
       {showMediaPicker && (
