@@ -107,6 +107,8 @@ export function FlowEditPage() {
 
   // Autosave timer
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tracks latest draft without triggering re-renders (used by save-as-template)
+  const latestDraftRef = useRef<FlowEditorDraft>(emptyDraft());
 
   // Delete dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -194,7 +196,9 @@ export function FlowEditPage() {
 
   // ── Autosave to localStorage ──────────────────────────────────────────────
   function handleDraftChange(draft: FlowEditorDraft) {
-    setCurrentDraft(draft);
+    // Store in ref only — NOT in state. Calling setCurrentDraft here would change
+    // initialDraft prop, triggering the FlowCanvas reset effect and closing the panel.
+    latestDraftRef.current = draft;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       localStorage.setItem("flow_draft", JSON.stringify(draft));
@@ -296,7 +300,7 @@ export function FlowEditPage() {
         name: templateName.trim(),
         description: templateDescription.trim() || undefined,
         category: templateCategory,
-        draft: currentDraft,
+        draft: latestDraftRef.current,
       },
       {
         onSuccess: () => {

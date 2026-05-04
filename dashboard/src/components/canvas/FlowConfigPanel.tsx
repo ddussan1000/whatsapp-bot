@@ -26,7 +26,7 @@ type Props = {
 };
 
 export function FlowConfigPanel({ draft, onChange, showPaymentConfig = true }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [keywordInput, setKeywordInput] = useState("");
   const [paymentOpen, setPaymentOpen] = useState(false);
 

@@ -225,7 +225,7 @@ function FlowCanvasInner({
                 return 'hsl(var(--muted-foreground))';
               }}
             />
-            <Controls className="!rounded-lg !border-border !bg-card" showInteractive={false} />
+            <Controls showInteractive={false} />
           </ReactFlow>
 
           {/* Floating add-step button */}

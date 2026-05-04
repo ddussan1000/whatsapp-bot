@@ -34,7 +34,7 @@ export function StepNode({ data }: { data: StepNodeData }) {
         isSelected
           ? "border-primary shadow-[0_0_0_3px_rgba(124,58,237,0.2)]"
           : "border-border",
-        isDimmed ? "opacity-40" : "opacity-100",
+        isDimmed ? "opacity-50 grayscale-[30%]" : "opacity-100",
       ].join(" ")}
     >
       <Handle
