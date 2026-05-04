@@ -190,6 +190,7 @@ export type FlowStepMessageV2 = {
   position: number;
   message_type: FlowMessageTypeV2;
   text_content?: string | null;
+  text_variants?: string[];
   media_url?: string | null;
   filename?: string | null;
   caption?: string | null;
@@ -239,6 +240,7 @@ export type UpsertFlowBody = {
       position: number;
       messageType: FlowMessageTypeV2;
       textContent?: string | null;
+      textVariants?: string[];
       mediaUrl?: string | null;
       filename?: string | null;
       caption?: string | null;

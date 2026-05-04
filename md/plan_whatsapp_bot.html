@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan de Implementación — WhatsApp Bot</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f11;
+    --bg2: #141618;
+    --bg3: #1a1d21;
+    --border: #2a2e33;
+    --border2: #353a40;
+    --text: #e8eaed;
+    --muted: #8b949e;
+    --accent: #22c55e;
+    --accent2: #16a34a;
+    --blue: #3b82f6;
+    --amber: #f59e0b;
+    --coral: #f43f5e;
+    --purple: #a78bfa;
+    --teal: #2dd4bf;
+    --phase1: #3b82f6;
+    --phase2: #8b5cf6;
+    --phase3: #f59e0b;
+    --phase4: #22c55e;
+    --phase5: #f43f5e;
+    --phase6: #2dd4bf;
+    --phase7: #f97316;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 42px;
+    font-weight: 400;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    max-width: 700px;
+  }
+  .header h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .header-meta {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .meta-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .meta-dot.amber { background: var(--amber); }
+  .meta-dot.blue { background: var(--blue); }
+
+  /* LAYOUT */
+  .container { max-width: 1100px; margin: 0 auto; padding: 48px 60px; }
+
+  /* OVERVIEW GRID */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 56px;
+  }
+  .overview-card {
+    background: var(--bg2);
+    padding: 24px;
+  }
+  .overview-card .num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 36px;
+    font-weight: 400;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .overview-card .num.amber { color: var(--amber); }
+  .overview-card .num.blue { color: var(--blue); }
+  .overview-card .num.purple { color: var(--purple); }
+  .overview-card .label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 13px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--muted);
+    text-transform: none;
+    letter-spacing: 0;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* PHASE */
+  .phase {
+    margin-bottom: 48px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .phase:hover { border-color: var(--border2); }
+
+  .phase-header {
+    padding: 24px 28px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--bg2);
+    transition: background 0.15s;
+  }
+  .phase-header:hover { background: var(--bg3); }
+
+  .phase-badge {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .phase-header-text { flex: 1; }
+  .phase-week {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .phase-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .phase-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .phase-toggle {
+    font-size: 18px;
+    color: var(--muted);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+    margin-top: 10px;
+  }
+  .phase.open .phase-toggle { transform: rotate(180deg); }
+
+  .phase-body {
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+  .phase.open .phase-body { display: block; }
+
+  /* STEPS */
+  .steps { padding: 28px; display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: flex;
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-content { flex: 1; }
+  .step-title {
+    font-weight: 500;
+    font-size: 15px;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .step-detail {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  /* Code block */
+  .code-block {
+    background: #0a0c0e;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #a8b3c1;
+    line-height: 1.7;
+    overflow-x: auto;
+    margin-top: 8px;
+  }
+  .code-block .comment { color: #4a5568; }
+  .code-block .key { color: #7dd3fc; }
+  .code-block .val { color: #86efac; }
+  .code-block .str { color: #fca5a5; }
+  .code-block .fn { color: #c4b5fd; }
+
+  /* Tags */
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+    letter-spacing: 0.05em;
+  }
+  .tag.free { color: var(--accent); border-color: rgba(34,197,94,0.25); background: rgba(34,197,94,0.06); }
+  .tag.tool { color: var(--blue); border-color: rgba(59,130,246,0.25); background: rgba(59,130,246,0.06); }
+  .tag.db { color: var(--purple); border-color: rgba(167,139,250,0.25); background: rgba(167,139,250,0.06); }
+  .tag.paid { color: var(--amber); border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.06); }
+  .tag.critical { color: var(--coral); border-color: rgba(244,63,94,0.25); background: rgba(244,63,94,0.06); }
+
+  /* Deliverables box */
+  .deliverables {
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 20px 28px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .deliverables-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .deliverable {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+  }
+  .deliverable-icon { font-size: 13px; }
+
+  /* Stack table */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 28px;
+  }
+  .stack-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stack-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .stack-name { font-weight: 500; font-size: 14px; }
+  .stack-env {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .stack-env.dev { background: rgba(34,197,94,0.1); color: var(--accent); }
+  .stack-env.prod { background: rgba(245,158,11,0.1); color: var(--amber); }
+  .stack-both { background: rgba(59,130,246,0.1); color: var(--blue); }
+  .stack-detail { font-size: 12px; color: var(--muted); }
+  .stack-arrow {
+    text-align: center;
+    padding: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+  }
+  .stack-arrow::before, .stack-arrow::after {
+    content: '';
+    height: 1px;
+    background: var(--border);
+    flex: 1;
+  }
+
+  /* Timeline strip */
+  .timeline {
+    display: flex;
+    margin-bottom: 56px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .tl-phase {
+    flex: 1;
+    padding: 14px 12px;
+    border-right: 1px solid var(--border);
+    min-width: 0;
+  }
+  .tl-phase:last-child { border-right: none; }
+  .tl-week {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+  .tl-name {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .tl-bar {
+    height: 3px;
+    border-radius: 2px;
+    margin-top: 10px;
+  }
+
+  /* Footer */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .footer-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 6px 14px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--accent);
+  }
+
+  @media (max-width: 768px) {
+    .header, .container, .footer { padding-left: 24px; padding-right: 24px; }
+    .header h1 { font-size: 28px; }
+    .overview-grid { grid-template-columns: repeat(2, 1fr); }
+    .stack-grid { grid-template-columns: 1fr; }
+    .timeline { flex-direction: column; }
+    .tl-phase { border-right: none; border-bottom: 1px solid var(--border); }
+    .tl-phase:last-child { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-label">Plan de Implementación · 2025</div>
+  <h1>WhatsApp Sales Bot<br><em>de cero a producción</em></h1>
+  <div class="header-meta">
+    <div class="meta-item"><span class="meta-dot"></span> 7 fases completas</div>
+    <div class="meta-item"><span class="meta-dot blue"></span> Stack: Bun · Hono · Supabase · Meta API</div>
+    <div class="meta-item"><span class="meta-dot amber"></span> Costo dev: $0 · Producción: ~$16/mes</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- OVERVIEW CARDS -->
+  <div class="overview-grid">
+    <div class="overview-card">
+      <div class="num">7</div>
+      <div class="label">Fases</div>
+    </div>
+    <div class="overview-card">
+      <div class="num amber">9</div>
+      <div class="label">Semanas estimadas</div>
+    </div>
+    <div class="overview-card">
+      <div class="num blue">$0</div>
+      <div class="label">Costo en desarrollo</div>
+    </div>
+    <div class="overview-card">
+      <div class="num purple">~$16</div>
+      <div class="label">Costo/mes en producción</div>
+    </div>
+  </div>
+
+  <!-- TIMELINE STRIP -->
+  <div class="section-title">Cronograma general</div>
+  <div class="timeline">
+    <div class="tl-phase">
+      <div class="tl-week">SEM 1</div>
+      <div class="tl-name" style="color:var(--phase1)">Setup &amp; Base</div>
+      <div class="tl-bar" style="background:var(--phase1)"></div>
+    </div>
+    <div class="tl-phase">
+      <div class="tl-week">SEM 2</div>
+      <div class="tl-name" style="color:var(--phase2)">Bot &amp; Flujos</div>
+      <div class="tl-bar" style="background:var(--phase2)"></div>
+    </div>
+    <div class="tl-phase">
+      <div class="tl-week">SEM 3</div>
+      <div class="tl-name" style="color:var(--phase3)">Comprobantes</div>
+      <div class="tl-bar" style="background:var(--phase3)"></div>
+    </div>
+    <div class="tl-phase">
+      <div class="tl-week">SEM 4</div>
+      <div class="tl-name" style="color:var(--phase4)">Reportes</div>
+      <div class="tl-bar" style="background:var(--phase4)"></div>
+    </div>
+    <div class="tl-phase">
+      <div class="tl-week">SEM 5–6</div>
+      <div class="tl-name" style="color:var(--phase5)">Dashboard</div>
+      <div class="tl-bar" style="background:var(--phase5)"></div>
+    </div>
+    <div class="tl-phase">
+      <div class="tl-week">SEM 7–8</div>
+      <div class="tl-name" style="color:var(--phase6)">Testing</div>
+      <div class="tl-bar" style="background:var(--phase6)"></div>
+    </div>
+    <div class="tl-phase">
+      <div class="tl-week">SEM 9</div>
+      <div class="tl-name" style="color:var(--phase7)">Producción</div>
+      <div class="tl-bar" style="background:var(--phase7)"></div>
+    </div>
+  </div>
+
+  <!-- STACK COMPARISON -->
+  <div class="section-title">Stack: desarrollo vs producción</div>
+  <div class="stack-grid" style="margin-bottom:56px; background:var(--bg2); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">Servidor / hosting</div>
+        <span class="stack-env dev">DEV</span>
+      </div>
+      <div class="stack-detail">Local con Bun + ngrok para exponer webhook</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">Servidor / hosting</div>
+        <span class="stack-env prod">PROD</span>
+      </div>
+      <div class="stack-detail">Railway ($5/mes) o Fly.io — siempre activo</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">Base de datos</div>
+        <span class="stack-env dev">DEV</span>
+      </div>
+      <div class="stack-detail">Supabase free tier (500MB, sin tarjeta)</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">Base de datos</div>
+        <span class="stack-env prod">PROD</span>
+      </div>
+      <div class="stack-detail">Supabase Pro ($25/mes) si superas 500MB</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">Cache / estado</div>
+        <span class="stack-env dev">DEV</span>
+      </div>
+      <div class="stack-detail">Redis en memoria local (ioredis + mock)</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">Cache / estado</div>
+        <span class="stack-env prod">PROD</span>
+      </div>
+      <div class="stack-detail">Upstash Redis free tier (10k req/día gratis)</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">OCR comprobantes</div>
+        <span class="stack-env dev">DEV</span>
+      </div>
+      <div class="stack-detail">Tesseract.js — gratis, corre en Node</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">OCR comprobantes</div>
+        <span class="stack-env prod">PROD</span>
+      </div>
+      <div class="stack-detail">Google Vision API (~$9/mes con 6k imgs)</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">Almacenamiento imgs</div>
+        <span class="stack-env dev">DEV</span>
+      </div>
+      <div class="stack-detail">Directorio local /tmp/receipts</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">Almacenamiento imgs</div>
+        <span class="stack-env prod">PROD</span>
+      </div>
+      <div class="stack-detail">Cloudflare R2 (gratis hasta 10GB)</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">WhatsApp API</div>
+        <span class="stack-env" style="background:rgba(59,130,246,0.1);color:var(--blue)">AMBOS</span>
+      </div>
+      <div class="stack-detail">Meta Cloud API — gratis para mensajes entrantes</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-top">
+        <div class="stack-name">IA (Haiku)</div>
+        <span class="stack-env" style="background:rgba(59,130,246,0.1);color:var(--blue)">AMBOS</span>
+      </div>
+      <div class="stack-detail">Claude Haiku — pago por uso (~$2/mes real)</div>
+    </div>
+  </div>
+
+  <!-- ================== FASES ================== -->
+  <div class="section-title">Fases detalladas — haz clic para expandir</div>
+
+  <!-- FASE 1 -->
+  <div class="phase open" id="phase1">
+    <div class="phase-header" onclick="toggle('phase1')">
+      <div class="phase-badge" style="background:rgba(59,130,246,0.12);color:var(--phase1);border:1px solid rgba(59,130,246,0.2)">F1</div>
+      <div class="phase-header-text">
+        <div class="phase-week">SEMANA 1 · GRATIS $0</div>
+        <div class="phase-title" style="color:var(--phase1)">Setup del proyecto y Meta API</div>
+        <div class="phase-desc">Estructura base del backend, cuenta de Meta Business, webhook funcional y primeros mensajes de prueba.</div>
+      </div>
+      <div class="phase-toggle">▾</div>
+    </div>
+    <div class="phase-body">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <div class="step-title">Crear cuenta Meta Business y app de desarrollador</div>
+            <div class="step-detail">Ir a developers.facebook.com → crear app tipo "Business" → agregar producto "WhatsApp" → obtener número de prueba gratuito que Meta provee (5 números de prueba incluidos). No se necesita tarjeta.</div>
+            <div class="tags">
+              <span class="tag free">GRATIS</span>
+              <span class="tag tool">meta developers</span>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <div class="step-title">Inicializar proyecto Bun + Hono</div>
+            <div class="step-detail">Estructura de carpetas y dependencias base del proyecto.</div>
+            <div class="code-block"><span class="comment"># Instalar Bun si no está</span>
+curl -fsSL https://bun.sh/install | bash
+
+<span class="comment"># Crear proyecto</span>
+mkdir whatsapp-bot && cd whatsapp-bot
+bun init
+
+<span class="comment"># Dependencias</span>
+bun add hono @hono/node-server ioredis
+bun add -d @types/bun typescript</div>
+            <div class="tags"><span class="tag free">GRATIS</span><span class="tag tool">bun</span><span class="tag tool">hono</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <div class="step-title">Estructura de carpetas del proyecto</div>
+            <div class="code-block">whatsapp-bot/
+├── src/
+│   ├── index.ts              <span class="comment"># Entry point Hono</span>
+│   ├── webhook/
+│   │   ├── handler.ts        <span class="comment"># Lógica principal del webhook</span>
+│   │   └── verify.ts         <span class="comment"># Verificación de Meta</span>
+│   ├── bot/
+│   │   ├── classifier.ts     <span class="comment"># Clasificador de mensajes</span>
+│   │   ├── flows.ts          <span class="comment"># Flujos fijos (keywords)</span>
+│   │   ├── haiku.ts          <span class="comment"># Integración Claude Haiku</span>
+│   │   └── messages.ts       <span class="comment"># Templates de mensajes WA</span>
+│   ├── receipts/
+│   │   ├── ocr.ts            <span class="comment"># OCR con Tesseract</span>
+│   │   ├── validator.ts      <span class="comment"># Validación fecha+monto</span>
+│   │   └── storage.ts        <span class="comment"># Guardar imagen (local/R2)</span>
+│   ├── db/
+│   │   ├── supabase.ts       <span class="comment"># Cliente Supabase</span>
+│   │   ├── conversations.ts  <span class="comment"># Tabla conversaciones</span>
+│   │   └── payments.ts       <span class="comment"># Tabla pagos</span>
+│   ├── cache/
+│   │   └── redis.ts          <span class="comment"># Estado conversación (Redis)</span>
+│   ├── cron/
+│   │   └── dailyReport.ts    <span class="comment"># Reporte diario</span>
+│   └── alerts/
+│       └── telegram.ts       <span class="comment"># Alertas de error</span>
+├── .env
+├── .env.example
+└── package.json</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-content">
+            <div class="step-title">Exponer webhook local con ngrok (gratis)</div>
+            <div class="step-detail">Meta necesita una URL pública para enviar mensajes. En desarrollo usamos ngrok que genera una URL temporal gratis.</div>
+            <div class="code-block"><span class="comment"># Instalar ngrok (gratis)</span>
+brew install ngrok <span class="comment"># Mac</span>
+<span class="comment"># o descargar de ngrok.com</span>
+
+<span class="comment"># En terminal 1: correr el servidor</span>
+bun run dev
+
+<span class="comment"># En terminal 2: exponer puerto 3000</span>
+ngrok http 3000
+<span class="comment"># Copia la URL: https://abc123.ngrok.io</span>
+<span class="comment"># Esa URL va en Meta → Webhook URL</span></div>
+            <div class="tags"><span class="tag free">GRATIS</span><span class="tag tool">ngrok</span><span class="tag critical">REEMPLAZAR en producción</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">05</div>
+          <div class="step-content">
+            <div class="step-title">Webhook handler — verificación y recepción</div>
+            <div class="code-block"><span class="comment">// src/webhook/handler.ts</span>
+<span class="fn">export async function</span> <span class="key">handleWebhook</span>(c: Context) {
+  <span class="fn">const</span> body = <span class="fn">await</span> c.req.json();
+  <span class="fn">const</span> entry = body.entry?.[<span class="val">0</span>];
+  <span class="fn">const</span> change = entry?.changes?.[<span class="val">0</span>]?.value;
+  <span class="fn">const</span> msg = change?.messages?.[<span class="val">0</span>];
+
+  <span class="fn">if</span> (!msg) <span class="fn">return</span> c.text(<span class="str">'ok'</span>);
+
+  <span class="fn">const</span> phone = msg.from;
+  <span class="fn">const</span> type  = msg.type; <span class="comment">// 'text' | 'image' | 'interactive'</span>
+
+  <span class="fn">await</span> processMessage({ phone, type, msg });
+  <span class="fn">return</span> c.text(<span class="str">'ok'</span>);
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">06</div>
+          <div class="step-content">
+            <div class="step-title">Variables de entorno necesarias</div>
+            <div class="code-block"><span class="comment"># .env</span>
+<span class="key">META_TOKEN</span>=<span class="str">EAAxxxxxxxxx</span>          <span class="comment"># Token de acceso Meta</span>
+<span class="key">META_PHONE_ID</span>=<span class="str">123456789</span>         <span class="comment"># ID del número de WhatsApp</span>
+<span class="key">VERIFY_TOKEN</span>=<span class="str">mi_token_secreto</span>   <span class="comment"># Para verificar webhook</span>
+<span class="key">SUPABASE_URL</span>=<span class="str">https://xxx.supabase.co</span>
+<span class="key">SUPABASE_KEY</span>=<span class="str">eyJxxx</span>
+<span class="key">ANTHROPIC_API_KEY</span>=<span class="str">sk-ant-xxx</span>
+<span class="key">REDIS_URL</span>=<span class="str">redis://localhost:6379</span>  <span class="comment"># Dev: local</span>
+<span class="key">ADMIN_PHONE</span>=<span class="str">57300xxxxxxx</span>         <span class="comment"># Tu número para alertas</span>
+<span class="key">TELEGRAM_BOT_TOKEN</span>=<span class="str">xxx</span>           <span class="comment"># Opcional alertas</span>
+<span class="key">STORAGE_MODE</span>=<span class="str">local</span>               <span class="comment"># 'local' | 'r2'</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="deliverables">
+        <span class="deliverables-label">Entregables</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Proyecto Bun/Hono corriendo</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Webhook verificado en Meta</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Primer mensaje recibido y loggeado</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Supabase conectado</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 2 -->
+  <div class="phase" id="phase2">
+    <div class="phase-header" onclick="toggle('phase2')">
+      <div class="phase-badge" style="background:rgba(139,92,246,0.12);color:var(--phase2);border:1px solid rgba(139,92,246,0.2)">F2</div>
+      <div class="phase-header-text">
+        <div class="phase-week">SEMANA 2 · GRATIS $0 (Haiku: mínimo)</div>
+        <div class="phase-title" style="color:var(--phase2)">Motor del bot — flujos y Claude Haiku</div>
+        <div class="phase-desc">Clasificador de mensajes, flujos fijos con keywords, mensajes interactivos (botones/listas), integración de Claude Haiku y manejo de estado con Redis.</div>
+      </div>
+      <div class="phase-toggle">▾</div>
+    </div>
+    <div class="phase-body">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <div class="step-title">Schema de Supabase — tablas principales</div>
+            <div class="code-block"><span class="comment">-- Ejecutar en Supabase SQL Editor</span>
+
+<span class="fn">CREATE TABLE</span> conversations (
+  id           UUID <span class="fn">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  phone        TEXT <span class="fn">NOT NULL</span>,
+  stage        TEXT <span class="fn">DEFAULT</span> <span class="str">'iniciado'</span>,
+  product      TEXT,
+  started_at   TIMESTAMPTZ <span class="fn">DEFAULT</span> now(),
+  updated_at   TIMESTAMPTZ <span class="fn">DEFAULT</span> now()
+);
+
+<span class="fn">CREATE TABLE</span> payments (
+  id              UUID <span class="fn">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  phone           TEXT <span class="fn">NOT NULL</span>,
+  product         TEXT,
+  amount          NUMERIC(<span class="val">12</span>,<span class="val">2</span>),
+  currency        TEXT <span class="fn">DEFAULT</span> <span class="str">'COP'</span>,
+  receipt_url     TEXT,
+  receipt_date    TIMESTAMPTZ,
+  validated_at    TIMESTAMPTZ <span class="fn">DEFAULT</span> now(),
+  conversation_id UUID <span class="fn">REFERENCES</span> conversations(id),
+  state           TEXT <span class="fn">DEFAULT</span> <span class="str">'pagó'</span>
+);
+
+<span class="comment">-- Índices para reportes</span>
+<span class="fn">CREATE INDEX</span> idx_payments_date <span class="fn">ON</span> payments(validated_at);
+<span class="fn">CREATE INDEX</span> idx_payments_phone <span class="fn">ON</span> payments(phone);</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <div class="step-title">Clasificador de mensajes</div>
+            <div class="step-detail">Primera función que se ejecuta con cada mensaje. Decide el camino sin gastar IA.</div>
+            <div class="code-block"><span class="comment">// src/bot/classifier.ts</span>
+<span class="fn">export function</span> <span class="key">classify</span>(msg: WaMessage): MsgType {
+  <span class="fn">if</span> (msg.type === <span class="str">'image'</span>)       <span class="fn">return</span> <span class="str">'receipt'</span>;
+  <span class="fn">if</span> (msg.type === <span class="str">'interactive'</span>) <span class="fn">return</span> <span class="str">'button_reply'</span>;
+
+  <span class="fn">const</span> text = msg.text?.body?.toLowerCase() ?? <span class="str">''</span>;
+
+  <span class="fn">const</span> keywords = {
+    price:    [<span class="str">'precio'</span>,<span class="str">'costo'</span>,<span class="str">'cuánto'</span>,<span class="str">'vale'</span>,<span class="str">'valor'</span>],
+    pay:      [<span class="str">'pagar'</span>,<span class="str">'pago'</span>,<span class="str">'transferir'</span>,<span class="str">'nequi'</span>,<span class="str">'bancolombia'</span>],
+    products: [<span class="str">'producto'</span>,<span class="str">'catálogo'</span>,<span class="str">'tienes'</span>,<span class="str">'disponible'</span>],
+    greeting: [<span class="str">'hola'</span>,<span class="str">'buenas'</span>,<span class="str">'buen dia'</span>,<span class="str">'hey'</span>],
+    help:     [<span class="str">'ayuda'</span>,<span class="str">'help'</span>,<span class="str">'soporte'</span>],
+  };
+
+  <span class="fn">for</span> (<span class="fn">const</span> [type, words] <span class="fn">of</span> Object.entries(keywords)) {
+    <span class="fn">if</span> (words.some(w => text.includes(w))) <span class="fn">return</span> type <span class="fn">as</span> MsgType;
+  }
+
+  <span class="fn">return</span> <span class="str">'free_text'</span>; <span class="comment">// → Claude Haiku</span>
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <div class="step-title">Mensajes interactivos — templates listos para usar</div>
+            <div class="code-block"><span class="comment">// src/bot/messages.ts</span>
+
+<span class="fn">export const</span> <span class="key">welcomeButtons</span> = () => ({
+  type: <span class="str">"interactive"</span>,
+  interactive: {
+    type: <span class="str">"button"</span>,
+    body: { text: <span class="str">"¡Hola! 👋 ¿En qué te ayudamos hoy?"</span> },
+    action: { buttons: [
+      { type: <span class="str">"reply"</span>, reply: { id: <span class="str">"ver_productos"</span>, title: <span class="str">"Ver productos"</span> }},
+      { type: <span class="str">"reply"</span>, reply: { id: <span class="str">"hacer_pedido"</span>,  title: <span class="str">"Hacer pedido"</span>  }},
+      { type: <span class="str">"reply"</span>, reply: { id: <span class="str">"soporte"</span>,        title: <span class="str">"Soporte"</span>        }},
+    ]}
+  }
+});
+
+<span class="fn">export const</span> <span class="key">catalogList</span> = (products: Product[]) => ({
+  type: <span class="str">"interactive"</span>,
+  interactive: {
+    type: <span class="str">"list"</span>,
+    body: { text: <span class="str">"Selecciona un producto:"</span> },
+    action: {
+      button: <span class="str">"Ver catálogo"</span>,
+      sections: [{ title: <span class="str">"Disponibles"</span>, rows:
+        products.map(p => ({
+          id: <span class="str">`prod_${p.id}`</span>,
+          title: p.name,
+          description: <span class="str">`$${p.price.toLocaleString('es-CO')}`</span>
+        }))
+      }]
+    }
+  }
+});</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-content">
+            <div class="step-title">Integración Claude Haiku con system prompt</div>
+            <div class="code-block"><span class="comment">// src/bot/haiku.ts</span>
+<span class="fn">const</span> SYSTEM = <span class="str">`
+Eres el asistente de ventas de [TU NEGOCIO] por WhatsApp.
+Responde SOLO en español. Máximo 3 oraciones. Tono amigable.
+
+CATÁLOGO: [pegas aquí tus productos y precios]
+
+Responde SIEMPRE en JSON:
+{
+  "reply": "texto para el cliente",
+  "next_state": "interesado|listo_pagar|necesita_agente|null",
+  "send_catalog": false
+}
+`</span>;
+
+<span class="fn">export async function</span> <span class="key">askHaiku</span>(text: <span class="fn">string</span>, history: Msg[]) {
+  <span class="fn">const</span> res = <span class="fn">await</span> fetch(<span class="str">"https://api.anthropic.com/v1/messages"</span>, {
+    method: <span class="str">"POST"</span>,
+    headers: { <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>,
+               <span class="str">"x-api-key"</span>: process.env.ANTHROPIC_API_KEY },
+    body: JSON.stringify({
+      model: <span class="str">"claude-haiku-4-5-20251001"</span>,
+      max_tokens: <span class="val">300</span>,
+      system: SYSTEM,
+      messages: [...history, { role: <span class="str">"user"</span>, content: text }]
+    })
+  });
+  <span class="fn">const</span> data = <span class="fn">await</span> res.json();
+  <span class="fn">return</span> JSON.parse(data.content[<span class="val">0</span>].text);
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">05</div>
+          <div class="step-content">
+            <div class="step-title">Estado de conversación en Redis (dev: local)</div>
+            <div class="code-block"><span class="comment">// src/cache/redis.ts</span>
+<span class="fn">import</span> Redis <span class="fn">from</span> <span class="str">'ioredis'</span>;
+<span class="fn">const</span> redis = <span class="fn">new</span> Redis(process.env.REDIS_URL);
+
+<span class="fn">const</span> TTL = <span class="val">3</span> * <span class="val">24</span> * <span class="val">3600</span>; <span class="comment">// 3 días</span>
+
+<span class="fn">export async function</span> <span class="key">getState</span>(phone: <span class="fn">string</span>) {
+  <span class="fn">const</span> raw = <span class="fn">await</span> redis.get(<span class="str">`conv:${phone}`</span>);
+  <span class="fn">return</span> raw ? JSON.parse(raw) : { stage: <span class="str">'nuevo'</span>, history: [] };
+}
+
+<span class="fn">export async function</span> <span class="key">setState</span>(phone: <span class="fn">string</span>, state: State) {
+  <span class="fn">await</span> redis.setex(<span class="str">`conv:${phone}`</span>, TTL, JSON.stringify(state));
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">06</div>
+          <div class="step-content">
+            <div class="step-title">Función sendMessage — envío a Meta API</div>
+            <div class="code-block"><span class="comment">// src/bot/sender.ts</span>
+<span class="fn">export async function</span> <span class="key">sendMessage</span>(to: <span class="fn">string</span>, payload: <span class="fn">object</span>) {
+  <span class="fn">await</span> fetch(
+    <span class="str">`https://graph.facebook.com/v19.0/${process.env.META_PHONE_ID}/messages`</span>,
+    {
+      method: <span class="str">'POST'</span>,
+      headers: {
+        <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+        <span class="str">'Authorization'</span>: <span class="str">`Bearer ${process.env.META_TOKEN}`</span>
+      },
+      body: JSON.stringify({ messaging_product: <span class="str">'whatsapp'</span>, to, ...payload })
+    }
+  );
+}</div>
+          </div>
+        </div>
+      </div>
+      <div class="deliverables">
+        <span class="deliverables-label">Entregables</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Bot responde keywords</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Botones y listas funcionando</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Haiku responde texto libre</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Estado persiste en Redis</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 3 -->
+  <div class="phase" id="phase3">
+    <div class="phase-header" onclick="toggle('phase3')">
+      <div class="phase-badge" style="background:rgba(245,158,11,0.12);color:var(--phase3);border:1px solid rgba(245,158,11,0.2)">F3</div>
+      <div class="phase-header-text">
+        <div class="phase-week">SEMANA 3 · GRATIS $0</div>
+        <div class="phase-title" style="color:var(--phase3)">Módulo de comprobantes y pagos</div>
+        <div class="phase-desc">OCR con Tesseract.js, extracción de monto y fecha, validación 48h, almacenamiento local, guardado en Supabase con el monto.</div>
+      </div>
+      <div class="phase-toggle">▾</div>
+    </div>
+    <div class="phase-body">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <div class="step-title">Instalar Tesseract.js (OCR gratuito)</div>
+            <div class="code-block">bun add tesseract.js sharp
+<span class="comment"># sharp: para preprocesar imagen antes del OCR (mejora precisión)</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <div class="step-title">Descarga de imagen desde Meta API</div>
+            <div class="code-block"><span class="comment">// src/receipts/downloader.ts</span>
+<span class="fn">export async function</span> <span class="key">downloadFromMeta</span>(mediaId: <span class="fn">string</span>): Promise&lt;Buffer&gt; {
+  <span class="comment">// 1. Obtener URL temporal de la imagen</span>
+  <span class="fn">const</span> meta = <span class="fn">await</span> fetch(
+    <span class="str">`https://graph.facebook.com/v19.0/${mediaId}`</span>,
+    { headers: { Authorization: <span class="str">`Bearer ${process.env.META_TOKEN}`</span> }}
+  ).then(r => r.json());
+
+  <span class="comment">// 2. Descargar la imagen como Buffer</span>
+  <span class="fn">const</span> img = <span class="fn">await</span> fetch(meta.url, {
+    headers: { Authorization: <span class="str">`Bearer ${process.env.META_TOKEN}`</span> }
+  });
+  <span class="fn">return</span> Buffer.from(<span class="fn">await</span> img.arrayBuffer());
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <div class="step-title">OCR + extracción de monto y fecha</div>
+            <div class="code-block"><span class="comment">// src/receipts/ocr.ts</span>
+<span class="fn">import</span> Tesseract <span class="fn">from</span> <span class="str">'tesseract.js'</span>;
+<span class="fn">import</span> sharp <span class="fn">from</span> <span class="str">'sharp'</span>;
+
+<span class="fn">export async function</span> <span class="key">extractPaymentData</span>(imgBuffer: Buffer) {
+  <span class="comment">// Preprocesar: escala de grises + contraste</span>
+  <span class="fn">const</span> processed = <span class="fn">await</span> sharp(imgBuffer)
+    .grayscale().normalize().sharpen().toBuffer();
+
+  <span class="fn">const</span> { data: { text } } = <span class="fn">await</span> Tesseract.recognize(
+    processed, <span class="str">'spa'</span> <span class="comment">/* español */</span>
+  );
+
+  <span class="comment">// Extraer monto (patrones colombianos)</span>
+  <span class="fn">const</span> amountPatterns = [
+    <span class="fn">/</span>(?:valor|monto|total|por)[:\s]*\$?\s*([\d.,]+)<span class="fn">/i</span>,
+    <span class="fn">/</span>\$\s*([\d]{1,3}(?:[.,]\d{3})+)<span class="fn">/</span>,
+    <span class="fn">/</span>([\d]{1,3}(?:\.\d{3})+)<span class="fn">/</span>,
+  ];
+  <span class="fn">let</span> amount = <span class="fn">null</span>;
+  <span class="fn">for</span> (<span class="fn">const</span> p <span class="fn">of</span> amountPatterns) {
+    <span class="fn">const</span> m = text.match(p);
+    <span class="fn">if</span> (m) { amount = parseFloat(m[<span class="val">1</span>].replace(/\./g,<span class="str">''</span>)); <span class="fn">break</span>; }
+  }
+
+  <span class="comment">// Extraer fecha</span>
+  <span class="fn">const</span> dateRx = <span class="fn">/</span>(\d{1,2})[\/\-\s](\d{1,2})[\/\-\s](\d{2,4})<span class="fn">/</span>;
+  <span class="fn">const</span> dm = text.match(dateRx);
+  <span class="fn">const</span> receiptDate = dm ? <span class="fn">new</span> Date(<span class="str">`${dm[3]}-${dm[2]}-${dm[1]}`</span>) : <span class="fn">null</span>;
+
+  <span class="comment">// Validar 48 horas</span>
+  <span class="fn">const</span> isRecent = receiptDate
+    ? (Date.now() - receiptDate.getTime()) < <span class="val">48</span> * <span class="val">3600000</span>
+    : <span class="fn">false</span>;
+
+  <span class="fn">return</span> { amount, receiptDate, isRecent };
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-content">
+            <div class="step-title">Storage local para desarrollo (luego R2)</div>
+            <div class="code-block"><span class="comment">// src/receipts/storage.ts</span>
+<span class="fn">import</span> fs <span class="fn">from</span> <span class="str">'fs/promises'</span>;
+<span class="fn">import</span> path <span class="fn">from</span> <span class="str">'path'</span>;
+
+<span class="fn">export async function</span> <span class="key">saveReceipt</span>(buffer: Buffer, phone: <span class="fn">string</span>): Promise&lt;<span class="fn">string</span>&gt; {
+  <span class="fn">if</span> (process.env.STORAGE_MODE === <span class="str">'local'</span>) {
+    <span class="fn">const</span> dir = <span class="str">'./tmp/receipts'</span>;
+    <span class="fn">await</span> fs.mkdir(dir, { recursive: <span class="fn">true</span> });
+    <span class="fn">const</span> filename = <span class="str">`${phone}_${Date.now()}.jpg`</span>;
+    <span class="fn">await</span> fs.writeFile(path.join(dir, filename), buffer);
+    <span class="fn">return</span> <span class="str">`local://${filename}`</span>;
+  }
+  <span class="comment">// En producción: uploadToR2(buffer, phone)</span>
+  <span class="fn">return</span> uploadToR2(buffer, phone);
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">05</div>
+          <div class="step-content">
+            <div class="step-title">Handler completo de comprobante + guardar monto</div>
+            <div class="code-block"><span class="comment">// src/receipts/handler.ts</span>
+<span class="fn">export async function</span> <span class="key">handleReceipt</span>(msg, phone, state) {
+  <span class="fn">const</span> buffer = <span class="fn">await</span> downloadFromMeta(msg.image.id);
+  <span class="fn">const</span> { amount, receiptDate, isRecent } = <span class="fn">await</span> extractPaymentData(buffer);
+  <span class="fn">const</span> url = <span class="fn">await</span> saveReceipt(buffer, phone);
+
+  <span class="fn">if</span> (!isRecent) {
+    <span class="fn">return</span> sendMessage(phone, { type: <span class="str">'text'</span>, text: {
+      body: <span class="str">'⚠️ El comprobante tiene más de 48h. Envía uno reciente.'</span>
+    }});
+  }
+
+  <span class="fn">if</span> (!amount) {
+    <span class="fn">return</span> sendMessage(phone, { type: <span class="str">'text'</span>, text: {
+      body: <span class="str">'⚠️ No pude leer el monto. ¿Puedes enviar foto más clara?'</span>
+    }});
+  }
+
+  <span class="comment">// ✅ Guardar pago con monto en Supabase</span>
+  <span class="fn">await</span> supabase.from(<span class="str">'payments'</span>).insert({
+    phone, product: state.product,
+    amount,               <span class="comment">// ← monto extraído del comprobante</span>
+    receipt_url: url,
+    receipt_date: receiptDate,
+    conversation_id: state.id,
+  });
+
+  <span class="fn">await</span> setState(phone, { ...state, stage: <span class="str">'pagó'</span> });
+
+  <span class="fn">return</span> sendMessage(phone, { type: <span class="str">'text'</span>, text: {
+    body: <span class="str">`✅ Pago de $${amount.toLocaleString('es-CO')} confirmado. ¡Tu pedido está en proceso! 🎉`</span>
+  }});
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">06</div>
+          <div class="step-content">
+            <div class="step-title">Cron job — purgar imágenes a los 7 días</div>
+            <div class="code-block"><span class="comment">// src/cron/purgeReceipts.ts</span>
+<span class="fn">export async function</span> <span class="key">purgeOldReceipts</span>() {
+  <span class="fn">const</span> cutoff = <span class="fn">new</span> Date(Date.now() - <span class="val">7</span> * <span class="val">86400000</span>);
+
+  <span class="fn">const</span> { data } = <span class="fn">await</span> supabase
+    .from(<span class="str">'payments'</span>)
+    .select(<span class="str">'id, receipt_url'</span>)
+    .lt(<span class="str">'validated_at'</span>, cutoff.toISOString())
+    .not(<span class="str">'receipt_url'</span>, <span class="str">'is'</span>, <span class="fn">null</span>);
+
+  <span class="fn">for</span> (<span class="fn">const</span> p <span class="fn">of</span> data ?? []) {
+    <span class="fn">await</span> deleteFromStorage(p.receipt_url);
+    <span class="fn">await</span> supabase.from(<span class="str">'payments'</span>)
+      .update({ receipt_url: <span class="fn">null</span> }).eq(<span class="str">'id'</span>, p.id);
+  }
+}</div>
+          </div>
+        </div>
+      </div>
+      <div class="deliverables">
+        <span class="deliverables-label">Entregables</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> OCR leyendo comprobantes</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Monto y fecha extraídos</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Pagos guardados en Supabase</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Purga de imágenes automática</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 4 -->
+  <div class="phase" id="phase4">
+    <div class="phase-header" onclick="toggle('phase4')">
+      <div class="phase-badge" style="background:rgba(34,197,94,0.12);color:var(--phase4);border:1px solid rgba(34,197,94,0.2)">F4</div>
+      <div class="phase-header-text">
+        <div class="phase-week">SEMANA 4 · GRATIS $0</div>
+        <div class="phase-title" style="color:var(--phase4)">Reportes y alertas</div>
+        <div class="phase-desc">Reporte diario de ganancias por WhatsApp, alertas de error al admin vía Telegram, cron jobs con Bun.</div>
+      </div>
+      <div class="phase-toggle">▾</div>
+    </div>
+    <div class="phase-body">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <div class="step-title">Reporte diario — query de ganancias</div>
+            <div class="code-block"><span class="comment">// src/cron/dailyReport.ts</span>
+<span class="fn">export async function</span> <span class="key">sendDailyReport</span>() {
+  <span class="fn">const</span> today = <span class="fn">new</span> Date(); today.setHours(<span class="val">0</span>,<span class="val">0</span>,<span class="val">0</span>,<span class="val">0</span>);
+
+  <span class="fn">const</span> { data } = <span class="fn">await</span> supabase.from(<span class="str">'payments'</span>)
+    .select(<span class="str">'amount, product'</span>)
+    .gte(<span class="str">'validated_at'</span>, today.toISOString())
+    .eq(<span class="str">'state'</span>, <span class="str">'pagó'</span>);
+
+  <span class="fn">const</span> total = data?.reduce((s, p) => s + p.amount, <span class="val">0</span>) ?? <span class="val">0</span>;
+  <span class="fn">const</span> byProd = data?.reduce((acc, p) => {
+    acc[p.product] = (acc[p.product] ?? <span class="val">0</span>) + p.amount;
+    <span class="fn">return</span> acc;
+  }, {}) ?? {};
+
+  <span class="fn">const</span> lines = Object.entries(byProd)
+    .map(([k,v]) => <span class="str">`  • ${k}: $${(v as number).toLocaleString('es-CO')}`</span>)
+    .join(<span class="str">'\n'</span>);
+
+  <span class="fn">const</span> msg = <span class="str">`📊 *Reporte ${today.toLocaleDateString('es-CO')}*
+    
+💰 Total: *$${total.toLocaleString('es-CO')} COP*
+📦 Ventas: *${data?.length ?? 0}*
+📈 Ticket prom: *$${(total/(data?.length||1)).toLocaleString('es-CO')}*
+
+*Por producto:*
+${lines || '  (sin datos)'}
+
+_Bot activo 24/7_ 🤖`</span>;
+
+  <span class="fn">await</span> sendWhatsAppText(process.env.ADMIN_PHONE, msg);
+}
+
+<span class="comment">// Registrar cron: cada día a las 9pm (Bogotá)</span>
+<span class="fn">import</span> { CronJob } <span class="fn">from</span> <span class="str">'cron'</span>;
+<span class="fn">new</span> CronJob(<span class="str">'0 21 * * *'</span>, sendDailyReport, <span class="fn">null</span>, <span class="fn">true</span>, <span class="str">'America/Bogota'</span>);</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <div class="step-title">Alertas de error al admin — Telegram (gratis)</div>
+            <div class="code-block"><span class="comment">// src/alerts/telegram.ts</span>
+<span class="comment">// Crear bot en @BotFather de Telegram — gratis</span>
+<span class="fn">export async function</span> <span class="key">alertAdmin</span>(msg: <span class="fn">string</span>, level: <span class="str">'warn'</span>|<span class="str">'error'</span>) {
+  <span class="fn">const</span> emoji = level === <span class="str">'error'</span> ? <span class="str">'🔴'</span> : <span class="str">'🟡'</span>;
+  <span class="fn">await</span> fetch(
+    <span class="str">`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`</span>,
+    {
+      method: <span class="str">'POST'</span>,
+      headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+      body: JSON.stringify({
+        chat_id: process.env.TELEGRAM_CHAT_ID,
+        text: <span class="str">`${emoji} ${msg}`</span>,
+        parse_mode: <span class="str">'Markdown'</span>
+      })
+    }
+  );
+}
+
+<span class="comment">// Uso en cualquier punto del bot:</span>
+<span class="fn">await</span> alertAdmin(<span class="str">`Error OCR · cliente ${phone} · imagen ilegible`</span>, <span class="str">'warn'</span>);
+<span class="fn">await</span> alertAdmin(<span class="str">`🚨 API Meta caída · status ${status}`</span>, <span class="str">'error'</span>);</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <div class="step-title">Manejo de estados de error en el pipeline</div>
+            <div class="code-block"><span class="comment">// Siempre envolver el processMessage principal en try/catch</span>
+<span class="fn">async function</span> <span class="key">processMessage</span>(ctx) {
+  <span class="fn">try</span> {
+    <span class="fn">const</span> type = classify(ctx.msg);
+    <span class="fn">switch</span> (type) {
+      <span class="fn">case</span> <span class="str">'receipt'</span>:     <span class="fn">return await</span> handleReceipt(ctx);
+      <span class="fn">case</span> <span class="str">'button_reply'</span>: <span class="fn">return await</span> handleButton(ctx);
+      <span class="fn">case</span> <span class="str">'greeting'</span>:    <span class="fn">return await</span> sendWelcome(ctx.phone);
+      <span class="fn">default</span>:           <span class="fn">return await</span> handleWithAI(ctx);
+    }
+  } <span class="fn">catch</span> (err) {
+    <span class="fn">await</span> setState(ctx.phone, { ...state, stage: <span class="str">'error'</span> });
+    <span class="fn">await</span> alertAdmin(<span class="str">`Error procesando ${ctx.phone}: ${err.message}`</span>, <span class="str">'error'</span>);
+    <span class="fn">await</span> sendMessage(ctx.phone, { type: <span class="str">'text'</span>, text: {
+      body: <span class="str">'Hubo un problema. Un agente te contactará pronto. 🙏'</span>
+    }});
+  }
+}</div>
+          </div>
+        </div>
+      </div>
+      <div class="deliverables">
+        <span class="deliverables-label">Entregables</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Reporte diario por WhatsApp</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Alertas Telegram funcionando</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Errores manejados sin caídas</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 5 -->
+  <div class="phase" id="phase5">
+    <div class="phase-header" onclick="toggle('phase5')">
+      <div class="phase-badge" style="background:rgba(244,63,94,0.12);color:var(--phase5);border:1px solid rgba(244,63,94,0.2)">F5</div>
+      <div class="phase-header-text">
+        <div class="phase-week">SEMANAS 5–6 · GRATIS $0</div>
+        <div class="phase-title" style="color:var(--phase5)">Dashboard web</div>
+        <div class="phase-desc">Panel de administración con conversaciones en tiempo real, estadísticas de ganancias, configuración del bot y vista de pagos.</div>
+      </div>
+      <div class="phase-toggle">▾</div>
+    </div>
+    <div class="phase-body">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <div class="step-title">Setup React + Vite (gratis, corre en el mismo repo)</div>
+            <div class="code-block"><span class="comment"># En la raíz del proyecto</span>
+bun create vite dashboard --template react-ts
+cd dashboard && bun install
+bun add @supabase/supabase-js recharts lucide-react</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <div class="step-title">Secciones del dashboard</div>
+            <div class="step-detail">4 vistas principales que cubren todo lo que necesitas administrar:</div>
+            <div class="code-block"><span class="comment">// Estructura de rutas del dashboard</span>
+/dashboard
+  /                    <span class="comment">→ Resumen: métricas del día</span>
+  /conversations       <span class="comment">→ Lista + detalle de conversaciones</span>
+  /payments            <span class="comment">→ Historial de pagos con montos</span>
+  /reports             <span class="comment">→ Gráficas de ganancias por período</span>
+  /config              <span class="comment">→ System prompt, keywords, catálogo</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <div class="step-title">API endpoints del backend para el dashboard</div>
+            <div class="code-block"><span class="comment">// src/api/dashboard.ts — agregar a Hono</span>
+
+app.get(<span class="str">'/api/stats/today'</span>, <span class="fn">async</span> (c) => {
+  <span class="fn">const</span> { data } = <span class="fn">await</span> supabase.from(<span class="str">'payments'</span>)
+    .select(<span class="str">'amount, product'</span>)
+    .gte(<span class="str">'validated_at'</span>, todayStart());
+  <span class="fn">return</span> c.json({
+    total:   data?.reduce((s,p) => s + p.amount, <span class="val">0</span>),
+    count:   data?.length,
+    average: data?.reduce((s,p) => s + p.amount, <span class="val">0</span>) / (data?.length || <span class="val">1</span>)
+  });
+});
+
+app.get(<span class="str">'/api/stats/range'</span>, <span class="fn">async</span> (c) => {
+  <span class="fn">const</span> { from, to } = c.req.query();
+  <span class="comment">// Retorna pagos agrupados por día para gráficas</span>
+});
+
+app.get(<span class="str">'/api/conversations'</span>, <span class="fn">async</span> (c) => {
+  <span class="comment">// Lista paginada con filtros por estado</span>
+});
+
+app.put(<span class="str">'/api/config/bot'</span>, <span class="fn">async</span> (c) => {
+  <span class="comment">// Actualiza system prompt y keywords desde UI</span>
+});</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-content">
+            <div class="step-title">Componente de gráfica de ganancias</div>
+            <div class="code-block"><span class="comment">// dashboard/src/components/RevenueChart.tsx</span>
+<span class="fn">import</span> { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } <span class="fn">from</span> <span class="str">'recharts'</span>;
+
+<span class="fn">export function</span> <span class="key">RevenueChart</span>({ data }) {
+  <span class="fn">return</span> (
+    &lt;ResponsiveContainer width=<span class="str">"100%"</span> height={<span class="val">280</span>}&gt;
+      &lt;BarChart data={data}&gt;
+        &lt;XAxis dataKey=<span class="str">"date"</span> /&gt;
+        &lt;YAxis tickFormatter={v =&gt; <span class="str">`$${(v/1000).toFixed(0)}k`</span>} /&gt;
+        &lt;Tooltip formatter={v =&gt; <span class="str">`$${v.toLocaleString('es-CO')}`</span>} /&gt;
+        &lt;Bar dataKey=<span class="str">"total"</span> fill=<span class="str">"#22c55e"</span> radius={[<span class="val">4</span>,<span class="val">4</span>,<span class="val">0</span>,<span class="val">0</span>]} /&gt;
+      &lt;/BarChart&gt;
+    &lt;/ResponsiveContainer&gt;
+  );
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">05</div>
+          <div class="step-content">
+            <div class="step-title">Autenticación del dashboard — básica y gratis</div>
+            <div class="step-detail">Usar Supabase Auth (gratis) o simplemente un middleware de token en Hono para proteger los endpoints del dashboard. No se necesita ningún servicio de pago.</div>
+            <div class="code-block"><span class="comment">// Middleware de auth básico en Hono</span>
+<span class="fn">const</span> authMiddleware = <span class="fn">async</span> (c, next) => {
+  <span class="fn">const</span> token = c.req.header(<span class="str">'Authorization'</span>)?.split(<span class="str">' '</span>)[<span class="val">1</span>];
+  <span class="fn">if</span> (token !== process.env.DASHBOARD_SECRET) {
+    <span class="fn">return</span> c.json({ error: <span class="str">'Unauthorized'</span> }, <span class="val">401</span>);
+  }
+  <span class="fn">await</span> next();
+};
+app.use(<span class="str">'/api/*'</span>, authMiddleware);</div>
+          </div>
+        </div>
+      </div>
+      <div class="deliverables">
+        <span class="deliverables-label">Entregables</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Dashboard con métricas del día</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Historial de pagos con montos</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Gráfica de ganancias por período</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Config del bot desde UI</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 6 -->
+  <div class="phase" id="phase6">
+    <div class="phase-header" onclick="toggle('phase6')">
+      <div class="phase-badge" style="background:rgba(45,212,191,0.12);color:var(--phase6);border:1px solid rgba(45,212,191,0.2)">F6</div>
+      <div class="phase-header-text">
+        <div class="phase-week">SEMANAS 7–8 · GRATIS $0</div>
+        <div class="phase-title" style="color:var(--phase6)">Testing y refinamiento</div>
+        <div class="phase-desc">Pruebas de todos los flujos, simulación de volumen real, ajuste del OCR, pruebas con números reales de WhatsApp.</div>
+      </div>
+      <div class="phase-toggle">▾</div>
+    </div>
+    <div class="phase-body">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <div class="step-title">Script de simulación de conversaciones</div>
+            <div class="code-block"><span class="comment">// tests/simulate.ts — simula una conversación completa</span>
+<span class="fn">const</span> scenarios = [
+  { name: <span class="str">'happy_path'</span>, messages: [
+    { type: <span class="str">'text'</span>, body: <span class="str">'hola'</span> },
+    { type: <span class="str">'interactive'</span>, buttonId: <span class="str">'ver_productos'</span> },
+    { type: <span class="str">'interactive'</span>, listId: <span class="str">'prod_1'</span> },
+    { type: <span class="str">'text'</span>, body: <span class="str">'quiero pagar'</span> },
+    { type: <span class="str">'image'</span>, file: <span class="str">'./tests/receipts/valid_nequi.jpg'</span> },
+  ]},
+  { name: <span class="str">'expired_receipt'</span>, messages: [
+    { type: <span class="str">'image'</span>, file: <span class="str">'./tests/receipts/old_receipt.jpg'</span> },
+  ]},
+  { name: <span class="str">'free_text_ai'</span>, messages: [
+    { type: <span class="str">'text'</span>, body: <span class="str">'me llegó incompleto el pedido'</span> },
+  ]},
+];
+
+<span class="fn">for</span> (<span class="fn">const</span> scenario <span class="fn">of</span> scenarios) {
+  console.log(<span class="str">`▶ Testing: ${scenario.name}`</span>);
+  <span class="fn">for</span> (<span class="fn">const</span> msg <span class="fn">of</span> scenario.messages) {
+    <span class="fn">await</span> simulateWebhookCall(msg);
+  }
+}</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <div class="step-title">Checklist de pruebas antes de producción</div>
+            <div class="step-detail">Verificar cada punto con un número real de WhatsApp (Meta da 5 números de prueba gratuitos).</div>
+            <div class="code-block"><span class="comment">CHECKLIST DE PRUEBAS:
+□ Webhook recibe y responde en menos de 3s
+□ Botones se muestran correctamente en WA
+□ Lista de catálogo funciona
+□ OCR lee comprobantes Nequi, Bancolombia, Davivienda
+□ Monto extraído correctamente (verificar con 5 comprobantes reales)
+□ Fecha expirada rechazada
+□ Imagen borrosa manejada con gracia
+□ Claude Haiku responde preguntas fuera de flujo
+□ Reporte diario llega al admin a las 9pm
+□ Alerta de error llega a Telegram
+□ Dashboard muestra datos correctos
+□ Purga de imágenes funciona (test manual)
+□ Redis expira conversaciones a 3 días</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <div class="step-title">Logging estructurado para debugging</div>
+            <div class="code-block">bun add pino pino-pretty
+
+<span class="comment">// src/logger.ts</span>
+<span class="fn">import</span> pino <span class="fn">from</span> <span class="str">'pino'</span>;
+<span class="fn">export const</span> log = pino({
+  level: process.env.LOG_LEVEL ?? <span class="str">'info'</span>,
+  transport: { target: <span class="str">'pino-pretty'</span> }
+});
+
+<span class="comment">// Uso:</span>
+log.info({ phone, type, stage }, <span class="str">'Mensaje procesado'</span>);
+log.warn({ phone, error }, <span class="str">'OCR falló'</span>);
+log.error({ err }, <span class="str">'Error crítico'</span>);</div>
+          </div>
+        </div>
+      </div>
+      <div class="deliverables">
+        <span class="deliverables-label">Entregables</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Todos los flujos testeados</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> OCR ajustado con comprobantes reales</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Logs estructurados</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Checklist completo</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 7 -->
+  <div class="phase" id="phase7">
+    <div class="phase-header" onclick="toggle('phase7')">
+      <div class="phase-badge" style="background:rgba(249,115,22,0.12);color:var(--phase7);border:1px solid rgba(249,115,22,0.2)">F7</div>
+      <div class="phase-header-text">
+        <div class="phase-week">SEMANA 9 · MIGRACIÓN A PRODUCCIÓN ~$16/mes</div>
+        <div class="phase-title" style="color:var(--phase7)">Deploy y migración a producción</div>
+        <div class="phase-desc">Reemplazar cada servicio local por su equivalente en la nube. Railway para el servidor, Upstash para Redis, Google Vision para OCR, Cloudflare R2 para imágenes.</div>
+      </div>
+      <div class="phase-toggle">▾</div>
+    </div>
+    <div class="phase-body">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <div class="step-title">Deploy del backend en Railway ($5/mes)</div>
+            <div class="code-block"><span class="comment"># 1. Crear cuenta en railway.app</span>
+<span class="comment"># 2. Conectar repositorio de GitHub</span>
+<span class="comment"># 3. Railway detecta Bun automáticamente</span>
+
+<span class="comment"># Procfile (opcional, Railway lo infiere)</span>
+web: bun run src/index.ts
+
+<span class="comment"># Variables de entorno: cargar el .env desde Railway dashboard</span>
+<span class="comment"># URL permanente: https://tu-bot.railway.app</span>
+<span class="comment"># → Reemplazar ngrok en Meta webhook settings</span></div>
+            <div class="tags"><span class="tag paid">$5/mes Railway</span><span class="tag critical">Cambiar URL en Meta</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <div class="step-title">Migrar Redis local → Upstash (gratis hasta 10k req/día)</div>
+            <div class="code-block"><span class="comment"># 1. Crear cuenta en upstash.com — gratis</span>
+<span class="comment"># 2. Crear base de datos Redis</span>
+<span class="comment"># 3. Copiar REDIS_URL de Upstash al .env de Railway</span>
+
+<span class="comment"># .env</span>
+<span class="comment"># ANTES:</span>
+REDIS_URL=redis://localhost:6379
+<span class="comment"># DESPUÉS:</span>
+REDIS_URL=rediss://default:xxx@xxx.upstash.io:6379
+
+<span class="comment"># Sin cambios en el código — ioredis lo maneja igual</span></div>
+            <div class="tags"><span class="tag free">Gratis hasta 10k req/día</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <div class="step-title">Migrar OCR: Tesseract → Google Vision (~$9/mes)</div>
+            <div class="step-detail">Google Vision es más preciso con fotos de celular. El switch es una variable de entorno.</div>
+            <div class="code-block"><span class="comment"># 1. Crear proyecto en Google Cloud Console</span>
+<span class="comment"># 2. Activar Cloud Vision API</span>
+<span class="comment"># 3. Crear API key o Service Account</span>
+
+<span class="comment"># .env</span>
+OCR_PROVIDER=google     <span class="comment"># 'tesseract' | 'google'</span>
+GOOGLE_VISION_KEY=AIzaxxxx
+
+<span class="comment">// src/receipts/ocr.ts — switch por provider</span>
+<span class="fn">export async function</span> <span class="key">extractPaymentData</span>(buf: Buffer) {
+  <span class="fn">const</span> text = process.env.OCR_PROVIDER === <span class="str">'google'</span>
+    ? <span class="fn">await</span> googleVisionOCR(buf)
+    : <span class="fn">await</span> tesseractOCR(buf);
+  <span class="comment">// El resto del parsing es igual</span>
+  <span class="fn">return</span> parsePaymentText(text);
+}</div>
+            <div class="tags"><span class="tag paid">~$9/mes con 6k comprobantes</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-content">
+            <div class="step-title">Migrar storage: local → Cloudflare R2 (gratis hasta 10GB)</div>
+            <div class="code-block">bun add @aws-sdk/client-s3
+<span class="comment"># R2 es compatible con la API S3 de AWS</span>
+
+<span class="comment">// src/receipts/storage.ts</span>
+<span class="fn">import</span> { S3Client, PutObjectCommand } <span class="fn">from</span> <span class="str">'@aws-sdk/client-s3'</span>;
+
+<span class="fn">const</span> r2 = <span class="fn">new</span> S3Client({
+  region: <span class="str">'auto'</span>,
+  endpoint: <span class="str">`https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`</span>,
+  credentials: {
+    accessKeyId:     process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+});
+
+<span class="fn">export async function</span> <span class="key">uploadToR2</span>(buffer: Buffer, phone: <span class="fn">string</span>) {
+  <span class="fn">const</span> key = <span class="str">`receipts/${phone}/${Date.now()}.jpg`</span>;
+  <span class="fn">await</span> r2.send(<span class="fn">new</span> PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME,
+    Key: key, Body: buffer, ContentType: <span class="str">'image/jpeg'</span>
+  }));
+  <span class="fn">return</span> key;
+}</div>
+            <div class="tags"><span class="tag free">Gratis hasta 10GB</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">05</div>
+          <div class="step-content">
+            <div class="step-title">Activar número real de WhatsApp Business</div>
+            <div class="step-detail">El número de prueba de Meta solo funciona con 5 contactos. Para producción hay que registrar un número real (puede ser un celular existente o uno nuevo).</div>
+            <div class="code-block"><span class="comment"># En Meta Business → WhatsApp → Agregar número de teléfono
+# Opciones:
+# A) Número nuevo SIM → registrar en la API (número deja de funcionar en la app WA normal)
+# B) Número existente → migrar a la API (igual, deja la app normal)
+# 
+# COSTO: $0 — Meta no cobra por el número
+# Solo cobran mensajes iniciados por el negocio (templates HSM)
+# Mensajes dentro de ventana 24h (respuesta al cliente): GRATIS</span></div>
+            <div class="tags"><span class="tag free">Gratis para respuestas</span><span class="tag paid">~$0.006 por template HSM</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">06</div>
+          <div class="step-content">
+            <div class="step-title">Deploy del dashboard en Vercel/Netlify (gratis)</div>
+            <div class="code-block"><span class="comment"># Dashboard React → Vercel (free tier permanente)</span>
+npm i -g vercel
+cd dashboard
+vercel deploy
+
+<span class="comment"># Variables de entorno en Vercel:</span>
+VITE_API_URL=https://tu-bot.railway.app
+VITE_DASHBOARD_TOKEN=tu_token_secreto</div>
+            <div class="tags"><span class="tag free">Vercel gratis</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">07</div>
+          <div class="step-content">
+            <div class="step-title">Resumen de costos finales en producción</div>
+            <div class="code-block"><span class="comment">COSTOS MENSUALES EN PRODUCCIÓN:
+────────────────────────────────────────
+Railway (servidor Bun)       $5.00/mes
+Supabase (DB, free tier)     $0.00/mes
+Upstash Redis (free tier)    $0.00/mes
+Cloudflare R2 (imgs, gratis) $0.00/mes
+Google Vision OCR            ~$9.00/mes  (con 6k comprobantes)
+Claude Haiku (~25% msgs)     ~$2.00/mes
+Meta Cloud API               $0.00/mes
+Vercel (dashboard)           $0.00/mes
+────────────────────────────────────────
+TOTAL                        ~$16/mes</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="deliverables">
+        <span class="deliverables-label">Entregables finales</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Bot en Railway siempre activo</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Número real de WA Business</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Dashboard en producción</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> OCR con Google Vision</span>
+        <span class="deliverable"><span class="deliverable-icon">✓</span> Sistema completo operativo</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div style="font-family:'DM Mono',monospace;font-size:11px;">
+    WhatsApp Sales Bot · Plan completo · 7 fases · 9 semanas
+  </div>
+  <div class="footer-badge">$0 dev → ~$16/mes producción</div>
+</div>
+
+<script>
+function toggle(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+// Keyboard accessibility
+document.querySelectorAll('.phase-header').forEach(h => {
+  h.setAttribute('tabindex', '0');
+  h.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      h.click();
+    }
+  });
+});
+</script>
+</body>
+</html>

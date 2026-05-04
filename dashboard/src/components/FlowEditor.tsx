@@ -17,6 +17,7 @@ import {
   Receipt,
   RotateCcw,
   AlertTriangle,
+  Shuffle,
 } from "lucide-react";
 import {
   DndContext,
@@ -197,6 +198,9 @@ function MessageRow({
   onCaptionChange,
   onUploadClick,
   onDelete,
+  variantExpanded,
+  onToggleVariants,
+  onVariantsChange,
 }: {
   msg: FlowEditorMessage;
   index: number;
@@ -207,7 +211,13 @@ function MessageRow({
   onCaptionChange: (v: string) => void;
   onUploadClick: () => void;
   onDelete: () => void;
+  variantExpanded?: boolean;
+  onToggleVariants?: () => void;
+  onVariantsChange?: (variants: string[]) => void;
 }) {
+  const variants = msg.textVariants ?? [];
+  const hasVariants = variants.length > 0;
+
   return (
     <div className="group relative flex gap-3 rounded-lg border bg-background p-3">
       <div className="flex flex-col items-center gap-1 pt-0.5">
@@ -223,6 +233,17 @@ function MessageRow({
         <div className="flex items-center gap-2">
           <MessageTypePopover value={msg.messageType} onChange={onTypeChange} />
           <span className="flex-1" />
+          {msg.messageType === "text" && hasVariants && (
+            <button
+              type="button"
+              onClick={onToggleVariants}
+              className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors"
+              title="Ver versiones del mensaje"
+            >
+              <Shuffle size={10} />
+              {variants.length + 1} versiones
+            </button>
+          )}
           <button
             type="button"
             className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-destructive group-hover:opacity-100"
@@ -233,13 +254,88 @@ function MessageRow({
         </div>
 
         {msg.messageType === "text" ? (
-          <Textarea
-            placeholder="Escribe el mensaje de texto…"
-            value={msg.textContent ?? ""}
-            rows={2}
-            className="resize-none text-base"
-            onChange={(e) => onTextChange(e.target.value)}
-          />
+          <div className="flex flex-col gap-2">
+            {variantExpanded && hasVariants ? (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Versión 1 (principal)
+                  </span>
+                  <Textarea
+                    placeholder="Escribe el mensaje de texto…"
+                    value={msg.textContent ?? ""}
+                    rows={2}
+                    className="resize-none text-base"
+                    onChange={(e) => onTextChange(e.target.value)}
+                  />
+                </div>
+                {variants.map((v, vi) => (
+                  <div key={vi} className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Versión {vi + 2}
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded p-0.5 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          const next = variants.filter((_, idx) => idx !== vi);
+                          onVariantsChange?.(next);
+                          if (next.length === 0) onToggleVariants?.();
+                        }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                    <Textarea
+                      placeholder={`Escribe una variante del mensaje…`}
+                      value={v}
+                      rows={2}
+                      className="resize-none text-base"
+                      onChange={(e) => {
+                        const next = [...variants];
+                        next[vi] = e.target.value;
+                        onVariantsChange?.(next);
+                      }}
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => onVariantsChange?.([...variants, ""])}
+                  className="flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <Plus size={12} />
+                  Agregar versión
+                </button>
+                <p className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
+                  <Shuffle size={10} />
+                  El bot elige una versión al azar al enviar este mensaje.
+                </p>
+              </>
+            ) : (
+              <>
+                <Textarea
+                  placeholder="Escribe el mensaje de texto…"
+                  value={msg.textContent ?? ""}
+                  rows={2}
+                  className="resize-none text-base"
+                  onChange={(e) => onTextChange(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    onVariantsChange?.([...variants, ""]);
+                    onToggleVariants?.();
+                  }}
+                  className="flex items-center gap-1 self-start rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/60 hover:bg-muted hover:text-muted-foreground transition-colors"
+                >
+                  <Plus size={10} />
+                  Agregar versión alternativa
+                </button>
+              </>
+            )}
+          </div>
         ) : (
           <div className="flex flex-col gap-2">
             <button
@@ -462,6 +558,9 @@ function StepCard({
   onUploadClick,
   onDelayChange,
   onReorderMessages,
+  expandedVariantKeys,
+  onToggleVariants,
+  onMessageVariantsChange,
 }: {
   step: FlowEditorStep;
   stepIndex: number;
@@ -478,6 +577,9 @@ function StepCard({
   onUploadClick: (msgIdx: number) => void;
   onDelayChange: (seconds: number) => void;
   onReorderMessages: (from: number, to: number) => void;
+  expandedVariantKeys: Set<string>;
+  onToggleVariants: (key: string) => void;
+  onMessageVariantsChange: (msgIdx: number, variants: string[]) => void;
 }) {
   const msgSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -543,23 +645,29 @@ function StepCard({
                 strategy={verticalListSortingStrategy}
               >
                 <div className="flex flex-col gap-2">
-                  {step.messages.map((msg, j) => (
-                    <SortableMessageRow
-                      key={msgIds[j]}
-                      id={msgIds[j]}
-                      msg={msg}
-                      index={j}
-                      uploadPending={
-                        uploadTarget?.step === stepIndex &&
-                        uploadTarget?.msg === j
-                      }
-                      onTypeChange={(v) => onMessageTypeChange(j, v)}
-                      onTextChange={(v) => onMessageTextChange(j, v)}
-                      onCaptionChange={(v) => onMessageCaptionChange(j, v)}
-                      onUploadClick={() => onUploadClick(j)}
-                      onDelete={() => onDeleteMessage(j)}
-                    />
-                  ))}
+                  {step.messages.map((msg, j) => {
+                    const variantKey = `${stepIndex}-${j}`;
+                    return (
+                      <SortableMessageRow
+                        key={msgIds[j]}
+                        id={msgIds[j]}
+                        msg={msg}
+                        index={j}
+                        uploadPending={
+                          uploadTarget?.step === stepIndex &&
+                          uploadTarget?.msg === j
+                        }
+                        onTypeChange={(v) => onMessageTypeChange(j, v)}
+                        onTextChange={(v) => onMessageTextChange(j, v)}
+                        onCaptionChange={(v) => onMessageCaptionChange(j, v)}
+                        onUploadClick={() => onUploadClick(j)}
+                        onDelete={() => onDeleteMessage(j)}
+                        variantExpanded={expandedVariantKeys.has(variantKey)}
+                        onToggleVariants={() => onToggleVariants(variantKey)}
+                        onVariantsChange={(variants) => onMessageVariantsChange(j, variants)}
+                      />
+                    );
+                  })}
                 </div>
               </SortableContext>
             </DndContext>
@@ -832,6 +940,7 @@ export function FlowEditor({
     step: number;
     msg: number;
   } | null>(null);
+  const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
 
   // Stable ref so onDraftChange never needs to be in effect deps.
   // Updating the ref inline (not in an effect) is intentional — keeps it
@@ -880,6 +989,17 @@ export function FlowEditor({
       msgs[j] = { ...msgs[j], ...partial };
       steps[i] = { ...steps[i], messages: msgs };
       return { ...d, steps };
+    });
+
+  const patchMessageVariants = (i: number, j: number, variants: string[]) =>
+    patchMessage(i, j, { textVariants: variants });
+
+  const toggleVariantExpanded = (key: string) =>
+    setExpandedVariants((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
 
   const reorderSteps = (from: number, to: number) =>
@@ -1338,6 +1458,7 @@ export function FlowEditor({
                         patchMessage(i, j, {
                           messageType: type,
                           textContent: "",
+                          textVariants: [],
                           mediaUrl: "",
                           filename: "",
                           caption: "",
@@ -1358,6 +1479,11 @@ export function FlowEditor({
                       }
                       onReorderMessages={(from, to) =>
                         reorderMessages(i, from, to)
+                      }
+                      expandedVariantKeys={expandedVariants}
+                      onToggleVariants={toggleVariantExpanded}
+                      onMessageVariantsChange={(j, variants) =>
+                        patchMessageVariants(i, j, variants)
                       }
                     />
                   );

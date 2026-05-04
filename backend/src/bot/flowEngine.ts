@@ -29,6 +29,7 @@ export type FlowStepMessage = {
   media_url: string | null;
   filename: string | null;
   caption: string | null;
+  text_variants: string[];
 };
 
 export type FlowStep = {
@@ -69,7 +70,7 @@ export async function getFlowById(flowId: string, organizationId: string): Promi
       `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, is_active,
        steps:flow_steps(
          id, flow_id, organization_id, position, delay_seconds, trigger_keywords, label,
-         messages:flow_step_messages(id, step_id, position, message_type, text_content, media_url, filename, caption)
+         messages:flow_step_messages(id, step_id, position, message_type, text_content, media_url, filename, caption, text_variants)
        )`,
     )
     .eq("id", flowId)
@@ -106,8 +107,12 @@ export async function sendStepMessages(
 
   for (const msg of sorted) {
     try {
-      if (msg.message_type === "text" && msg.text_content) {
-        await sendMessage(phone, textMessage(msg.text_content), ctx);
+      if (msg.message_type === "text") {
+        const pool = (msg.text_variants ?? []).filter(Boolean);
+        const text = pool.length > 0
+          ? pool[Math.floor(Math.random() * pool.length)]
+          : msg.text_content;
+        if (text) await sendMessage(phone, textMessage(text), ctx);
       } else if (msg.message_type === "image" && msg.media_url) {
         await sendMessage(
           phone,

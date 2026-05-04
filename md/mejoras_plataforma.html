@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mejoras · WhatsApp Bot Platform</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Syne+Mono&family=Instrument+Sans:ital,wght@0,400;0,500;1,400&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg:     #0e0f0f;
+  --bg2:    #151617;
+  --bg3:    #1c1e20;
+  --border: rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.12);
+  --text:   #f0ede8;
+  --muted:  #7a7872;
+  --muted2: #a09c96;
+
+  /* prioridades */
+  --p1: #ff6b35;   /* crítico */
+  --p2: #f5c842;   /* importante */
+  --p3: #4ade80;   /* mejora */
+  --p4: #60a5fa;   /* futuro */
+
+  /* categorías */
+  --cat-arch:   #c084fc;
+  --cat-ux:     #34d399;
+  --cat-bot:    #fb923c;
+  --cat-db:     #38bdf8;
+  --cat-perf:   #f472b6;
+}
+
+body {
+  font-family: 'Instrument Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+/* ── HEADER ─────────────────────────────── */
+header {
+  padding: 64px 64px 48px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,107,53,0.4), transparent);
+}
+.h-label {
+  font-family: 'Syne Mono', monospace;
+  font-size: 11px;
+  color: var(--p1);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+header h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(28px, 4vw, 46px);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+  margin-bottom: 20px;
+  max-width: 680px;
+}
+header h1 span { color: var(--p1); }
+.h-sub {
+  font-size: 15px;
+  color: var(--muted2);
+  max-width: 560px;
+  margin-bottom: 32px;
+}
+.h-stats {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.hstat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Syne Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+.hstat b { color: var(--text); font-weight: 500; }
+.dot { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+
+/* ── LEGEND ─────────────────────────────── */
+.legend {
+  display: flex;
+  gap: 0;
+  padding: 0 64px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.leg-tab {
+  padding: 14px 20px;
+  font-family: 'Syne Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+  user-select: none;
+}
+.leg-tab:hover { color: var(--text); }
+.leg-tab.active { color: var(--text); border-bottom-color: var(--p1); }
+.leg-sep { width:1px; background:var(--border); margin: 8px 0; flex-shrink:0; }
+
+/* ── MAIN LAYOUT ─────────────────────────── */
+.main {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: calc(100vh - 200px);
+}
+
+/* ── SIDEBAR ─────────────────────────────── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 32px 0;
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+.sb-section {
+  margin-bottom: 8px;
+}
+.sb-label {
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .15em;
+  color: var(--muted);
+  text-transform: uppercase;
+  padding: 6px 24px;
+}
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 24px;
+  cursor: pointer;
+  transition: background .1s;
+  font-size: 13px;
+  color: var(--muted2);
+  border-left: 2px solid transparent;
+}
+.sb-item:hover { background: rgba(255,255,255,.03); color: var(--text); }
+.sb-item.active { background: rgba(255,255,255,.04); color: var(--text); border-left-color: var(--p1); }
+.sb-badge {
+  font-family: 'Syne Mono', monospace;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.sb-prio { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+
+/* ── CONTENT ─────────────────────────────── */
+.content {
+  padding: 40px 56px;
+  max-width: 860px;
+}
+
+/* ── SECTION ─────────────────────────────── */
+.section { display: none; }
+.section.visible { display: block; }
+
+/* ── IMPROVEMENT CARD ───────────────────── */
+.imp-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.imp-card:hover { border-color: var(--border2); }
+
+.imp-header {
+  padding: 22px 24px 20px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  cursor: pointer;
+  user-select: none;
+}
+.imp-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.imp-meta { flex: 1; min-width: 0; }
+.imp-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.imp-tag {
+  font-family: 'Syne Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.imp-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.imp-summary { font-size: 13px; color: var(--muted2); line-height: 1.5; }
+.imp-toggle {
+  font-size: 16px;
+  color: var(--muted);
+  flex-shrink: 0;
+  margin-top: 8px;
+  transition: transform .2s;
+}
+.imp-card.open .imp-toggle { transform: rotate(180deg); }
+
+.imp-body {
+  display: none;
+  border-top: 1px solid var(--border);
+  padding: 24px;
+}
+.imp-card.open .imp-body { display: block; }
+
+/* ── PROBLEM / SOLUTION BLOCKS ───────────── */
+.ps-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.ps-block {
+  border-radius: 10px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ps-block.problem {
+  background: rgba(244,63,94,.06);
+  border: 1px solid rgba(244,63,94,.15);
+}
+.ps-block.solution {
+  background: rgba(74,222,128,.06);
+  border: 1px solid rgba(74,222,128,.15);
+}
+.ps-label {
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.ps-block.problem .ps-label { color: #f43f5e; }
+.ps-block.solution .ps-label { color: #4ade80; }
+.ps-block p { color: var(--muted2); }
+
+/* ── CODE ─────────────────────────────────── */
+.code {
+  background: #0a0b0b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  font-family: 'Syne Mono', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #9ca8b4;
+  overflow-x: auto;
+  margin: 14px 0;
+}
+.code .c  { color: #3d4550; }
+.code .k  { color: #7dd3fc; }
+.code .s  { color: #86efac; }
+.code .fn { color: #c4b5fd; }
+.code .w  { color: #fca5a5; }
+.code .ok { color: #4ade80; }
+.code-label {
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+/* ── STEPS ─────────────────────────────── */
+.steps { margin: 16px 0; }
+.step-row {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.step-row:last-child { border-bottom: none; }
+.step-n {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.step-row strong { color: var(--text); display: block; margin-bottom: 2px; }
+.step-row p { color: var(--muted2); }
+
+/* ── IMPACT METER ─────────────────────── */
+.impact-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 16px 0 0;
+}
+.impact-item { font-size: 12px; }
+.impact-label {
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.impact-bar-wrap {
+  width: 120px; height: 4px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.impact-bar { height: 100%; border-radius: 2px; }
+
+/* ── SECTION HEADER ─────────────────── */
+.sec-header {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sec-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  margin-bottom: 6px;
+}
+.sec-desc { font-size: 14px; color: var(--muted2); }
+
+/* ── OVERVIEW TABLE ─────────────────── */
+.ov-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 32px;
+}
+.ov-table th {
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.ov-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  color: var(--muted2);
+}
+.ov-table tr:last-child td { border-bottom: none; }
+.ov-table tr:hover td { background: rgba(255,255,255,.02); }
+.ov-table td:first-child { color: var(--text); font-weight: 500; }
+.prio-pill {
+  font-family: 'Syne Mono', monospace;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ── CALLOUT ─────────────────────────── */
+.callout {
+  border-radius: 10px;
+  padding: 16px 18px;
+  font-size: 13px;
+  margin: 16px 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.callout.warn {
+  background: rgba(245,200,66,.06);
+  border: 1px solid rgba(245,200,66,.2);
+  color: var(--muted2);
+}
+.callout.info {
+  background: rgba(96,165,250,.06);
+  border: 1px solid rgba(96,165,250,.2);
+  color: var(--muted2);
+}
+.callout.ok {
+  background: rgba(74,222,128,.06);
+  border: 1px solid rgba(74,222,128,.2);
+  color: var(--muted2);
+}
+.callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+@media (max-width: 820px) {
+  header { padding: 40px 24px 32px; }
+  .legend { padding: 0 24px; }
+  .main { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .content { padding: 28px 24px; }
+  .ps-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-label">Análisis &amp; Roadmap · WhatsApp Bot Platform</div>
+  <h1>Mejoras para escalar<br><span>sin complejidad innecesaria</span></h1>
+  <p class="h-sub">Basado en el análisis de context.md y flujo-registro-bot-productos.md. Ordenado por impacto real sobre usabilidad y escalabilidad.</p>
+  <div class="h-stats">
+    <div class="hstat"><span class="dot" style="background:var(--p1)"></span>3 cambios <b>críticos</b></div>
+    <div class="hstat"><span class="dot" style="background:var(--p2)"></span>4 mejoras <b>importantes</b></div>
+    <div class="hstat"><span class="dot" style="background:var(--p3)"></span>3 mejoras <b>de UX</b></div>
+    <div class="hstat"><span class="dot" style="background:var(--p4)"></span>2 para <b>futuro</b></div>
+  </div>
+</header>
+
+<div class="legend">
+  <div class="leg-tab active" onclick="showSection('overview')">Vista general</div>
+  <div class="leg-sep"></div>
+  <div class="leg-tab" onclick="showSection('sec-arch')">Arquitectura</div>
+  <div class="leg-sep"></div>
+  <div class="leg-tab" onclick="showSection('sec-ux')">Onboarding</div>
+  <div class="leg-sep"></div>
+  <div class="leg-tab" onclick="showSection('sec-bot')">Motor del bot</div>
+  <div class="leg-sep"></div>
+  <div class="leg-tab" onclick="showSection('sec-db')">Base de datos</div>
+  <div class="leg-sep"></div>
+  <div class="leg-tab" onclick="showSection('sec-future')">Futuro</div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Crítico</div>
+      <div class="sb-item active" onclick="goTo('overview','')">
+        <span class="sb-prio" style="background:var(--p1)"></span>
+        Vista general
+      </div>
+      <div class="sb-item" onclick="goTo('sec-arch','imp-config')">
+        <span class="sb-prio" style="background:var(--p1)"></span>
+        Una fuente de verdad (config)
+        <span class="sb-badge" style="background:rgba(255,107,53,.15);color:var(--p1)">P1</span>
+      </div>
+      <div class="sb-item" onclick="goTo('sec-arch','imp-happypath')">
+        <span class="sb-prio" style="background:var(--p1)"></span>
+        Happy path: producto = funciona
+        <span class="sb-badge" style="background:rgba(255,107,53,.15);color:var(--p1)">P1</span>
+      </div>
+      <div class="sb-item" onclick="goTo('sec-bot','imp-resolver')">
+        <span class="sb-prio" style="background:var(--p1)"></span>
+        Resolver producto sin campaña
+        <span class="sb-badge" style="background:rgba(255,107,53,.15);color:var(--p1)">P1</span>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Importante</div>
+      <div class="sb-item" onclick="goTo('sec-ux','imp-onboarding')">
+        <span class="sb-prio" style="background:var(--p2)"></span>
+        Wizard de alta de cliente
+        <span class="sb-badge" style="background:rgba(245,200,66,.15);color:var(--p2)">P2</span>
+      </div>
+      <div class="sb-item" onclick="goTo('sec-ux','imp-productfirst')">
+        <span class="sb-prio" style="background:var(--p2)"></span>
+        UI product-first
+        <span class="sb-badge" style="background:rgba(245,200,66,.15);color:var(--p2)">P2</span>
+      </div>
+      <div class="sb-item" onclick="goTo('sec-db','imp-schema')">
+        <span class="sb-prio" style="background:var(--p2)"></span>
+        Auto-crear campaña con producto
+        <span class="sb-badge" style="background:rgba(245,200,66,.15);color:var(--p2)">P2</span>
+      </div>
+      <div class="sb-item" onclick="goTo('sec-bot','imp-errores')">
+        <span class="sb-prio" style="background:var(--p2)"></span>
+        Errores descriptivos en flows
+        <span class="sb-badge" style="background:rgba(245,200,66,.15);color:var(--p2)">P2</span>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Mejora UX</div>
+      <div class="sb-item" onclick="goTo('sec-ux','imp-estado')">
+        <span class="sb-prio" style="background:var(--p3)"></span>
+        Estado del bot visible
+        <span class="sb-badge" style="background:rgba(74,222,128,.15);color:var(--p3)">P3</span>
+      </div>
+      <div class="sb-item" onclick="goTo('sec-bot','imp-ctwa')">
+        <span class="sb-prio" style="background:var(--p3)"></span>
+        CTWA como módulo opcional
+        <span class="sb-badge" style="background:rgba(74,222,128,.15);color:var(--p3)">P3</span>
+      </div>
+      <div class="sb-item" onclick="goTo('sec-db','imp-retention')">
+        <span class="sb-prio" style="background:var(--p3)"></span>
+        Política de retención explícita
+        <span class="sb-badge" style="background:rgba(74,222,128,.15);color:var(--p3)">P3</span>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Futuro</div>
+      <div class="sb-item" onclick="goTo('sec-future','imp-multiorg')">
+        <span class="sb-prio" style="background:var(--p4)"></span>
+        UI multi-org para platform admin
+        <span class="sb-badge" style="background:rgba(96,165,250,.15);color:var(--p4)">P4</span>
+      </div>
+      <div class="sb-item" onclick="goTo('sec-future','imp-metaconv')">
+        <span class="sb-prio" style="background:var(--p4)"></span>
+        Meta Conversions API
+        <span class="sb-badge" style="background:rgba(96,165,250,.15);color:var(--p4)">P4</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══════════════ OVERVIEW ══════════════ -->
+    <div class="section visible" id="overview">
+      <div class="sec-header">
+        <div class="sec-title">Vista general de mejoras</div>
+        <div class="sec-desc">12 mejoras organizadas por impacto. Empieza por las P1 — son las que hoy bloquean que el sistema sea usable sin conocer el código.</div>
+      </div>
+
+      <table class="ov-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Mejora</th>
+            <th>Área</th>
+            <th>Prioridad</th>
+            <th>Esfuerzo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr onclick="goTo('sec-arch','imp-config')" style="cursor:pointer">
+            <td>1</td>
+            <td>Unificar <code>botConfig</code> en memoria con <code>product.system_prompt</code></td>
+            <td>Arquitectura</td>
+            <td><span class="prio-pill" style="background:rgba(255,107,53,.15);color:var(--p1)">P1 Crítico</span></td>
+            <td>Medio</td>
+          </tr>
+          <tr onclick="goTo('sec-arch','imp-happypath')" style="cursor:pointer">
+            <td>2</td>
+            <td>Crear producto → bot funciona sin más pasos</td>
+            <td>Arquitectura</td>
+            <td><span class="prio-pill" style="background:rgba(255,107,53,.15);color:var(--p1)">P1 Crítico</span></td>
+            <td>Alto</td>
+          </tr>
+          <tr onclick="goTo('sec-bot','imp-resolver')" style="cursor:pointer">
+            <td>3</td>
+            <td>Resolver producto/prompt sin depender de campaña</td>
+            <td>Bot</td>
+            <td><span class="prio-pill" style="background:rgba(255,107,53,.15);color:var(--p1)">P1 Crítico</span></td>
+            <td>Bajo</td>
+          </tr>
+          <tr onclick="goTo('sec-ux','imp-onboarding')" style="cursor:pointer">
+            <td>4</td>
+            <td>Wizard de alta de cliente (5 pasos guiados)</td>
+            <td>Onboarding</td>
+            <td><span class="prio-pill" style="background:rgba(245,200,66,.15);color:var(--p2)">P2 Importante</span></td>
+            <td>Medio</td>
+          </tr>
+          <tr onclick="goTo('sec-ux','imp-productfirst')" style="cursor:pointer">
+            <td>5</td>
+            <td>Reestructurar navegación como product-first</td>
+            <td>UX</td>
+            <td><span class="prio-pill" style="background:rgba(245,200,66,.15);color:var(--p2)">P2 Importante</span></td>
+            <td>Medio</td>
+          </tr>
+          <tr onclick="goTo('sec-db','imp-schema')" style="cursor:pointer">
+            <td>6</td>
+            <td>Auto-crear campaña al crear producto</td>
+            <td>DB / Backend</td>
+            <td><span class="prio-pill" style="background:rgba(245,200,66,.15);color:var(--p2)">P2 Importante</span></td>
+            <td>Bajo</td>
+          </tr>
+          <tr onclick="goTo('sec-bot','imp-errores')" style="cursor:pointer">
+            <td>7</td>
+            <td>Errores descriptivos cuando falta campaña/flujo</td>
+            <td>Bot / DX</td>
+            <td><span class="prio-pill" style="background:rgba(245,200,66,.15);color:var(--p2)">P2 Importante</span></td>
+            <td>Bajo</td>
+          </tr>
+          <tr onclick="goTo('sec-ux','imp-estado')" style="cursor:pointer">
+            <td>8</td>
+            <td>Dashboard: estado del bot visible en todo momento</td>
+            <td>UX</td>
+            <td><span class="prio-pill" style="background:rgba(74,222,128,.15);color:var(--p3)">P3 UX</span></td>
+            <td>Bajo</td>
+          </tr>
+          <tr onclick="goTo('sec-bot','imp-ctwa')" style="cursor:pointer">
+            <td>9</td>
+            <td>CTWA como módulo opcional, no en flujo principal</td>
+            <td>Bot</td>
+            <td><span class="prio-pill" style="background:rgba(74,222,128,.15);color:var(--p3)">P3 UX</span></td>
+            <td>Bajo</td>
+          </tr>
+          <tr onclick="goTo('sec-db','imp-retention')" style="cursor:pointer">
+            <td>10</td>
+            <td>Política de retención de datos explícita por org</td>
+            <td>DB</td>
+            <td><span class="prio-pill" style="background:rgba(74,222,128,.15);color:var(--p3)">P3 UX</span></td>
+            <td>Bajo</td>
+          </tr>
+          <tr onclick="goTo('sec-future','imp-multiorg')" style="cursor:pointer">
+            <td>11</td>
+            <td>UI de selector de organización para platform admin</td>
+            <td>Admin</td>
+            <td><span class="prio-pill" style="background:rgba(96,165,250,.15);color:var(--p4)">P4 Futuro</span></td>
+            <td>Medio</td>
+          </tr>
+          <tr onclick="goTo('sec-future','imp-metaconv')" style="cursor:pointer">
+            <td>12</td>
+            <td>Meta Conversions API para ROI de anuncios</td>
+            <td>Integraciones</td>
+            <td><span class="prio-pill" style="background:rgba(96,165,250,.15);color:var(--p4)">P4 Futuro</span></td>
+            <td>Alto</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div>Las mejoras P1 y P2 están relacionadas entre sí. El orden recomendado es: <strong>3 → 2 → 6 → 1 → 4 → 5</strong>. Primero hacer que el bot funcione sin campaña, luego auto-crearla, luego unificar el config, luego mejorar el onboarding.</div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ARQUITECTURA ══════════════ -->
+    <div class="section" id="sec-arch">
+      <div class="sec-header">
+        <div class="sec-title">Arquitectura</div>
+        <div class="sec-desc">Los dos problemas estructurales que hay que resolver antes de escalar.</div>
+      </div>
+
+      <!-- IMP 1: botConfig -->
+      <div class="imp-card open" id="imp-config">
+        <div class="imp-header" onclick="toggleCard('imp-config')">
+          <div class="imp-icon" style="background:rgba(255,107,53,.12)">⚙️</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p1);border-color:rgba(255,107,53,.3)">P1 CRÍTICO</span>
+              <span class="imp-tag" style="color:var(--cat-arch);border-color:rgba(192,132,252,.3)">ARQUITECTURA</span>
+            </div>
+            <div class="imp-title">Unificar la configuración del bot — una sola fuente de verdad</div>
+            <div class="imp-summary">Hoy coexisten <code>botConfig</code> en memoria del proceso y <code>product.system_prompt</code> en DB. Son dos fuentes distintas para el mismo concepto.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="ps-grid">
+            <div class="ps-block problem">
+              <div class="ps-label">Problema actual</div>
+              <p><code>/api/config/bot</code> guarda en un objeto en memoria del proceso. Si el servidor se reinicia, la configuración se pierde. Además, <code>flows.ts</code> ya usa <code>product.system_prompt</code>, así que hay dos prompts posibles y no está claro cuál gana.</p>
+            </div>
+            <div class="ps-block solution">
+              <div class="ps-label">Solución</div>
+              <p>Eliminar <code>botConfig</code> en memoria. Mover toda la configuración del bot a <code>products</code> (o a una tabla <code>bot_config</code> por org si se necesita config global). El endpoint <code>/api/config/bot</code> debe leer y escribir en DB, no en memoria.</p>
+            </div>
+          </div>
+          <div class="code-label">Cambio concreto en backend</div>
+          <div class="code"><span class="c">// ANTES — botConfig volátil en memoria</span>
+<span class="fn">let</span> botConfig = { systemPrompt: <span class="s">''</span>, keywords: [] };
+app.put(<span class="s">'/api/config/bot'</span>, (c) => {
+  botConfig = <span class="fn">await</span> c.req.json(); <span class="c">// 💀 se pierde al reiniciar</span>
+});
+
+<span class="c">// DESPUÉS — persiste en DB por organización</span>
+app.put(<span class="s">'/api/config/bot'</span>, <span class="fn">async</span> (c) => {
+  <span class="fn">const</span> { systemPrompt, keywords } = <span class="fn">await</span> c.req.json();
+  <span class="fn">await</span> supabase.from(<span class="s">'organizations'</span>)
+    .update({ bot_config: { systemPrompt, keywords } })
+    .eq(<span class="s">'id'</span>, ctx.organizationId);
+  <span class="fn">return</span> c.json({ ok: <span class="ok">true</span> });
+});
+
+<span class="c">// En flows.ts — único punto de lectura</span>
+<span class="fn">const</span> prompt = product?.system_prompt
+  ?? org?.bot_config?.systemPrompt
+  ?? DEFAULT_PROMPT;</div>
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-n">1</div>
+              <div><strong>Agregar columna <code>bot_config jsonb</code> a <code>organizations</code></strong><p>O crear tabla separada <code>org_bot_config</code> si prefieres más estructura.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">2</div>
+              <div><strong>Migrar endpoint <code>PUT /api/config/bot</code></strong><p>Leer/escribir de DB en vez de variable en memoria.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">3</div>
+              <div><strong>Definir jerarquía de prompts en <code>flows.ts</code></strong><p><code>product.system_prompt</code> tiene prioridad → luego <code>org.bot_config.systemPrompt</code> → luego default hardcodeado.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">4</div>
+              <div><strong>Eliminar la variable <code>botConfig</code> global</strong><p>Borrar el objeto en memoria y todos sus usos directos.</p></div>
+            </div>
+          </div>
+          <div class="impact-row">
+            <div class="impact-item">
+              <div class="impact-label">Complejidad</div>
+              <div class="impact-bar-wrap"><div class="impact-bar" style="width:35%;background:var(--p3)"></div></div>
+            </div>
+            <div class="impact-item">
+              <div class="impact-label">Impacto en estabilidad</div>
+              <div class="impact-bar-wrap"><div class="impact-bar" style="width:90%;background:var(--p1)"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMP 2: Happy path -->
+      <div class="imp-card" id="imp-happypath">
+        <div class="imp-header" onclick="toggleCard('imp-happypath')">
+          <div class="imp-icon" style="background:rgba(255,107,53,.12)">🚀</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p1);border-color:rgba(255,107,53,.3)">P1 CRÍTICO</span>
+              <span class="imp-tag" style="color:var(--cat-arch);border-color:rgba(192,132,252,.3)">ARQUITECTURA</span>
+            </div>
+            <div class="imp-title">Crear producto → el bot funciona sin pasos adicionales</div>
+            <div class="imp-summary">Hoy hay 5 pasos obligatorios para tener un bot funcional. Deberían ser 1 (crear el producto), con el resto siendo opcional y avanzado.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="ps-grid">
+            <div class="ps-block problem">
+              <div class="ps-label">Flujo actual (5 pasos obligatorios)</div>
+              <p>1. Crear producto → 2. Seleccionar activo → 3. Crear campaña ligada → 4. Activar campaña → 5. Crear versión de flujo. Si falta el paso 3 o 4, el bot no responde y el error es silencioso.</p>
+            </div>
+            <div class="ps-block solution">
+              <div class="ps-label">Flujo objetivo (1 paso mínimo)</div>
+              <p>Crear producto con <code>system_prompt</code> y <code>keywords</code> → bot responde. Campaña, flujos y plantillas son capas opcionales para quienes quieren más control.</p>
+            </div>
+          </div>
+          <div class="callout warn">
+            <span class="callout-icon">⚠️</span>
+            <div>Esta mejora requiere coordinación con la mejora #3 (resolver producto sin campaña) y la #6 (auto-crear campaña). Las tres juntas resuelven el problema completo.</div>
+          </div>
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-n">1</div>
+              <div><strong>El webhook funciona con solo <code>product_id</code> (sin <code>campaign_id</code>)</strong><p>Ver mejora #3 para el cambio concreto en el resolver.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">2</div>
+              <div><strong>Al crear un producto, auto-crear la campaña asociada en el backend</strong><p>Ver mejora #6. El usuario no tiene que ir a otra pantalla.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">3</div>
+              <div><strong>La campaña se auto-activa si el producto está activo</strong><p>Sincronizar <code>product.is_active</code> con <code>campaign.status</code> en el trigger o en el handler del endpoint.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">4</div>
+              <div><strong>Flujos y plantillas permanecen como opcional avanzado</strong><p>Documentar claramente en la UI que son para personalización extra, no requisito mínimo.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ONBOARDING / UX ══════════════ -->
+    <div class="section" id="sec-ux">
+      <div class="sec-header">
+        <div class="sec-title">Onboarding y UX</div>
+        <div class="sec-desc">Hacer que un cliente nuevo pueda configurar su bot sin necesitar ayuda ni leer documentación.</div>
+      </div>
+
+      <!-- IMP 4: Wizard -->
+      <div class="imp-card open" id="imp-onboarding">
+        <div class="imp-header" onclick="toggleCard('imp-onboarding')">
+          <div class="imp-icon" style="background:rgba(74,222,128,.1)">🧙</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p2);border-color:rgba(245,200,66,.3)">P2 IMPORTANTE</span>
+              <span class="imp-tag" style="color:var(--cat-ux);border-color:rgba(52,211,153,.3)">ONBOARDING</span>
+            </div>
+            <div class="imp-title">Wizard de configuración inicial — 5 pasos guiados</div>
+            <div class="imp-summary">Un cliente nuevo con acceso al dashboard no sabe qué tiene que hacer primero. Un wizard lo lleva de cero a bot activo sin ambigüedad.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="callout ok">
+            <span class="callout-icon">✓</span>
+            <div>Este wizard solo aplica en el dashboard del cliente (tenant), no en el panel de plataforma. El platform admin sigue creando org y allowlist manualmente.</div>
+          </div>
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-n">1</div>
+              <div><strong>Conectar número de WhatsApp</strong><p>Pedir <code>phone_number_id</code> y <code>meta_token</code>. Mostrar instrucciones de cómo obtenerlos desde Meta for Developers con capturas de pantalla. Validar que el número recibe el webhook antes de continuar.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">2</div>
+              <div><strong>Crear tu primer producto</strong><p>Formulario con nombre, descripción breve y precio (o rango). El <code>slug</code> se genera automático. Keywords se pueden agregar después.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">3</div>
+              <div><strong>Configurar el bot</strong><p>Un textarea grande con el <code>system_prompt</code> y un helper text explicando cómo escribirlo. Ejemplo pre-llenado según el tipo de negocio seleccionado.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">4</div>
+              <div><strong>Configurar datos de pago</strong><p>Número de Nequi, cuenta Bancolombia, etc. Se guardan en el <code>system_prompt</code> o en un campo estructurado del producto.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">5</div>
+              <div><strong>Prueba de envío</strong><p>Botón "Enviarme un mensaje de prueba" → manda un WhatsApp al número del admin para verificar que todo funciona. Si pasa, mostrar pantalla de éxito y redirigir al dashboard.</p></div>
+            </div>
+          </div>
+          <div class="code-label">Detección de wizard pendiente (frontend)</div>
+          <div class="code"><span class="c">// En App.tsx — al cargar sesión autenticada</span>
+<span class="fn">const</span> needsOnboarding =
+  !org.hasInstance || <span class="c">// sin WhatsApp conectado</span>
+  !org.hasProduct  || <span class="c">// sin producto creado</span>
+  !org.botConfigured; <span class="c">// sin system_prompt</span>
+
+<span class="fn">if</span> (needsOnboarding) {
+  navigate(<span class="s">'/setup'</span>); <span class="c">// ruta del wizard</span>
+}</div>
+        </div>
+      </div>
+
+      <!-- IMP 5: Product-first nav -->
+      <div class="imp-card" id="imp-productfirst">
+        <div class="imp-header" onclick="toggleCard('imp-productfirst')">
+          <div class="imp-icon" style="background:rgba(74,222,128,.1)">🗂️</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p2);border-color:rgba(245,200,66,.3)">P2 IMPORTANTE</span>
+              <span class="imp-tag" style="color:var(--cat-ux);border-color:rgba(52,211,153,.3)">UX</span>
+            </div>
+            <div class="imp-title">Reestructurar navegación como product-first</div>
+            <div class="imp-summary">Hoy el menú tiene ítems separados para Campañas, Flujos, Plantillas, Productos y Referrals sin jerarquía clara. Todo debería vivir dentro del contexto del producto.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="ps-grid">
+            <div class="ps-block problem">
+              <div class="ps-label">Navegación actual (plana)</div>
+              <p>Inicio · Conversaciones · Pagos · Informes · Campañas · Flujos · Plantillas · Instancias · Productos · Referrals · Configuración</p>
+            </div>
+            <div class="ps-block solution">
+              <div class="ps-label">Navegación propuesta (jerárquica)</div>
+              <p><strong>Operaciones:</strong> Inicio · Conversaciones · Pagos · Informes<br><strong>Producto activo [selector]:</strong> Configuración · Flujos · Plantillas · Referrals (CTWA)<br><strong>Sistema:</strong> WhatsApp · Equipo · Cuenta</p>
+            </div>
+          </div>
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-n">1</div>
+              <div><strong>Agregar selector de producto activo en el sidebar</strong><p>Dropdown con los productos de la org. Al cambiar, actualiza el contexto global y el <code>localStorage</code> ya existente.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">2</div>
+              <div><strong>Agrupar Flujos, Plantillas y Referrals bajo el producto</strong><p>Las rutas pueden seguir siendo <code>/flows</code>, <code>/templates</code> etc., pero el menú las agrupa visualmente bajo el producto seleccionado.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">3</div>
+              <div><strong>Eliminar "Campañas" del menú principal</strong><p>Las campañas son un detalle de implementación interna, no algo que el usuario deba gestionar directamente. Si se necesita, moverla a Configuración avanzada del producto.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMP 8: Estado bot -->
+      <div class="imp-card" id="imp-estado">
+        <div class="imp-header" onclick="toggleCard('imp-estado')">
+          <div class="imp-icon" style="background:rgba(74,222,128,.1)">🟢</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p3);border-color:rgba(74,222,128,.3)">P3 UX</span>
+              <span class="imp-tag" style="color:var(--cat-ux);border-color:rgba(52,211,153,.3)">UX</span>
+            </div>
+            <div class="imp-title">Estado del bot siempre visible en el dashboard</div>
+            <div class="imp-summary">El usuario no sabe si el bot está activo, sin campaña, sin instancia o con error. Un indicador de salud en el header evita soporte innecesario.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="code-label">Estados posibles del bot</div>
+          <div class="code"><span class="c">// Endpoint: GET /api/bot/health</span>
+{
+  status: <span class="s">'active'</span>     <span class="c">// 🟢 todo OK</span>
+        | <span class="s">'no_instance'</span> <span class="c">// 🔴 sin WhatsApp conectado</span>
+        | <span class="s">'no_product'</span>  <span class="c">// 🟡 sin producto activo</span>
+        | <span class="s">'no_campaign'</span> <span class="c">// 🟡 producto sin campaña (transitorio)</span>
+        | <span class="s">'error'</span>,      <span class="c">// 🔴 fallo reciente en webhook</span>
+  lastActivity: <span class="s">'2025-03-30T21:00:00Z'</span>,
+  messageCount24h: <span class="k">47</span>,
+  detail: <span class="s">'Instancia WA sin token válido'</span>  <span class="c">// solo en error</span>
+}</div>
+          <div class="callout info">
+            <span class="callout-icon">💡</span>
+            <div>Con la mejora #2 implementada, el estado <code>no_campaign</code> desaparecería — siempre habría campaña auto-creada. Pero el endpoint sigue siendo útil para los otros estados.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ BOT ══════════════ -->
+    <div class="section" id="sec-bot">
+      <div class="sec-header">
+        <div class="sec-title">Motor del bot</div>
+        <div class="sec-desc">Cambios en el clasificador y los flujos para que el bot sea más robusto y fácil de depurar.</div>
+      </div>
+
+      <!-- IMP 3: Resolver sin campaña -->
+      <div class="imp-card open" id="imp-resolver">
+        <div class="imp-header" onclick="toggleCard('imp-resolver')">
+          <div class="imp-icon" style="background:rgba(255,107,53,.12)">🔀</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p1);border-color:rgba(255,107,53,.3)">P1 CRÍTICO</span>
+              <span class="imp-tag" style="color:var(--cat-bot);border-color:rgba(251,146,60,.3)">BOT</span>
+            </div>
+            <div class="imp-title">El bot resuelve el prompt sin necesitar campaña</div>
+            <div class="imp-summary">El webhook hoy falla silenciosamente si el producto no tiene campaña. El bot debería poder responder usando directamente el <code>system_prompt</code> del producto.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="code-label">Cambio en flows.ts — resolución en cascada</div>
+          <div class="code"><span class="c">// flows.ts — antes de llamar a Haiku</span>
+
+<span class="fn">async function</span> <span class="k">resolvePrompt</span>(ctx: FlowContext): Promise&lt;<span class="fn">string</span>&gt; {
+  <span class="c">// 1. system_prompt del producto (máxima prioridad)</span>
+  <span class="fn">if</span> (ctx.product?.system_prompt) {
+    <span class="fn">return</span> ctx.product.system_prompt;
+  }
+
+  <span class="c">// 2. system_prompt de la campaña (si existe)</span>
+  <span class="fn">if</span> (ctx.campaign?.system_prompt) {
+    <span class="fn">return</span> ctx.campaign.system_prompt;
+  }
+
+  <span class="c">// 3. config global de la org (nuevo, ver mejora #1)</span>
+  <span class="fn">if</span> (ctx.org?.bot_config?.systemPrompt) {
+    <span class="fn">return</span> ctx.org.bot_config.systemPrompt;
+  }
+
+  <span class="c">// 4. Fallback hardcodeado — nunca falla</span>
+  <span class="fn">return</span> <span class="s">`Eres el asistente de ${ctx.org.name}. 
+Responde en español, sé amigable y conciso.`</span>;
+}
+
+<span class="c">// El bot NUNCA debe quedar mudo por falta de configuración</span></div>
+          <div class="callout ok">
+            <span class="callout-icon">✓</span>
+            <div>Este es el cambio de menor esfuerzo y mayor impacto inmediato. Solo modifica la función de resolución en <code>flows.ts</code> — no toca el webhook ni la DB.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMP 7: Errores descriptivos -->
+      <div class="imp-card" id="imp-errores">
+        <div class="imp-header" onclick="toggleCard('imp-errores')">
+          <div class="imp-icon" style="background:rgba(245,200,66,.1)">🪲</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p2);border-color:rgba(245,200,66,.3)">P2 IMPORTANTE</span>
+              <span class="imp-tag" style="color:var(--cat-bot);border-color:rgba(251,146,60,.3)">BOT / DX</span>
+            </div>
+            <div class="imp-title">Errores descriptivos — no más fallos silenciosos</div>
+            <div class="imp-summary">Cuando el bot no puede resolver producto o campaña, el log actual no da contexto suficiente para depurar. Se necesitan errores accionables.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="code-label">Logging estructurado en el webhook handler</div>
+          <div class="code"><span class="c">// handler.ts — reemplazar warnings genéricos</span>
+
+<span class="c">// ❌ Antes</span>
+<span class="fn">if</span> (!instance) { log.warn(<span class="s">'No instance'</span>); <span class="fn">return</span>; }
+
+<span class="c">// ✅ Después</span>
+<span class="fn">if</span> (!instance) {
+  log.warn({
+    phone_number_id: phoneNumberId,
+    <span class="w">event</span>: <span class="s">'webhook.instance_not_found'</span>,
+    action: <span class="s">'ignored'</span>,
+    hint: <span class="s">'Crear instancia en /instances con este phone_number_id'</span>
+  }, <span class="s">'Webhook ignorado: instancia no encontrada'</span>);
+  <span class="fn">return</span>;
+}
+
+<span class="fn">if</span> (!product) {
+  log.warn({
+    org_id: orgId,
+    text: messageText,
+    <span class="w">event</span>: <span class="s">'bot.product_not_resolved'</span>,
+    hint: <span class="s">'Ningún producto activo tiene keywords que coincidan'</span>
+  }, <span class="s">'Producto no resuelto — usando fallback'</span>);
+  <span class="c">// Continuar con fallback, NO silenciar</span>
+}</div>
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-n">1</div>
+              <div><strong>Agregar campo <code>event</code> a todos los logs del webhook</strong><p>Formato: <code>webhook.&lt;acción&gt;</code>, <code>bot.&lt;acción&gt;</code>, <code>ocr.&lt;acción&gt;</code>. Facilita filtrar en Railway logs.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">2</div>
+              <div><strong>Nunca retornar sin loggear — especialmente en los <code>return</code> tempranos</strong><p>Cada <code>if (!x) return</code> debe tener su log con hint de qué configurar.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">3</div>
+              <div><strong>Exponer últimos errores en <code>GET /api/bot/health</code></strong><p>Los últimos 5 warnings del webhook, accesibles desde el dashboard sin entrar a Railway.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMP 9: CTWA opcional -->
+      <div class="imp-card" id="imp-ctwa">
+        <div class="imp-header" onclick="toggleCard('imp-ctwa')">
+          <div class="imp-icon" style="background:rgba(74,222,128,.1)">🔌</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p3);border-color:rgba(74,222,128,.3)">P3 UX</span>
+              <span class="imp-tag" style="color:var(--cat-bot);border-color:rgba(251,146,60,.3)">BOT</span>
+            </div>
+            <div class="imp-title">CTWA (Click to WhatsApp) como módulo opcional</div>
+            <div class="imp-summary">La detección por <code>ctwa_clid</code> está en el flujo principal de resolución de producto. Es una feature avanzada de anuncios que no todos los clientes usan.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="code-label">Reordenar la resolución de producto</div>
+          <div class="code"><span class="c">// classifier.ts / handler.ts</span>
+<span class="c">// Orden actual: Redis → CTWA → keywords</span>
+<span class="c">// Orden propuesto: Redis → keywords → CTWA (si habilitado)</span>
+
+<span class="fn">async function</span> <span class="k">resolveProduct</span>(msg, orgId, state) {
+  <span class="c">// 1. Estado previo en Redis (siempre primero)</span>
+  <span class="fn">if</span> (state.productId) <span class="fn">return</span> state.productId;
+
+  <span class="c">// 2. Keywords en texto (flujo normal)</span>
+  <span class="fn">const</span> byKeyword = <span class="fn">await</span> findProductByText(msg.text, orgId);
+  <span class="fn">if</span> (byKeyword) <span class="fn">return</span> byKeyword.id;
+
+  <span class="c">// 3. CTWA — solo si la org tiene referrals configurados</span>
+  <span class="fn">if</span> (msg.referral?.ctwa_clid && org.ctwa_enabled) {
+    <span class="fn">const</span> byCTWA = <span class="fn">await</span> findProductByCTWA(msg.referral.ctwa_clid, orgId);
+    <span class="fn">if</span> (byCTWA) <span class="fn">return</span> byCTWA.id;
+  }
+
+  <span class="c">// 4. Sin producto — usar default de org si existe</span>
+  <span class="fn">return</span> org.default_product_id ?? <span class="fn">null</span>;
+}</div>
+          <div class="callout info">
+            <span class="callout-icon">💡</span>
+            <div>Agregar <code>ctwa_enabled: boolean</code> a <code>organizations</code> permite activar/desactivar CTWA por cliente. Los que no usan anuncios no pagan el costo de esa query en cada mensaje.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ DB ══════════════ -->
+    <div class="section" id="sec-db">
+      <div class="sec-header">
+        <div class="sec-title">Base de datos</div>
+        <div class="sec-desc">Cambios en el schema y lógica de datos para reducir la fricción operacional.</div>
+      </div>
+
+      <!-- IMP 6: Auto-crear campaña -->
+      <div class="imp-card open" id="imp-schema">
+        <div class="imp-header" onclick="toggleCard('imp-schema')">
+          <div class="imp-icon" style="background:rgba(56,189,248,.1)">⚡</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p2);border-color:rgba(245,200,66,.3)">P2 IMPORTANTE</span>
+              <span class="imp-tag" style="color:var(--cat-db);border-color:rgba(56,189,248,.3)">DB / BACKEND</span>
+            </div>
+            <div class="imp-title">Auto-crear campaña al crear un producto</div>
+            <div class="imp-summary">El constraint de unicidad <code>(org_id, product_id)</code> ya garantiza una campaña por producto. Hay que aprovechar eso para generarla automáticamente.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="code-label">Opción A — Trigger en PostgreSQL</div>
+          <div class="code"><span class="c">-- Trigger: al insertar un producto activo, crear campaña</span>
+<span class="fn">CREATE OR REPLACE FUNCTION</span> auto_create_campaign()
+<span class="fn">RETURNS TRIGGER AS</span> $$
+<span class="fn">BEGIN</span>
+  <span class="fn">INSERT INTO</span> campaigns (organization_id, product_id, name, status)
+  <span class="fn">VALUES</span> (
+    NEW.organization_id,
+    NEW.id,
+    <span class="s">'Campaña de '</span> || NEW.name,
+    <span class="fn">CASE WHEN</span> NEW.is_active <span class="fn">THEN</span> <span class="s">'active'</span> <span class="fn">ELSE</span> <span class="s">'draft'</span> <span class="fn">END</span>
+  )
+  <span class="fn">ON CONFLICT</span> (organization_id, product_id) <span class="fn">DO NOTHING</span>;
+  <span class="fn">RETURN NEW</span>;
+<span class="fn">END</span>;
+$$ <span class="fn">LANGUAGE</span> plpgsql;
+
+<span class="fn">CREATE TRIGGER</span> trg_product_campaign
+<span class="fn">AFTER INSERT ON</span> products
+<span class="fn">FOR EACH ROW EXECUTE FUNCTION</span> auto_create_campaign();</div>
+          <div class="code-label">Opción B — En el endpoint POST /api/products (backend)</div>
+          <div class="code"><span class="c">// Más explícito, más fácil de debuggear</span>
+app.post(<span class="s">'/api/products'</span>, <span class="fn">async</span> (c) => {
+  <span class="fn">const</span> product = <span class="fn">await</span> createProduct(body, orgId);
+
+  <span class="c">// Auto-crear campaña ligada (si no existe)</span>
+  <span class="fn">await</span> supabase.from(<span class="s">'campaigns'</span>).upsert({
+    organization_id: orgId,
+    product_id: product.id,
+    name: <span class="s">`Campaña de ${product.name}`</span>,
+    status: product.is_active ? <span class="s">'active'</span> : <span class="s">'draft'</span>,
+  }, { onConflict: <span class="s">'organization_id,product_id'</span> });
+
+  <span class="fn">return</span> c.json(product);
+});</div>
+          <div class="callout info">
+            <span class="callout-icon">💡</span>
+            <div>Recomiendo la Opción B. Es más explícita, fácil de leer en el código y no requiere entender triggers de Postgres para mantenerla. El trigger es más "automático" pero oculta lógica de negocio importante.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMP 10: Retención -->
+      <div class="imp-card" id="imp-retention">
+        <div class="imp-header" onclick="toggleCard('imp-retention')">
+          <div class="imp-icon" style="background:rgba(56,189,248,.1)">🗑️</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p3);border-color:rgba(74,222,128,.3)">P3 UX</span>
+              <span class="imp-tag" style="color:var(--cat-db);border-color:rgba(56,189,248,.3)">DB</span>
+            </div>
+            <div class="imp-title">Política de retención de datos explícita por organización</div>
+            <div class="imp-summary">Hoy el cron de purga de imágenes está hardcodeado en 7 días. Con multitenancy, cada cliente debería poder configurar su propia retención.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="code-label">Campo <code>data_retention</code> en organizations</div>
+          <div class="code"><span class="c">-- Migration</span>
+<span class="fn">ALTER TABLE</span> organizations
+  <span class="fn">ADD COLUMN</span> data_retention jsonb <span class="fn">DEFAULT</span> <span class="s">'{
+    "conversation_history_days": 3,
+    "receipt_images_days": 7,
+    "message_log_days": 90
+  }'</span>;
+
+<span class="c">-- Cron usa esto en vez de constantes hardcodeadas</span>
+<span class="fn">SELECT</span> id, data_retention
+<span class="fn">FROM</span> organizations
+<span class="fn">WHERE</span> is_active = <span class="ok">true</span>;</div>
+          <div class="callout warn">
+            <span class="callout-icon">⚠️</span>
+            <div>Importante para cuando vendas el servicio: en Colombia aplican normativas de protección de datos (Ley 1581). Documentar qué datos se guardan y por cuánto tiempo protege a tus clientes.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ FUTURO ══════════════ -->
+    <div class="section" id="sec-future">
+      <div class="sec-header">
+        <div class="sec-title">Futuro — cuando escales</div>
+        <div class="sec-desc">No urgentes ahora, pero vale la pena tenerlos en mente al diseñar para que no requieran refactoring mayor.</div>
+      </div>
+
+      <!-- IMP 11: Multi-org UI -->
+      <div class="imp-card open" id="imp-multiorg">
+        <div class="imp-header" onclick="toggleCard('imp-multiorg')">
+          <div class="imp-icon" style="background:rgba(96,165,250,.1)">🏢</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p4);border-color:rgba(96,165,250,.3)">P4 FUTURO</span>
+              <span class="imp-tag" style="color:var(--cat-arch);border-color:rgba(192,132,252,.3)">ADMIN</span>
+            </div>
+            <div class="imp-title">UI de selector de organización para platform admin</div>
+            <div class="imp-summary">Hoy el platform admin actúa como una org enviando el header <code>X-Organization-Id</code> manualmente. Para gestionar 10+ clientes necesita una UI de cambio de contexto.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-n">1</div>
+              <div><strong>Dropdown "Gestionando: [Nombre org]" en el AppLayout</strong><p>Solo visible cuando <code>isPlatformAdmin</code>. Al cambiar, actualiza <code>ACTIVE_ORG_KEY</code> en localStorage y recarga los datos.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">2</div>
+              <div><strong>Indicador visual de contexto activo</strong><p>Banner o badge en el sidebar que recuerda qué org estás gestionando. Evita operar en la org equivocada.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">3</div>
+              <div><strong>Acceso rápido desde <code>/admin</code> a cualquier org</strong><p>En la lista de organizaciones del panel admin, botón "Gestionar" que cambia el contexto y redirige al dashboard tenant.</p></div>
+            </div>
+          </div>
+          <div class="callout info">
+            <span class="callout-icon">💡</span>
+            <div>La lógica de <code>X-Organization-Id</code> ya está implementada en el backend. Este cambio es 100% frontend — solo necesitas persistir y enviar el org activo en todas las peticiones del API client.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMP 12: Meta Conversions -->
+      <div class="imp-card" id="imp-metaconv">
+        <div class="imp-header" onclick="toggleCard('imp-metaconv')">
+          <div class="imp-icon" style="background:rgba(96,165,250,.1)">📊</div>
+          <div class="imp-meta">
+            <div class="imp-tags">
+              <span class="imp-tag" style="color:var(--p4);border-color:rgba(96,165,250,.3)">P4 FUTURO</span>
+              <span class="imp-tag" style="color:var(--cat-arch);border-color:rgba(192,132,252,.3)">INTEGRACIONES</span>
+            </div>
+            <div class="imp-title">Meta Conversions API — ROI de anuncios en el loop</div>
+            <div class="imp-summary">AliziaBot lo ofrece como feature diferencial. Permite que Meta sepa qué anuncios generaron ventas reales y optimice el targeting automáticamente.</div>
+          </div>
+          <div class="imp-toggle">▾</div>
+        </div>
+        <div class="imp-body">
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-n">1</div>
+              <div><strong>Guardar el <code>ctwa_clid</code> en el pago al validar comprobante</strong><p>Ya tienes el <code>ctwa_clid</code> del referral. Solo hay que propagarlo hasta la tabla <code>payments</code>.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">2</div>
+              <div><strong>Llamar a la Conversions API de Meta al validar un pago</strong><p>POST a <code>https://graph.facebook.com/v19.0/{pixel_id}/events</code> con evento <code>Purchase</code> y el <code>value</code> del comprobante.</p></div>
+            </div>
+            <div class="step-row">
+              <div class="step-n">3</div>
+              <div><strong>Agregar <code>meta_pixel_id</code> y <code>meta_access_token</code> a la org o instancia</strong><p>Cada cliente tiene su propio pixel. Se configura desde el dashboard en Configuración avanzada.</p></div>
+            </div>
+          </div>
+          <div class="callout warn">
+            <span class="callout-icon">⚠️</span>
+            <div>Requiere que el cliente tenga un pixel de Meta y que los anuncios usen Click to WhatsApp (CTWA). No aplica si el cliente no hace ads en Facebook/Instagram.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+  document.getElementById(id).classList.add('visible');
+  document.querySelectorAll('.leg-tab').forEach(t => t.classList.remove('active'));
+  const tabs = document.querySelectorAll('.leg-tab');
+  const map = { overview:0, 'sec-arch':1, 'sec-ux':2, 'sec-bot':3, 'sec-db':4, 'sec-future':5 };
+  if (map[id] !== undefined) tabs[map[id]].classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+}
+
+function goTo(sectionId, cardId) {
+  showSection(sectionId);
+  if (cardId) {
+    const el = document.getElementById(cardId);
+    if (el) {
+      el.classList.add('open');
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    }
+  } else {
+    document.querySelector('.content').scrollTop = 0;
+  }
+}
+
+function toggleCard(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// sidebar active on sb-item click
+document.querySelectorAll('.sb-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

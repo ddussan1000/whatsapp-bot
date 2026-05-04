@@ -26,6 +26,7 @@ export const DelayEditor = forwardRef<DelayEditorRef, Props>(
     // Sync when external value changes (e.g. step switch)
     useEffect(() => {
       const { value: v, unit: u } = secondsToDisplay(value);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalVal(String(v));
       setUnit(u);
     }, [value]);

@@ -67,6 +67,7 @@ function FlowCanvasInner({
 
   // Reset when initialDraft changes (e.g. parent loads different flow)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraftRaw(initialDraft);
     setDirtyRaw(false);
     setSelectedNodeId(null);

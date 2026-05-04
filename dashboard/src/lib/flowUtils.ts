@@ -9,6 +9,7 @@ export type FlowEditorMessage = {
   position: number;
   messageType: FlowMessageType;
   textContent?: string | null;
+  textVariants?: string[];
   mediaUrl?: string | null;
   filename?: string | null;
   caption?: string | null;

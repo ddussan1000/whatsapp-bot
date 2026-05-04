@@ -164,7 +164,7 @@ async function processJob(payload: ScheduledJobPayload): Promise<void> {
       .from("flow_steps")
       .select(
         `id, flow_id, organization_id, position, delay_seconds, trigger_keywords, label,
-         messages:flow_step_messages(id, step_id, position, message_type, text_content, media_url, filename, caption)`,
+         messages:flow_step_messages(id, step_id, position, message_type, text_content, media_url, filename, caption, text_variants)`,
       )
       .eq("id", payload.stepId)
       .maybeSingle();

@@ -337,7 +337,7 @@ export function MediaPickerModal({
                   onSelect={() =>
                     setSelectedIds((prev) => {
                       const next = new Set(prev);
-                      next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+                      if (next.has(item.id)) { next.delete(item.id); } else { next.add(item.id); }
                       return next;
                     })
                   }

@@ -25,6 +25,7 @@ const FlowStepMessageSchema = z.object({
   media_url: z.string().nullable().optional(),
   filename: z.string().nullable().optional(),
   caption: z.string().nullable().optional(),
+  text_variants: z.array(z.string()).optional().default([]),
 });
 
 const FlowStepSchema = z.object({
@@ -91,6 +92,7 @@ const UpsertFlowBodySchema = z
                 position: z.number(),
                 messageType: z.enum(["text", "image", "document", "video", "audio"]),
                 textContent: z.string().nullable().optional(),
+                textVariants: z.array(z.string()).optional().default([]),
                 mediaUrl: z.string().nullable().optional(),
                 filename: z.string().nullable().optional(),
                 caption: z.string().nullable().optional(),
@@ -128,7 +130,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         .select(
           `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, message_overrides, is_active, session_timeout_hours, updated_at,
            steps:flow_steps(id, flow_id, organization_id, position, delay_seconds, label, trigger_keywords,
-             messages:flow_step_messages(id, step_id, organization_id, position, message_type, text_content, media_url, filename, caption))`,
+             messages:flow_step_messages(id, step_id, organization_id, position, message_type, text_content, media_url, filename, caption, text_variants))`,
         )
         .eq("organization_id", orgId(c))
         .order("updated_at", { ascending: false });
@@ -166,7 +168,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         .select(
           `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, message_overrides, is_active, session_timeout_hours, updated_at,
            steps:flow_steps(id, flow_id, organization_id, position, delay_seconds, label, trigger_keywords,
-             messages:flow_step_messages(id, step_id, organization_id, position, message_type, text_content, media_url, filename, caption))`,
+             messages:flow_step_messages(id, step_id, organization_id, position, message_type, text_content, media_url, filename, caption, text_variants))`,
         )
         .eq("id", id)
         .eq("organization_id", orgId(c))
@@ -216,7 +218,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         .select(
           `id, organization_id, name, trigger_phrase, trigger_first_word, keywords, no_match_behavior, system_prompt, message_overrides, is_active, session_timeout_hours, updated_at,
            steps:flow_steps(id, flow_id, organization_id, position, delay_seconds, label, trigger_keywords,
-             messages:flow_step_messages(id, step_id, organization_id, position, message_type, text_content, media_url, filename, caption))`,
+             messages:flow_step_messages(id, step_id, organization_id, position, message_type, text_content, media_url, filename, caption, text_variants))`,
         )
         .eq("id", String(flowId))
         .eq("organization_id", orgId(c))

@@ -239,6 +239,7 @@ export function ConversationsPage() {
 
   // Sync input back when URL param is cleared externally (e.g. "Limpiar" button)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSearchInput(search);
     pushedSearchRef.current = search;
   }, [search]);

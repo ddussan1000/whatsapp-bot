@@ -1,0 +1,660 @@
+{
+  "location": {
+    "city": "Atlanta",
+    "region": "Georgia",
+    "country": "United States",
+    "postCode": "30302",
+    "regionCode": "GA",
+    "countryCode": "US",
+    "coords": {
+      "latitude": 33.749,
+      "longitude": -84.388
+    },
+    "isp": "Amazon.com, Inc.",
+    "timezone": "America/New_York",
+    "languages": "en-US,es-US,haw,fr",
+    "currencyCode": "USD",
+    "currency": "Dollar",
+    "countryDomain": ".us",
+    "countryAreaSize": 9629091,
+    "countryPopulation": 327167434
+  },
+  "ssl": {
+    "subject": {
+      "CN": "dssbot.site"
+    },
+    "issuer": {
+      "C": "US",
+      "O": "Let's Encrypt",
+      "CN": "R13"
+    },
+    "subjectaltname": "DNS:dssbot.site",
+    "infoAccess": {
+      "CA Issuers - URI": [
+        "http://r13.i.lencr.org/"
+      ]
+    },
+    "ca": false,
+    "modulus": "A4430509591485C2846CEC619F717E989CDA7004F5B80ADA68B99DA81DFA5063B0D4E879B4C53AE903F2F1C6BB11413F8FDE3F4C90517DB0D84C855BEB592A4941925E04502EEC91A58D657F5973FFD2948843E492203CA6D0103D16E8E9D69CF70E84DC787C25330C4A5D50EA7121B198B90261ABE5D544841616119290B991CA5E7B0E345E7279193466712BC7FC47BB66484C1ED69373E9453F90633BF3523F7544156902EAEB6262863D347246759A51B9C06413562D55566AFAB28260BF79FBF84C3FFA446C128F0C6600204A6BD2D66969DA5F6C3F894352B0368E91E012415CDC00682A6C5CCA919E1BBBFAC69A0AF91DA6D1BBDC49BBEF049EFBDAB9",
+    "bits": 2048,
+    "exponent": "0x10001",
+    "pubkey": {
+      "type": "Buffer",
+      "data": [
+        48,
+        130,
+        1,
+        34,
+        48,
+        13,
+        6,
+        9,
+        42,
+        134,
+        72,
+        134,
+        247,
+        13,
+        1,
+        1,
+        1,
+        5,
+        0,
+        3,
+        130,
+        1,
+        15,
+        0,
+        48,
+        130,
+        1,
+        10,
+        2,
+        130,
+        1,
+        1,
+        0,
+        164,
+        67,
+        5,
+        9,
+        89,
+        20,
+        133,
+        194,
+        132,
+        108,
+        236,
+        97,
+        159,
+        113,
+        126,
+        152,
+        156,
+        218,
+        112,
+        4,
+        245,
+        184,
+        10,
+        218,
+        104,
+        185,
+        157,
+        168,
+        29,
+        250,
+        80,
+        99,
+        176,
+        212,
+        232,
+        121,
+        180,
+        197,
+        58,
+        233,
+        3,
+        242,
+        241,
+        198,
+        187,
+        17,
+        65,
+        63,
+        143,
+        222,
+        63,
+        76,
+        144,
+        81,
+        125,
+        176,
+        216,
+        76,
+        133,
+        91,
+        235,
+        89,
+        42,
+        73,
+        65,
+        146,
+        94,
+        4,
+        80,
+        46,
+        236,
+        145,
+        165,
+        141,
+        101,
+        127,
+        89,
+        115,
+        255,
+        210,
+        148,
+        136,
+        67,
+        228,
+        146,
+        32,
+        60,
+        166,
+        208,
+        16,
+        61,
+        22,
+        232,
+        233,
+        214,
+        156,
+        247,
+        14,
+        132,
+        220,
+        120,
+        124,
+        37,
+        51,
+        12,
+        74,
+        93,
+        80,
+        234,
+        113,
+        33,
+        177,
+        152,
+        185,
+        2,
+        97,
+        171,
+        229,
+        213,
+        68,
+        132,
+        22,
+        22,
+        17,
+        146,
+        144,
+        185,
+        145,
+        202,
+        94,
+        123,
+        14,
+        52,
+        94,
+        114,
+        121,
+        25,
+        52,
+        102,
+        113,
+        43,
+        199,
+        252,
+        71,
+        187,
+        102,
+        72,
+        76,
+        30,
+        214,
+        147,
+        115,
+        233,
+        69,
+        63,
+        144,
+        99,
+        59,
+        243,
+        82,
+        63,
+        117,
+        68,
+        21,
+        105,
+        2,
+        234,
+        235,
+        98,
+        98,
+        134,
+        61,
+        52,
+        114,
+        70,
+        117,
+        154,
+        81,
+        185,
+        192,
+        100,
+        19,
+        86,
+        45,
+        85,
+        86,
+        106,
+        250,
+        178,
+        130,
+        96,
+        191,
+        121,
+        251,
+        248,
+        76,
+        63,
+        250,
+        68,
+        108,
+        18,
+        143,
+        12,
+        102,
+        0,
+        32,
+        74,
+        107,
+        210,
+        214,
+        105,
+        105,
+        218,
+        95,
+        108,
+        63,
+        137,
+        67,
+        82,
+        176,
+        54,
+        142,
+        145,
+        224,
+        18,
+        65,
+        92,
+        220,
+        0,
+        104,
+        42,
+        108,
+        92,
+        202,
+        145,
+        158,
+        27,
+        187,
+        250,
+        198,
+        154,
+        10,
+        249,
+        29,
+        166,
+        209,
+        187,
+        220,
+        73,
+        187,
+        239,
+        4,
+        158,
+        251,
+        218,
+        185,
+        2,
+        3,
+        1,
+        0,
+        1
+      ]
+    },
+    "valid_from": "Apr  2 18:41:54 2026 GMT",
+    "valid_to": "Jul  1 18:41:53 2026 GMT",
+    "fingerprint": "2C:F8:AA:6D:0C:37:67:F1:1A:62:A1:B2:84:0E:E5:57:35:A7:76:8F",
+    "fingerprint256": "56:9C:3C:D2:AC:39:88:8B:D4:77:A5:42:4B:18:49:5B:C9:88:ED:08:18:72:D7:F5:A1:2F:82:87:C8:D5:09:AC",
+    "fingerprint512": "84:50:2D:C6:47:69:36:FF:32:CA:5F:29:22:AC:2D:3C:AC:A7:08:B6:38:7B:B2:C5:0E:ED:C3:F7:F7:C2:59:A0:8E:70:CE:70:3E:A5:B0:B9:EB:A7:6D:75:69:6C:C9:BC:81:5D:3D:BF:7D:EA:C3:47:89:3A:F7:0A:DF:55:2D:8B",
+    "ext_key_usage": [
+      "1.3.6.1.5.5.7.3.1"
+    ],
+    "serialNumber": "06F3D4C26B2762861571342C30C93459BE0B"
+  },
+  "domain": {
+    "internicData": {
+      "error": "No matches found for domain in internic database"
+    },
+    "whoisData": null
+  },
+  "server-info": {
+    "loc": "",
+    "type": ""
+  },
+  "headers": {
+    "accept-ranges": "bytes",
+    "access-control-allow-origin": "*",
+    "age": "30061",
+    "cache-control": "public, max-age=0, must-revalidate",
+    "content-disposition": "inline",
+    "content-length": "457",
+    "content-type": "text/html; charset=utf-8",
+    "date": "Sun, 05 Apr 2026 17:12:11 GMT",
+    "etag": "\"13537b18e09d8901571d068894cc7ed0\"",
+    "last-modified": "Sun, 05 Apr 2026 08:51:09 GMT",
+    "server": "Vercel",
+    "strict-transport-security": "max-age=63072000",
+    "x-vercel-cache": "HIT",
+    "x-vercel-id": "iad1:lhr1::dbshq-1775409131620-0fa6bb69d4fe"
+  },
+  "dns": {
+    "A": {
+      "address": "216.198.79.1",
+      "family": 4
+    },
+    "AAAA": [
+      "216.198.79.1"
+    ],
+    "MX": [],
+    "TXT": [],
+    "NS": [],
+    "CNAME": [
+      "salvador.ns.porkbun.com",
+      "curitiba.ns.porkbun.com",
+      "fortaleza.ns.porkbun.com",
+      "maceio.ns.porkbun.com"
+    ],
+    "SOA": [],
+    "SRV": {
+      "nsname": "curitiba.ns.porkbun.com",
+      "hostmaster": "dns.cloudflare.com",
+      "serial": 2400645944,
+      "refresh": 10000,
+      "retry": 2400,
+      "expire": 604800,
+      "minttl": 1800
+    },
+    "PTR": []
+  },
+  "hosts": null,
+  "http-security": {
+    "strictTransportPolicy": true,
+    "xFrameOptions": false,
+    "xContentTypeOptions": false,
+    "xXSSProtection": false,
+    "contentSecurityPolicy": false
+  },
+  "social-tags": {
+    "title": "DSS Bot",
+    "viewport": "width=device-width, initial-scale=1.0",
+    "favicon": "/favicon.svg"
+  },
+  "security-txt": {
+    "isPresent": false
+  },
+  "dns-server": {
+    "domain": "dssbot.site",
+    "dns": [
+      {
+        "address": "216.198.79.1",
+        "hostname": null,
+        "dohDirectSupports": false
+      }
+    ]
+  },
+  "firewall": {
+    "hasWaf": false
+  },
+  "dnssec": {
+    "DNSKEY": {
+      "isFound": false,
+      "answer": null,
+      "response": {
+        "Status": 3,
+        "TC": false,
+        "RD": true,
+        "RA": true,
+        "AD": false,
+        "CD": false,
+        "Question": [
+          {
+            "name": "https://dssbot.site.",
+            "type": 48
+          }
+        ],
+        "Authority": [
+          {
+            "name": "site.",
+            "type": 6,
+            "TTL": 300,
+            "data": "ns.trs-dns.com. trs-ops.tucows.com. 1775408946 1800 900 604800 300"
+          }
+        ],
+        "Comment": "Response from 2620:171:812:1534:8::1."
+      }
+    },
+    "DS": {
+      "isFound": false,
+      "answer": null,
+      "response": {
+        "Status": 3,
+        "TC": false,
+        "RD": true,
+        "RA": true,
+        "AD": false,
+        "CD": false,
+        "Question": [
+          {
+            "name": "https://dssbot.site.",
+            "type": 43
+          }
+        ],
+        "Authority": [
+          {
+            "name": "site.",
+            "type": 6,
+            "TTL": 300,
+            "data": "ns.trs-dns.com. trs-ops.tucows.com. 1775408946 1800 900 604800 300"
+          }
+        ],
+        "Comment": "Response from 64.78.204.1."
+      }
+    },
+    "RRSIG": {
+      "isFound": false,
+      "answer": null,
+      "response": {
+        "Status": 3,
+        "TC": false,
+        "RD": true,
+        "RA": true,
+        "AD": false,
+        "CD": false,
+        "Question": [
+          {
+            "name": "https://dssbot.site.",
+            "type": 46
+          }
+        ],
+        "Authority": [
+          {
+            "name": "site.",
+            "type": 6,
+            "TTL": 300,
+            "data": "ns.trs-dns.com. trs-ops.tucows.com. 1775408946 1800 900 604800 300"
+          }
+        ],
+        "Comment": "Response from 2620:171:813:1534:8::1."
+      }
+    }
+  },
+  "hsts": {
+    "message": "HSTS header does not include all subdomains.",
+    "compatible": false,
+    "hstsHeader": null
+  },
+  "redirects": {
+    "redirects": [
+      "https://dssbot.site",
+      "https://www.dssbot.site/"
+    ]
+  },
+  "status": {
+    "isUp": true,
+    "responseTime": 149.07138200002373,
+    "responseCode": 307
+  },
+  "ports": {
+    "openPorts": [
+      80,
+      443
+    ],
+    "failedPorts": [
+      20,
+      21,
+      22,
+      23,
+      25,
+      53,
+      67,
+      68,
+      69,
+      110,
+      119,
+      123,
+      143,
+      156,
+      161,
+      162,
+      179,
+      194,
+      389,
+      587,
+      993,
+      995,
+      3000,
+      3306,
+      3389,
+      5060,
+      5900,
+      8000,
+      8080,
+      8888
+    ]
+  },
+  "block-lists": {
+    "blocklists": [
+      {
+        "server": "AdGuard",
+        "serverIp": "176.103.130.130",
+        "isBlocked": false
+      },
+      {
+        "server": "AdGuard Family",
+        "serverIp": "176.103.130.132",
+        "isBlocked": false
+      },
+      {
+        "server": "CleanBrowsing Adult",
+        "serverIp": "185.228.168.10",
+        "isBlocked": false
+      },
+      {
+        "server": "CleanBrowsing Family",
+        "serverIp": "185.228.168.168",
+        "isBlocked": false
+      },
+      {
+        "server": "CleanBrowsing Security",
+        "serverIp": "185.228.168.9",
+        "isBlocked": false
+      },
+      {
+        "server": "CloudFlare",
+        "serverIp": "1.1.1.1",
+        "isBlocked": false
+      },
+      {
+        "server": "CloudFlare Family",
+        "serverIp": "1.1.1.3",
+        "isBlocked": false
+      },
+      {
+        "server": "Comodo Secure",
+        "serverIp": "8.26.56.26",
+        "isBlocked": false
+      },
+      {
+        "server": "Google DNS",
+        "serverIp": "8.8.8.8",
+        "isBlocked": false
+      },
+      {
+        "server": "Neustar Family",
+        "serverIp": "156.154.70.3",
+        "isBlocked": false
+      },
+      {
+        "server": "Neustar Protection",
+        "serverIp": "156.154.70.2",
+        "isBlocked": false
+      },
+      {
+        "server": "Norton Family",
+        "serverIp": "199.85.126.20",
+        "isBlocked": false
+      },
+      {
+        "server": "OpenDNS",
+        "serverIp": "208.67.222.222",
+        "isBlocked": false
+      },
+      {
+        "server": "OpenDNS Family",
+        "serverIp": "208.67.222.123",
+        "isBlocked": false
+      },
+      {
+        "server": "Quad9",
+        "serverIp": "9.9.9.9",
+        "isBlocked": false
+      },
+      {
+        "server": "Yandex Family",
+        "serverIp": "77.88.8.7",
+        "isBlocked": false
+      },
+      {
+        "server": "Yandex Safe",
+        "serverIp": "77.88.8.88",
+        "isBlocked": false
+      }
+    ]
+  }
+}

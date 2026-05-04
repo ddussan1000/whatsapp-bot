@@ -273,7 +273,7 @@ export function ReportsPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportInstanceId, setExportInstanceId] = useState<string>("");
   const [exportDate, setExportDate] = useState<Date | undefined>(
-    new Date(Date.now() - 86400000)
+    () => new Date(Date.now() - 86400000)
   );
   const [exportAccountName, setExportAccountName] = useState<string>("");
   const [exportIncludeMetaSpend, setExportIncludeMetaSpend] = useState(false);

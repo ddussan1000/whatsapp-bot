@@ -125,6 +125,7 @@ export function FlowEditPage() {
   // ── Initialize draft ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!isNew && existingFlow) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentDraft(toDraft(existingFlow));
       setEditorKey((k) => k + 1);
       return;
@@ -168,7 +169,6 @@ export function FlowEditPage() {
         }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNew, existingFlow]);
 
   // Listen for template bridge event
