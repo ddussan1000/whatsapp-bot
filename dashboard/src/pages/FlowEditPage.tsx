@@ -109,6 +109,13 @@ export function FlowEditPage() {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Tracks latest draft without triggering re-renders (used by save-as-template)
   const latestDraftRef = useRef<FlowEditorDraft>(emptyDraft());
+  // Prevents background TanStack Query refetches from overwriting in-progress edits
+  const draftInitializedRef = useRef(false);
+
+  // Reset initialization flag when navigating to a different flow
+  useEffect(() => {
+    draftInitializedRef.current = false;
+  }, [flowId]);
 
   // Delete dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -126,7 +133,8 @@ export function FlowEditPage() {
 
   // ── Initialize draft ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isNew && existingFlow) {
+    if (!isNew && existingFlow && !draftInitializedRef.current) {
+      draftInitializedRef.current = true;
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentDraft(toDraft(existingFlow));
       setEditorKey((k) => k + 1);

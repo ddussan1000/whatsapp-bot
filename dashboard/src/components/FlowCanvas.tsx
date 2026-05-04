@@ -113,11 +113,14 @@ function FlowCanvasInner({
 
   const nodes = useMemo(
     () =>
-      draftToNodes(draft, selectedNodeId, (id) => {
-        setSelectedNodeId(id);
-        setFocusDelay(true);
-      }),
-    [draft, selectedNodeId],
+      draftToNodes(
+        draft,
+        selectedNodeId,
+        (id) => { setSelectedNodeId(id); setFocusDelay(true); },
+        readOnly ? undefined : moveStep,
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [draft, selectedNodeId, readOnly],
   );
 
   const edges = useMemo(
@@ -157,6 +160,16 @@ function FlowCanvasInner({
   function deleteStep(index: number) {
     setDraft((d) => ({ ...d, steps: d.steps.filter((_, i) => i !== index) }));
     selectNode(null);
+  }
+
+  function moveStep(index: number, direction: "up" | "down") {
+    const target = direction === "up" ? index - 1 : index + 1;
+    setDraft((d) => {
+      if (target < 0 || target >= d.steps.length) return d;
+      const steps = [...d.steps];
+      [steps[index], steps[target]] = [steps[target], steps[index]];
+      return { ...d, steps: steps.map((s, i) => ({ ...s, position: i })) };
+    });
   }
 
   // ── Node click ─────────────────────────────────────────────────────────
@@ -244,7 +257,7 @@ function FlowCanvasInner({
         </div>
 
         {/* Right panel */}
-        {!readOnly && selectedStepIndex !== null && (
+        {!readOnly && selectedStepIndex !== null && selectedStepIndex >= 0 && (
           <FlowRightPanel
             draft={draft}
             stepIndex={selectedStepIndex}

@@ -47,9 +47,13 @@ export type StartNodeData = Record<string, unknown> & {
 export type StepNodeData = Record<string, unknown> & {
   step: FlowEditorStep;
   stepIndex: number;
+  isFirst: boolean;
+  isLast: boolean;
   isSelected: boolean;
   isDimmed: boolean;
   onDelayBadgeClick: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 };
 
 export type DelayEdgeData = Record<string, unknown> & {
@@ -73,6 +77,7 @@ export function draftToNodes(
   draft: FlowEditorDraft,
   selectedId: string | null,
   onDelayBadgeClick: (id: string) => void,
+  onMoveStep?: (index: number, direction: "up" | "down") => void,
 ): FlowNode[] {
   const nodes: FlowNode[] = [
     {
@@ -86,6 +91,7 @@ export function draftToNodes(
 
   const hasSelection = selectedId !== null;
 
+  const total = draft.steps.length;
   draft.steps.forEach((step, i) => {
     const id = stepNodeId(step, i);
     nodes.push({
@@ -95,9 +101,13 @@ export function draftToNodes(
       data: {
         step,
         stepIndex: i,
+        isFirst: i === 0,
+        isLast: i === total - 1,
         isSelected: selectedId === id,
         isDimmed: hasSelection && selectedId !== id,
         onDelayBadgeClick: () => onDelayBadgeClick(id),
+        onMoveUp: () => onMoveStep?.(i, "up"),
+        onMoveDown: () => onMoveStep?.(i, "down"),
       } as StepNodeData,
     });
   });

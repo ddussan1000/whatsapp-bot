@@ -60,7 +60,10 @@ export function MessageEditor({
     if (!over || active.id === over.id) return;
     const from = ids.indexOf(String(active.id));
     const to = ids.indexOf(String(over.id));
-    if (from !== -1 && to !== -1) onChange(arrayMove(messages, from, to));
+    if (from !== -1 && to !== -1) {
+      const reordered = arrayMove(messages, from, to);
+      onChange(reordered.map((m, i) => ({ ...m, position: i })));
+    }
   }
 
   return (

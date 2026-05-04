@@ -2,7 +2,7 @@
 import { Handle, Position } from "@xyflow/react";
 import {
   MessageSquare, Image as ImageIcon, FileText,
-  Video, Music, Clock, Shuffle,
+  Video, Music, Clock, Shuffle, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { formatDuration } from "@/lib/flowCanvas";
 import type { StepNodeData } from "@/lib/flowCanvas";
@@ -25,12 +25,12 @@ const TYPE_COLOR: Record<FlowMessageType, string> = {
 };
 
 export function StepNode({ data }: { data: StepNodeData }) {
-  const { step, stepIndex, isSelected, isDimmed, onDelayBadgeClick } = data;
+  const { step, stepIndex, isFirst, isLast, isSelected, isDimmed, onDelayBadgeClick, onMoveUp, onMoveDown } = data;
 
   return (
     <div
       className={[
-        "rounded-xl border bg-card shadow-sm transition-all min-w-[210px] max-w-[250px]",
+        "group rounded-xl border bg-card shadow-sm transition-all min-w-[210px] max-w-[250px]",
         isSelected
           ? "border-primary shadow-[0_0_0_3px_rgba(124,58,237,0.2)]"
           : "border-border",
@@ -51,6 +51,24 @@ export function StepNode({ data }: { data: StepNodeData }) {
         <span className="flex-1 truncate text-xs font-semibold text-foreground">
           {step.label || `Paso ${stepIndex + 1}`}
         </span>
+        <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            type="button"
+            disabled={isFirst}
+            onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+            className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+          >
+            <ChevronUp size={11} />
+          </button>
+          <button
+            type="button"
+            disabled={isLast}
+            onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+            className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+          >
+            <ChevronDown size={11} />
+          </button>
+        </div>
       </div>
 
       {/* Message summary chips */}
