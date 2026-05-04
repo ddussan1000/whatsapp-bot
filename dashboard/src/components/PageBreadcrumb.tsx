@@ -1,5 +1,12 @@
 import { Link } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 type BreadcrumbItem = { label: string; href?: string };
 
@@ -7,19 +14,23 @@ type Props = { items: BreadcrumbItem[] };
 
 export function PageBreadcrumb({ items }: Props) {
   return (
-    <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-      {items.map((item, i) => (
-        <div key={i} className="flex items-center gap-1">
-          {i > 0 && <ChevronRight size={13} className="text-muted-foreground/50" />}
-          {item.href ? (
-            <Link to={item.href} className="hover:text-foreground transition-colors">
-              {item.label}
-            </Link>
-          ) : (
-            <span className="text-foreground font-medium">{item.label}</span>
-          )}
-        </div>
-      ))}
-    </nav>
+    <Breadcrumb>
+      <BreadcrumbList>
+        {items.map((item, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            {i > 0 && <BreadcrumbSeparator />}
+            <BreadcrumbItem>
+              {item.href ? (
+                <BreadcrumbLink asChild>
+                  <Link to={item.href}>{item.label}</Link>
+                </BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+          </div>
+        ))}
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }
