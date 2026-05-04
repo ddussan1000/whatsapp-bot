@@ -602,8 +602,7 @@ export function TemplatesPage() {
 
   const loadDraft = (draft: FlowTemplateDraft) => {
     localStorage.setItem("flow_new_draft", JSON.stringify(draft));
-    window.dispatchEvent(new Event("flow_template_loaded"));
-    navigate("/flows");
+    navigate("/flows/new");
   };
 
   const handleUse = (template: FlowTemplate) => {
