@@ -990,6 +990,7 @@ export const api = {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(60_000),
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
         return r.json() as Promise<ExportToReportingResponse>;

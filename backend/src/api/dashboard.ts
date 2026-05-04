@@ -745,12 +745,12 @@ dashboardApi.openapi(
       return c.json({ error: "Esta instancia no tiene configurado el sistema de reportes externo" }, 422);
     }
 
-    // Aggregate validated payments for that date grouped by flow
+    // Aggregate validated payments for that date grouped by ad name
     const dayStart = `${date}T00:00:00.000Z`;
     const dayEnd = `${date}T23:59:59.999Z`;
     const { data: payments, error: payErr } = await supabase
       .from("payments")
-      .select("amount, flows(name)")
+      .select("phone, flow_id, amount, flows(name)")
       .eq("organization_id", org)
       .eq("whatsapp_instance_id", instance_id)
       .eq("state", "validated")
@@ -759,14 +759,33 @@ dashboardApi.openapi(
 
     if (payErr) return c.json({ error: payErr.message }, 500);
 
-    const flowTotals = new Map<string, number>();
+    // Build phone→ad_name map using most recent ad_click_log per phone+flow
+    const phones = [...new Set((payments ?? []).map((p) => (p as { phone?: string }).phone).filter(Boolean))] as string[];
+    const phoneAdMap = new Map<string, string>();
+    if (phones.length > 0) {
+      const { data: adLogs } = await supabase
+        .from("ad_click_logs")
+        .select("phone, flow_id, ad_name")
+        .eq("organization_id", org)
+        .in("phone", phones)
+        .not("ad_name", "is", null)
+        .order("created_at", { ascending: false });
+      for (const log of adLogs ?? []) {
+        const key = `${(log as { phone?: string }).phone}:${(log as { flow_id?: string }).flow_id}`;
+        if (!phoneAdMap.has(key)) phoneAdMap.set(key, (log as { ad_name?: string }).ad_name ?? "");
+      }
+    }
+
+    const adTotals = new Map<string, number>();
     let totalAmount = 0;
     for (const p of payments ?? []) {
-      const label = (p.flows as { name?: string } | null)?.name ?? "—";
-      flowTotals.set(label, (flowTotals.get(label) ?? 0) + Number(p.amount ?? 0));
-      totalAmount += Number(p.amount ?? 0);
+      const pTyped = p as { phone?: string; flow_id?: string; amount?: number; flows?: { name?: string } | null };
+      const adKey = `${pTyped.phone}:${pTyped.flow_id}`;
+      const label = phoneAdMap.get(adKey) || pTyped.flows?.name || "—";
+      adTotals.set(label, (adTotals.get(label) ?? 0) + Number(pTyped.amount ?? 0));
+      totalAmount += Number(pTyped.amount ?? 0);
     }
-    const detail = [...flowTotals.entries()].map(([label, amount]) => ({ label, amount }));
+    const detail = [...adTotals.entries()].map(([label, amount]) => ({ label, amount }));
 
     // Optionally fetch Meta Ads spend for the day
     let metaSpend: number | undefined;
@@ -3829,9 +3848,9 @@ dashboardApi.openapi(
     const { data: adRows } = await supabase
       .rpc("get_conversation_filter_ads", { p_org_id: organization });
 
-    const ads = (adRows ?? []).map((r) => ({
-      ad_name: r.ad_name as string,
-      campaign_name: r.campaign_name as string | null,
+    const ads = (adRows ?? []).map((r: { ad_name: string; campaign_name: string | null }) => ({
+      ad_name: r.ad_name,
+      campaign_name: r.campaign_name,
     }));
 
     return c.json({ flows, ads }, 200);
