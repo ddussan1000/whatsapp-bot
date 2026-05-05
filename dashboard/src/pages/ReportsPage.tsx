@@ -1471,8 +1471,11 @@ export function ReportsPage() {
                       }
                     },
                     onError: (err) => {
+                      const isTimeout = err instanceof DOMException && err.name === "TimeoutError";
                       toast.error(
-                        err instanceof Error ? err.message : "Error al exportar"
+                        isTimeout
+                          ? "La exportación tardó demasiado. Verifica la conexión e intenta de nuevo."
+                          : err instanceof Error ? err.message : "Error al exportar"
                       );
                     },
                   }

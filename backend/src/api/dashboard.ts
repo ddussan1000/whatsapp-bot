@@ -198,6 +198,7 @@ const PaymentSchema = z.object({
   amount: z.number().nullable().optional(),
   currency: z.string().nullable().optional(),
   receipt_date: z.string().nullable().optional(),
+  received_at: z.string().nullable().optional(),
   state: z.enum(PAYMENT_STATES).nullable().optional(),
   validated_at: z.string().nullable().optional(),
   conversation_id: z.string().nullable().optional(),
@@ -439,7 +440,7 @@ dashboardApi.openapi(
       .select("amount, product")
       .eq("organization_id", orgId(c))
       .eq("state", "validated")
-      .or(`receipt_date.gte.${todayStart},and(receipt_date.is.null,validated_at.gte.${todayStart})`);
+      .or(`receipt_date.gte.${todayStart},and(receipt_date.is.null,received_at.gte.${todayStart})`);
     if (error) return c.json({ error: error.message }, 500);
     const total = (data ?? []).reduce(
       (sum, row) => sum + Number(row.amount ?? 0),
@@ -754,8 +755,8 @@ dashboardApi.openapi(
       .eq("organization_id", org)
       .eq("whatsapp_instance_id", instance_id)
       .eq("state", "validated")
-      .or(`receipt_date.gte.${dayStart},and(receipt_date.is.null,validated_at.gte.${dayStart})`)
-      .or(`receipt_date.lte.${dayEnd},and(receipt_date.is.null,validated_at.lte.${dayEnd})`);
+      .or(`receipt_date.gte.${dayStart},and(receipt_date.is.null,received_at.gte.${dayStart})`)
+      .or(`receipt_date.lte.${dayEnd},and(receipt_date.is.null,received_at.lte.${dayEnd})`);
 
     if (payErr) return c.json({ error: payErr.message }, 500);
 
@@ -763,24 +764,26 @@ dashboardApi.openapi(
     const phones = [...new Set((payments ?? []).map((p) => (p as { phone?: string }).phone).filter(Boolean))] as string[];
     const phoneAdMap = new Map<string, string>();
     if (phones.length > 0) {
-      const { data: adLogs } = await supabase
+      const { data: adLogs, error: adErr } = await supabase
         .from("ad_click_logs")
         .select("phone, flow_id, ad_name")
         .eq("organization_id", org)
         .in("phone", phones)
         .not("ad_name", "is", null)
         .order("created_at", { ascending: false });
-      for (const log of adLogs ?? []) {
-        const key = `${(log as { phone?: string }).phone}:${(log as { flow_id?: string }).flow_id}`;
-        if (!phoneAdMap.has(key)) phoneAdMap.set(key, (log as { ad_name?: string }).ad_name ?? "");
+      if (adErr) log.warn({ adErr }, "export-to-reporting: failed to load ad_click_logs, falling back to flow names");
+      for (const entry of adLogs ?? []) {
+        const l = entry as { phone?: string | null; flow_id?: string | null; ad_name?: string | null };
+        const key = `${l.phone ?? ""}:${l.flow_id ?? ""}`;
+        if (!phoneAdMap.has(key)) phoneAdMap.set(key, l.ad_name ?? "");
       }
     }
 
     const adTotals = new Map<string, number>();
     let totalAmount = 0;
     for (const p of payments ?? []) {
-      const pTyped = p as { phone?: string; flow_id?: string; amount?: number; flows?: { name?: string } | null };
-      const adKey = `${pTyped.phone}:${pTyped.flow_id}`;
+      const pTyped = p as { phone?: string | null; flow_id?: string | null; amount?: number | null; flows?: { name?: string } | null };
+      const adKey = `${pTyped.phone ?? ""}:${pTyped.flow_id ?? ""}`;
       const label = phoneAdMap.get(adKey) || pTyped.flows?.name || "—";
       adTotals.set(label, (adTotals.get(label) ?? 0) + Number(pTyped.amount ?? 0));
       totalAmount += Number(pTyped.amount ?? 0);
@@ -3772,17 +3775,17 @@ dashboardApi.openapi(
     const { from, to } = c.req.valid("query");
     let query = supabase
       .from("payments")
-      .select("receipt_date, validated_at, amount")
+      .select("receipt_date, received_at, amount")
       .eq("organization_id", orgId(c))
       .eq("state", "validated")
-      .order("validated_at", { ascending: true });
-    if (from) query = query.or(`receipt_date.gte.${from},and(receipt_date.is.null,validated_at.gte.${from})`);
-    if (to) query = query.or(`receipt_date.lte.${to},and(receipt_date.is.null,validated_at.lte.${to})`);
+      .order("received_at", { ascending: true });
+    if (from) query = query.or(`receipt_date.gte.${from},and(receipt_date.is.null,received_at.gte.${from})`);
+    if (to) query = query.or(`receipt_date.lte.${to},and(receipt_date.is.null,received_at.lte.${to})`);
     const { data, error } = await query;
     if (error) return c.json({ error: error.message }, 500);
     const grouped = new Map<string, number>();
     for (const row of data ?? []) {
-      const rawDate = (row.receipt_date as string | null) ?? String(row.validated_at);
+      const rawDate = (row.receipt_date as string | null) ?? String((row as { received_at?: string }).received_at);
       const date = new Date(rawDate).toISOString().slice(0, 10);
       grouped.set(date, (grouped.get(date) ?? 0) + Number(row.amount ?? 0));
     }
@@ -4748,7 +4751,7 @@ dashboardApi.openapi(
     const organization = orgId(c);
 
     const selectCols = [
-      "id, phone, flow_id, whatsapp_instance_id, amount, currency, receipt_date, state, validated_at, conversation_id",
+      "id, phone, flow_id, whatsapp_instance_id, amount, currency, receipt_date, received_at, state, validated_at, conversation_id",
       "flows(name)",
       "whatsapp_instances(label)",
     ].join(", ");
@@ -4762,8 +4765,8 @@ dashboardApi.openapi(
     if (state) query = query.eq("state", state);
     if (flowId) query = query.eq("flow_id", flowId);
     if (instanceId) query = query.eq("whatsapp_instance_id", instanceId);
-    if (fromDate) query = query.or(`receipt_date.gte.${fromDate},and(receipt_date.is.null,validated_at.gte.${fromDate})`);
-    if (toDate) query = query.or(`receipt_date.lte.${toDate},and(receipt_date.is.null,validated_at.lte.${toDate})`);
+    if (fromDate) query = query.or(`receipt_date.gte.${fromDate},and(receipt_date.is.null,received_at.gte.${fromDate})`);
+    if (toDate) query = query.or(`receipt_date.lte.${toDate},and(receipt_date.is.null,received_at.lte.${toDate})`);
     if (phone) query = query.eq("phone", phone);
 
     const { data, error } = await query;
@@ -4777,8 +4780,8 @@ dashboardApi.openapi(
     if (flowId) countQuery = countQuery.eq("flow_id", flowId);
     if (instanceId)
       countQuery = countQuery.eq("whatsapp_instance_id", instanceId);
-    if (fromDate) countQuery = countQuery.or(`receipt_date.gte.${fromDate},and(receipt_date.is.null,validated_at.gte.${fromDate})`);
-    if (toDate) countQuery = countQuery.or(`receipt_date.lte.${toDate},and(receipt_date.is.null,validated_at.lte.${toDate})`);
+    if (fromDate) countQuery = countQuery.or(`receipt_date.gte.${fromDate},and(receipt_date.is.null,received_at.gte.${fromDate})`);
+    if (toDate) countQuery = countQuery.or(`receipt_date.lte.${toDate},and(receipt_date.is.null,received_at.lte.${toDate})`);
     if (phone) countQuery = countQuery.eq("phone", phone);
     const { count } = await countQuery;
 
@@ -4795,6 +4798,7 @@ dashboardApi.openapi(
       amount: (p.amount as number | null) ?? null,
       currency: (p.currency as string | null) ?? null,
       receipt_date: (p.receipt_date as string | null) ?? null,
+      received_at: (p.received_at as string | null) ?? null,
       state: (p.state as (typeof PAYMENT_STATES)[number] | null) ?? null,
       validated_at: (p.validated_at as string | null) ?? null,
       conversation_id: (p.conversation_id as string | null) ?? null,
