@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { sql as pgSql } from "./postgres";
+import { getCached, setCached } from "../cache/redis";
 import { log } from "../logger";
 
 export type MessageDirection = "inbound" | "outbound";
@@ -21,8 +22,14 @@ export type MessageInput = {
   skipPayload?: boolean;
 };
 
+// Separate namespace from conv:prev (used by conversations.ts for PreviousConversation shape)
+const convIdKey = (orgId: string, phone: string) => `conv:id:${orgId}:${phone}`;
+
 async function getLatestConversationIdByPhone(phone: string, organizationId: string) {
-  if (!supabase || !organizationId) return null;
+  if (!organizationId) return null;
+  const cached = await getCached<{ id: string }>(convIdKey(organizationId, phone));
+  if (cached?.id) return cached.id;
+  if (!supabase) return null;
   const { data } = await supabase
     .from("conversations")
     .select("id")
@@ -31,6 +38,7 @@ async function getLatestConversationIdByPhone(phone: string, organizationId: str
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (data?.id) await setCached(convIdKey(organizationId, phone), { id: data.id }, 300);
   return data?.id ?? null;
 }
 
@@ -116,18 +124,50 @@ export async function updateMessageDeliveryStatus(input: {
   status: "sent" | "delivered" | "read" | string;
   timestamp?: string | null;
 }) {
-  if (!supabase) return;
-
   const deliveredAt = input.timestamp
     ? new Date(Number(input.timestamp) * 1000).toISOString()
     : null;
+
+  // Fast path: single UPDATE ... WHERE id = (subquery) — one roundtrip, no lock race
+  if (pgSql) {
+    try {
+      if (input.organizationId) {
+        await pgSql`
+          UPDATE messages
+          SET delivery_status = ${input.status}, delivered_at = ${deliveredAt}
+          WHERE id = (
+            SELECT id FROM messages
+            WHERE organization_id = ${input.organizationId}
+              AND meta_message_id = ${input.metaMessageId}
+            ORDER BY created_at DESC
+            LIMIT 1
+          )
+        `;
+      } else {
+        await pgSql`
+          UPDATE messages
+          SET delivery_status = ${input.status}, delivered_at = ${deliveredAt}
+          WHERE id = (
+            SELECT id FROM messages
+            WHERE meta_message_id = ${input.metaMessageId}
+            ORDER BY created_at DESC
+            LIMIT 1
+          )
+        `;
+      }
+      return;
+    } catch (err) {
+      log.warn({ err }, "updateMessageDeliveryStatus: postgres.js falló, fallback a supabase");
+    }
+  }
+
+  if (!supabase) return;
 
   const matchFilter = input.organizationId
     ? { organization_id: input.organizationId, meta_message_id: input.metaMessageId }
     : { meta_message_id: input.metaMessageId };
 
-  // Intento 1: coincidencia exacta
-  let { data, error } = await supabase
+  const { data, error } = await supabase
     .from("messages")
     .select("id")
     .match(matchFilter)

@@ -9,7 +9,6 @@ import { handleWebhook } from "./webhook/handler";
 import { registerDailyReportCron } from "./cron/dailyReport";
 import { registerScheduledMessagesCron } from "./cron/processScheduledMessages";
 import { registerPurgeReceiptsCron } from "./cron/purgeReceipts";
-import { registerPurgeMessagesCron } from "./cron/purgeOldMessages";
 import { dashboardApi } from "./api/dashboard";
 import { globalRateLimiter, mutationRateLimiter, webhookRateLimiter } from "./middleware/rateLimiter";
 import { startMessageWorker } from "./workers/messageWorker";
@@ -92,7 +91,6 @@ const messageWorker = startMessageWorker();
 registerDailyReportCron();
 registerScheduledMessagesCron();
 registerPurgeReceiptsCron();
-registerPurgeMessagesCron();
 
 process.on("SIGTERM", async () => {
   log.info("SIGTERM: cerrando worker y conexiones...");

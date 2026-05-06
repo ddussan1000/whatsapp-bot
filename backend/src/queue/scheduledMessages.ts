@@ -129,9 +129,10 @@ export async function hasPendingJobs(orgId: string, phone: string): Promise<bool
 
 // ── Worker ────────────────────────────────────────────────────────────────────
 
-async function processJob(payload: ScheduledJobPayload): Promise<void> {
+// Returns sentAt string if the job was sent (for batch audit update), null otherwise.
+async function processJob(payload: ScheduledJobPayload): Promise<string | null> {
   const r = redis;
-  if (!supabase || !r) return;
+  if (!supabase || !r) return null;
 
   // Rate limit per WhatsApp instance (sliding 1-minute window)
   if (payload.instanceId) {
@@ -142,7 +143,7 @@ async function processJob(payload: ScheduledJobPayload): Promise<void> {
     if (count > MAX_MSGS_PER_MINUTE) {
       log.warn({ instanceId: payload.instanceId, count }, "processJob: rate limit, re-enqueueing in 60s");
       await r.zadd(QUEUE_KEY, Date.now() + 60_000, payload.id);
-      return;
+      return null;
     }
   }
 
@@ -173,7 +174,7 @@ async function processJob(payload: ScheduledJobPayload): Promise<void> {
       // Supabase error — re-enqueue instead of dropping the job permanently
       log.warn({ stepId: payload.stepId, jobId: payload.id, err: stepErr }, "processJob: Supabase error, re-enqueueing in 30s");
       await r.zadd(QUEUE_KEY, Date.now() + 30_000, payload.id);
-      return;
+      return null;
     }
 
     if (!data) {
@@ -188,7 +189,7 @@ async function processJob(payload: ScheduledJobPayload): Promise<void> {
           .update({ status: "failed", sent_at: sentAt })
           .eq("redis_job_id", payload.id),
       ).catch(() => {});
-      return;
+      return null;
     }
 
     step = data as FlowStep;
@@ -213,19 +214,7 @@ async function processJob(payload: ScheduledJobPayload): Promise<void> {
   p.del(`sched:job:${payload.id}`);
   await p.exec();
 
-  // Audit DB update (fire-and-forget, non-blocking)
-  Promise.resolve(
-    supabase
-      .from("scheduled_flow_messages")
-      .update({ status: "sent", sent_at: sentAt })
-      .eq("redis_job_id", payload.id),
-  ).catch((err: unknown) =>
-    log.warn({ err, jobId: payload.id }, "processJob: audit DB update failed"),
-  );
-
   // If all steps for this phone are done, mark conversation as flujo_terminado.
-  // The .in("stage", FLOW_IN_PROGRESS_STAGES) guard prevents overwriting a stage
-  // that was already advanced (e.g. pago_confirmado, revision_manual).
   const remaining = await r.scard(phoneKey);
   if (remaining === 0 && payload.conversationId) {
     await supabase
@@ -234,6 +223,8 @@ async function processJob(payload: ScheduledJobPayload): Promise<void> {
       .eq("id", payload.conversationId)
       .in("stage", FLOW_IN_PROGRESS_STAGES);
   }
+
+  return sentAt;
 }
 
 export async function processScheduledMessages(): Promise<void> {
@@ -280,13 +271,30 @@ export async function processScheduledMessages(): Promise<void> {
     jobIds.map((id) => r.get(`sched:job:${id}`)),
   );
 
-  await Promise.allSettled(
+  const sentAt = new Date().toISOString();
+  const results = await Promise.allSettled(
     rawPayloads.map((raw, i) => {
       if (!raw) {
         log.warn({ jobId: jobIds[i] }, "processScheduledMessages: payload missing (TTL expired?)");
-        return Promise.resolve();
+        return Promise.resolve(null);
       }
       return processJob(JSON.parse(raw) as ScheduledJobPayload);
     }),
   );
+
+  // Batch audit update: one UPDATE ... IN (...) instead of N individual PATCHes
+  const sentJobIds = results
+    .map((r, i) => (r.status === "fulfilled" && r.value !== null ? jobIds[i] : null))
+    .filter((id): id is string => id !== null);
+
+  if (sentJobIds.length > 0 && supabase) {
+    Promise.resolve(
+      supabase
+        .from("scheduled_flow_messages")
+        .update({ status: "sent", sent_at: sentAt })
+        .in("redis_job_id", sentJobIds),
+    ).catch((err: unknown) =>
+      log.warn({ err, count: sentJobIds.length }, "processScheduledMessages: batch audit update failed"),
+    );
+  }
 }
