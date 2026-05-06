@@ -37,19 +37,10 @@ ALTER TABLE scheduled_flow_messages SET (
 -- VACUUM ANALYZE messages;
 -- VACUUM ANALYZE scheduled_flow_messages;
 
--- ── 5. Move purge to pg_cron (bypasses PostgREST + RLS overhead) ─────────────
--- Supabase Pro includes pg_cron.
--- IMPORTANT: after adding this job, remove registerPurgeMessagesCron() from
--- backend/src/index.ts to avoid double-deletion (both would hit the same rows
--- within minutes — idempotent but wasteful and triggers two autovacuum cycles).
--- Schedule: 2:00 AM UTC = 9:00 PM Colombia (UTC-5), well away from business hours.
-SELECT cron.schedule(
-  'purge-old-messages',
-  '0 2 * * *',
-  $$
-    DELETE FROM messages WHERE created_at < NOW() - INTERVAL '90 days';
-  $$
-);
+-- ── 5. Purge runs via app cron (purgeOldMessages.ts) ────────────────────────
+-- pg_cron not available on this Supabase project.
+-- idx_messages_created_at (step 1) ensures the app-level DELETE uses an index
+-- instead of a full table scan.
 
 -- ── 6. Index for updateMessageDeliveryStatus fast lookup ──────────────────────
 -- Replace idx_messages_org_meta_message_id (org, meta_message_id) with a
