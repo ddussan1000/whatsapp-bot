@@ -42,7 +42,7 @@ Respond ONLY with this JSON (no explanation):
 {"isReceipt":BOOL,"amount":NUMBER_OR_NULL,"currency":"CODE_OR_NULL","datetime":"DD/MM/YYYY HH:MM_OR_NULL","reference":"STRING_OR_NULL"}
 Rules:
 - isReceipt: true only if this is a payment/transaction receipt
-- amount: numeric value only (no symbols), null if not found
+- amount: the payment amount as a plain number (no currency symbols). IMPORTANT: for Latin American receipts (COP, ARS, MXN, etc.) the period "." is a thousands separator and the comma "," is the decimal separator. Examples: "$10.000,00" = 10000, "$1.500.000" = 1500000, "$25.000" = 25000. Never include separators in the returned number.
 - currency: ISO 4217 code if clearly visible, otherwise "${currency}"
 - datetime: date AND time in format "dd/mm/yyyy HH:MM" (24h) if both visible, or "dd/mm/yyyy" if only date is visible, null if no date found
 - reference: transaction/operation ID if visible, null otherwise`;
