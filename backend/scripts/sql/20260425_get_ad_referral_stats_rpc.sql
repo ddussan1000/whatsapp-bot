@@ -55,8 +55,8 @@ BEGIN
       SELECT p.phone, COUNT(*) AS pay_count, SUM(p.amount)::numeric AS pay_revenue
       FROM payments p
       WHERE p.organization_id = p_org_id
-        AND p.state IN ('validated', 'pending_manual_review')
-        AND p.validated_at BETWEEN p_from AND p_to
+        AND p.state = 'validated'
+        AND COALESCE(p.receipt_date, p.validated_at) BETWEEN p_from AND p_to
         AND (p_flow_ids IS NULL OR p.flow_id = ANY(p_flow_ids))
         AND p.phone IN (SELECT DISTINCT phone FROM clicks)
       GROUP BY p.phone
