@@ -42,7 +42,7 @@ Respond ONLY with this JSON (no explanation):
 {"isReceipt":BOOL,"amount":NUMBER_OR_NULL,"currency":"CODE_OR_NULL","datetime":"DD/MM/YYYY HH:MM_OR_NULL","reference":"STRING_OR_NULL"}
 Rules:
 - isReceipt: true only if this is a payment/transaction receipt
-- amount: the payment amount as a plain number (no currency symbols). IMPORTANT: for Latin American receipts (COP, ARS, MXN, etc.) the period "." is a thousands separator and the comma "," is the decimal separator. Examples: "$10.000,00" = 10000, "$1.500.000" = 1500000, "$25.000" = 25000. Never include separators in the returned number.
+- amount: return as a plain INTEGER — no decimals, no separators, no currency symbols. LATIN AMERICAN FORMAT RULE (COP, ARS, MXN, PEN, etc.): the period "." is a THOUSANDS separator (remove it), the comma "," is a DECIMAL separator (remove it and everything after it). Examples: "$ 12.000,00" → 12000 | "$ 1.500.000,00" → 1500000 | "$ 25.000" → 25000 | "$ 4.315" → 4315 | "$ 850.000,00" → 850000. CRITICAL: NEVER return 0 or a number under 100 for COP/ARS/MXN receipts — those currencies have no cents worth less than 1. If the full amount is ambiguous, return null.
 - currency: ISO 4217 code if clearly visible, otherwise "${currency}"
 - datetime: date AND time in format "dd/mm/yyyy HH:MM" (24h) if both visible, or "dd/mm/yyyy" if only date is visible, null if no date found
 - reference: transaction/operation ID if visible, null otherwise`;
@@ -77,9 +77,25 @@ Rules:
       { isReceipt: parsed.isReceipt, amount: parsed.amount, datetime: parsed.datetime },
       "geminiOcr: JSON parseado correctamente",
     );
+    // Coerce string amounts ("12000" → 12000) in case Gemini ignores JSON type hint
+    let rawAmount: number | null = null;
+    if (typeof parsed.amount === "number") {
+      rawAmount = parsed.amount;
+    } else if (typeof parsed.amount === "string" && parsed.amount.trim() !== "") {
+      const coerced = Number(parsed.amount.trim());
+      if (!isNaN(coerced)) {
+        rawAmount = coerced;
+        log.warn({ raw: parsed.amount, coerced }, "geminiOcr: amount era string, se coercionó a número");
+      }
+    }
+    // Discard 0 and negatives — valid payments always have amount > 0
+    const amount = rawAmount !== null && rawAmount > 0 ? rawAmount : null;
+    if (rawAmount !== null && rawAmount <= 0) {
+      log.warn({ rawAmount }, "geminiOcr: amount <= 0 descartado");
+    }
     return {
       isReceipt: parsed.isReceipt === true,
-      amount: typeof parsed.amount === "number" ? parsed.amount : null,
+      amount,
       currency:
         typeof parsed.currency === "string" && parsed.currency.length > 0
           ? parsed.currency

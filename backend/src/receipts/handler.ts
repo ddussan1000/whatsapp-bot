@@ -193,10 +193,10 @@ export async function classifyAndHandleImage(
   const { rejectedMessage, confirmedMessage } =
     await getReceiptMessages(state.organizationId, state.flowId);
 
-  if (!amount) {
+  if (amount === null || amount === undefined || amount <= 0) {
     log.warn(
-      { phone, event: "receipt.illegible" },
-      "classifyAndHandleImage: amount not detected → revision_manual",
+      { phone, event: "receipt.illegible", amount },
+      "classifyAndHandleImage: amount not detected or invalid → revision_manual",
     );
     await cancelPending();
     await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
