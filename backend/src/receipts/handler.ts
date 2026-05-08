@@ -179,7 +179,7 @@ export async function classifyAndHandleImage(
     "classifyAndHandleImage: classified as RECEIPT",
   );
 
-  const { amount, receiptDate, isWithin24Hours } = ocrResult;
+  let { amount, receiptDate, isWithin24Hours } = ocrResult;
   log.info(
     {
       phone,
@@ -214,27 +214,13 @@ export async function classifyAndHandleImage(
   }
 
   if (!receiptDate && amount) {
+    // No date visible in receipt → treat message received time as the payment date.
     log.info(
-      { phone, event: "receipt.pending_review", amount },
-      "classifyAndHandleImage: no date detected → pending_manual_review",
+      { phone, event: "receipt.no_date_fallback", amount },
+      "classifyAndHandleImage: no date detected → using now() as receipt date",
     );
-    await insertPayment({
-      organizationId: state.organizationId,
-      phone,
-      product: state.flowName ?? null,
-      flow_id: state.flowId ?? null,
-      whatsapp_instance_id: state.whatsappInstanceId ?? null,
-      amount,
-      currency: ocrResult.currency ?? currency,
-      receipt_url: receiptUrl,
-      receipt_date: null,
-      conversation_id: state.id ?? null,
-      state: "pending_manual_review",
-      meta_message_id: metaMessageId,
-    });
-    await cancelPending();
-    await sendMessage(phone, textMessage(rejectedMessage), msgCtx(state));
-    return { handled: true, state: { ...state, stage: STAGES.revision_manual } };
+    receiptDate = new Date();
+    isWithin24Hours = true;
   }
 
   // Valid receipt (amount + date within 24h).
