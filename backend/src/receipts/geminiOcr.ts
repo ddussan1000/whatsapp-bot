@@ -24,6 +24,58 @@ async function compressForGemini(imgBuffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+/**
+ * Parses a raw amount string returned by Gemini, handling both Latin American
+ * (period=thousands, comma=decimal) and US/MX (comma=thousands, period=decimal) formats.
+ *
+ * Rules (same as aliziabot-reportes-v2):
+ *   - If both separators present → last one is decimal
+ *   - If one separator with exactly 3 digits after → thousands (remove)
+ *   - If one separator with 1-2 digits after → decimal (convert to ".")
+ *
+ * Examples:
+ *   "20.000,00" → 20000   "20,000.00" → 20000
+ *   "20.000"    → 20000   "1.500.000" → 1500000
+ *   "250,50"    → 250.5   "1.500,50"  → 1500.5
+ */
+function parseAmountString(raw: string): number | null {
+  let s = raw.trim().replace(/\s/g, "").replace(/^\$/, "");
+  if (!s || s.toLowerCase() === "null") return null;
+
+  const hasDot = s.includes(".");
+  const hasComma = s.includes(",");
+
+  if (hasDot && hasComma) {
+    // Both separators: last one is the decimal separator
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+      // Latin American: "20.000,00" → remove dots, comma→period
+      s = s.replace(/\./g, "").replace(",", ".");
+    } else {
+      // US/MX: "20,000.00" → remove commas
+      s = s.replace(/,/g, "");
+    }
+  } else if (hasDot) {
+    const afterDot = s.split(".").pop() ?? "";
+    if (afterDot.length === 3) {
+      // Thousands: "20.000" or "1.500.000"
+      s = s.replace(/\./g, "");
+    }
+    // else decimal: "250.50" — leave as-is
+  } else if (hasComma) {
+    const afterComma = s.split(",").pop() ?? "";
+    if (afterComma.length === 3) {
+      // Thousands: "20,000"
+      s = s.replace(/,/g, "");
+    } else {
+      // Decimal: "250,50"
+      s = s.replace(",", ".");
+    }
+  }
+
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
 export async function runGeminiOcr(
   imgBuffer: Buffer,
   currency = "COP",
@@ -39,19 +91,19 @@ export async function runGeminiOcr(
 
   const prompt = `Analyze this payment receipt image. The expected currency is ${currency}.
 Respond ONLY with this JSON (no explanation):
-{"isReceipt":BOOL,"amount":NUMBER_OR_NULL,"currency":"CODE_OR_NULL","datetime":"DD/MM/YYYY HH:MM_OR_NULL","reference":"STRING_OR_NULL"}
+{"isReceipt":BOOL,"amount":"STRING_OR_NULL","currency":"CODE_OR_NULL","datetime":"DD/MM/YYYY HH:MM_OR_NULL","reference":"STRING_OR_NULL"}
 Rules:
 - isReceipt: true only if this is a payment/transaction receipt
-- amount: return as a plain INTEGER — no decimals, no separators, no currency symbols. LATIN AMERICAN FORMAT RULE (COP, ARS, MXN, PEN, etc.): the period "." is a THOUSANDS separator (remove it), the comma "," is a DECIMAL separator (remove it and everything after it). Examples: "$ 12.000,00" → 12000 | "$ 1.500.000,00" → 1500000 | "$ 25.000" → 25000 | "$ 4.315" → 4315 | "$ 850.000,00" → 850000. CRITICAL: NEVER return 0 or a number under 100 for COP/ARS/MXN receipts — those currencies have no cents worth less than 1. If the full amount is ambiguous, return null.
+- amount: the payment amount exactly as it appears in the image (e.g. "20.000,00" or "1.500.000" or "250.50"). Include separators. DO NOT do any math or conversion. Return null if no amount found. Look for fields: Monto, Valor, Total, Importe, Enviaste, ¿Cuánto?, Cantidad.
 - currency: ISO 4217 code if clearly visible, otherwise "${currency}"
-- datetime: date AND time in format "dd/mm/yyyy HH:MM" (24h) if both visible, or "dd/mm/yyyy" if only date is visible, null if no date found
+- datetime: date AND time in format "dd/mm/yyyy HH:MM" (24h) if both visible, or "dd/mm/yyyy" if only date visible, null if no date found
 - reference: transaction/operation ID if visible, null otherwise`;
 
   const response = await ai.models.generateContent({
     model,
     config: {
       temperature: 0,
-      maxOutputTokens: 150,
+      maxOutputTokens: 200,
       responseMimeType: "application/json",
     },
     contents: [
@@ -77,22 +129,23 @@ Rules:
       { isReceipt: parsed.isReceipt, amount: parsed.amount, datetime: parsed.datetime },
       "geminiOcr: JSON parseado correctamente",
     );
-    // Coerce string amounts ("12000" → 12000) in case Gemini ignores JSON type hint
-    let rawAmount: number | null = null;
-    if (typeof parsed.amount === "number") {
-      rawAmount = parsed.amount;
-    } else if (typeof parsed.amount === "string" && parsed.amount.trim() !== "") {
-      const coerced = Number(parsed.amount.trim());
-      if (!isNaN(coerced)) {
-        rawAmount = coerced;
-        log.warn({ raw: parsed.amount, coerced }, "geminiOcr: amount era string, se coercionó a número");
-      }
+
+    // Parse amount server-side — Gemini returns the raw string, we apply separator logic
+    let amount: number | null = null;
+    if (typeof parsed.amount === "string") {
+      amount = parseAmountString(parsed.amount);
+      log.info({ raw: parsed.amount, parsed: amount }, "geminiOcr: amount parseado");
+    } else if (typeof parsed.amount === "number") {
+      // Gemini returned a number directly — trust it only if it looks reasonable
+      amount = parsed.amount > 0 ? parsed.amount : null;
+      log.info({ amount }, "geminiOcr: amount era número directo de Gemini");
     }
-    // Discard 0 and negatives — valid payments always have amount > 0
-    const amount = rawAmount !== null && rawAmount > 0 ? rawAmount : null;
-    if (rawAmount !== null && rawAmount <= 0) {
-      log.warn({ rawAmount }, "geminiOcr: amount <= 0 descartado");
+
+    if (amount !== null && amount <= 0) {
+      log.warn({ amount }, "geminiOcr: amount <= 0 descartado");
+      amount = null;
     }
+
     return {
       isReceipt: parsed.isReceipt === true,
       amount,
