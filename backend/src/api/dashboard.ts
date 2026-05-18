@@ -202,6 +202,7 @@ const PaymentSchema = z.object({
   state: z.enum(PAYMENT_STATES).nullable().optional(),
   validated_at: z.string().nullable().optional(),
   conversation_id: z.string().nullable().optional(),
+  has_validated_duplicate: z.boolean().optional(),
 });
 const ChatMessageSchema = z.object({
   id: z.string(),
@@ -4803,6 +4804,34 @@ dashboardApi.openapi(
       validated_at: (p.validated_at as string | null) ?? null,
       conversation_id: (p.conversation_id as string | null) ?? null,
     }));
+
+    const pendingPhones = items
+      .filter((p) => p.state === "pending_manual_review")
+      .map((p) => p.phone);
+
+    if (pendingPhones.length > 0) {
+      const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+      const { data: validatedData } = await supabase
+        .from("payments")
+        .select("phone")
+        .eq("organization_id", organization)
+        .eq("state", "validated")
+        .in("phone", pendingPhones)
+        .gte("received_at", cutoff);
+
+      const validatedPhoneSet = new Set(
+        (validatedData ?? []).map((r) => r.phone as string),
+      );
+
+      for (const item of items) {
+        if (
+          item.state === "pending_manual_review" &&
+          validatedPhoneSet.has(item.phone)
+        ) {
+          item.has_validated_duplicate = true;
+        }
+      }
+    }
 
     return c.json({ items, page, pageSize, total: count ?? items.length }, 200);
   },

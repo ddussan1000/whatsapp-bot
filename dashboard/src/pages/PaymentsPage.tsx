@@ -12,6 +12,7 @@ import {
   Clock,
   XCircle,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import {
   useReactTable,
@@ -93,6 +94,186 @@ function formatCurrency(
   }).format(amount);
 }
 
+// ── PhonePaymentsModal ────────────────────────────────────────────────────
+
+function PhonePaymentsModal({
+  phone,
+  onClose,
+}: {
+  phone: string;
+  onClose: () => void;
+}) {
+  const { data, isLoading } = usePaymentsQuery({ phone, pageSize: 50 });
+  const updateState = useUpdatePaymentStateMutation();
+  const updateAmount = useUpdatePaymentAmountMutation();
+  const deletePayment = useDeletePaymentMutation();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [amountDraft, setAmountDraft] = useState("");
+  const [pendingStateId, setPendingStateId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const payments = data?.items ?? [];
+
+  function handleStateChange(id: string, state: string) {
+    setPendingStateId(id);
+    updateState.mutate(
+      { id, state },
+      {
+        onSuccess: () => { toast.success("Estado actualizado"); setPendingStateId(null); },
+        onSettled: () => setPendingStateId(null),
+      }
+    );
+  }
+
+  function handleAmountSave(id: string, currency: string) {
+    const v = parseFloat(amountDraft);
+    if (!v || v <= 0) return;
+    updateAmount.mutate(
+      { id, amount: v, currency },
+      {
+        onSuccess: () => { toast.success("Monto actualizado"); setEditingId(null); },
+      }
+    );
+  }
+
+  return (
+    <>
+      <Dialog open onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Pagos de {phone}</DialogTitle>
+            <DialogDescription>
+              Todos los pagos registrados para este número. Haz clic en el monto para editarlo.
+            </DialogDescription>
+          </DialogHeader>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Cargando…</p>
+          ) : payments.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Sin pagos registrados</p>
+          ) : (
+            <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto pr-1">
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+                  {editingId === p.id ? (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <input
+                        type="number"
+                        value={amountDraft}
+                        onChange={(e) => setAmountDraft(e.target.value)}
+                        className="w-24 h-7 border rounded px-2 text-xs font-mono bg-background"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAmountSave(p.id, p.currency ?? "COP");
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                      />
+                      <span className="text-xs text-muted-foreground">{p.currency}</span>
+                    </div>
+                  ) : (
+                    <button
+                      className="font-mono text-sm hover:underline text-left shrink-0"
+                      title="Editar monto"
+                      onClick={() => { setEditingId(p.id); setAmountDraft(String(p.amount ?? "")); }}
+                    >
+                      {formatCurrency(p.amount, p.currency)}
+                    </button>
+                  )}
+
+                  <PaymentStateBadge state={p.state ?? ""} />
+
+                  <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                    {formatDate(p.receipt_date ?? p.received_at)}
+                  </span>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    {p.state !== "validated" && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-green-600 hover:text-green-700"
+                        title="Aprobar"
+                        disabled={pendingStateId === p.id}
+                        onClick={() => handleStateChange(p.id, "validated")}
+                      >
+                        <CheckCircle2 size={14} />
+                      </Button>
+                    )}
+                    {p.state !== "pending_manual_review" && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-amber-600 hover:text-amber-700"
+                        title="Marcar pendiente"
+                        disabled={pendingStateId === p.id}
+                        onClick={() => handleStateChange(p.id, "pending_manual_review")}
+                      >
+                        <Clock size={14} />
+                      </Button>
+                    )}
+                    {p.state !== "rejected" && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-red-600 hover:text-red-700"
+                        title="Rechazar"
+                        disabled={pendingStateId === p.id}
+                        onClick={() => handleStateChange(p.id, "rejected")}
+                      >
+                        <XCircle size={14} />
+                      </Button>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      title="Eliminar"
+                      disabled={deletePayment.isPending && confirmDeleteId === p.id}
+                      onClick={() => setConfirmDeleteId(p.id)}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!confirmDeleteId} onOpenChange={(o) => { if (!o) setConfirmDeleteId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar pago</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer. El registro de pago será eliminado permanentemente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deletePayment.isPending}
+              onClick={() => {
+                if (!confirmDeleteId) return;
+                deletePayment.mutate(confirmDeleteId, {
+                  onSuccess: () => {
+                    toast.success("Pago eliminado");
+                    setConfirmDeleteId(null);
+                  },
+                });
+              }}
+            >
+              {deletePayment.isPending ? "Eliminando…" : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // ── PaymentsPage ──────────────────────────────────────────────────────────
 
 export function PaymentsPage() {
@@ -149,6 +330,9 @@ export function PaymentsPage() {
   const updatePaymentAmount = useUpdatePaymentAmountMutation();
   const deletePayment = useDeletePaymentMutation();
 
+  // Phone payments modal
+  const [phoneModal, setPhoneModal] = useState<string | null>(null);
+
   // Edit amount dialog
   const [editPayment, setEditPayment] = useState<Payment | null>(null);
   const [editAmount, setEditAmount] = useState("");
@@ -193,9 +377,25 @@ export function PaymentsPage() {
           Teléfono <SortIcon col="phone" />
         </button>
       ),
-      cell: ({ row }) => (
-        <span className="text-sm font-mono">{row.original.phone}</span>
-      ),
+      cell: ({ row }) => {
+        const p = row.original;
+        const warn = p.state === "pending_manual_review" && p.has_validated_duplicate;
+        return (
+          <span className="flex items-center gap-1.5">
+            <span className="text-sm font-mono">{p.phone}</span>
+            {warn && (
+              <button
+                onClick={() => setPhoneModal(p.phone)}
+                className="flex items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 hover:bg-amber-500/20 transition-colors"
+                title="Este teléfono tiene pagos validados. Ver todos los pagos."
+              >
+                <AlertTriangle size={10} />
+                Duplicado
+              </button>
+            )}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "amount",
@@ -588,6 +788,11 @@ export function PaymentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Phone payments modal */}
+      {phoneModal && (
+        <PhonePaymentsModal phone={phoneModal} onClose={() => setPhoneModal(null)} />
+      )}
 
       {/* Delete confirm dialog */}
       <Dialog open={!!deletePaymentId} onOpenChange={(o) => { if (!o) setDeletePaymentId(null); }}>

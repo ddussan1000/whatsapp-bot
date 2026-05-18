@@ -4742,10 +4742,12 @@ export interface paths {
                                 amount?: number | null;
                                 currency?: string | null;
                                 receipt_date?: string | null;
+                                received_at?: string | null;
                                 /** @enum {string|null} */
                                 state?: "pending_manual_review" | "validated" | "rejected" | null;
                                 validated_at?: string | null;
                                 conversation_id?: string | null;
+                                has_validated_duplicate?: boolean;
                             }[];
                             page: number;
                             pageSize: number;
@@ -4920,7 +4922,55 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header: {
+                    authorization: string;
+                    "x-organization-id"?: string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Pago eliminado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                        };
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch: {

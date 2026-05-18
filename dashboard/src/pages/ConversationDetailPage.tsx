@@ -23,6 +23,7 @@ import {
   StopCircle,
   Workflow,
   X,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -33,6 +34,8 @@ import { StatusBadge } from "../components/StatusBadge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
@@ -46,6 +49,7 @@ import {
 import {
   useConversationQuery,
   useCreatePaymentMutation,
+  useDeletePaymentMutation,
   useFlowV2Query,
   useFlowsV2Query,
   usePaymentsQuery,
@@ -792,6 +796,8 @@ function ClientInfoModal({
   const updatePaymentState = useUpdatePaymentStateMutation();
   const updatePaymentAmount = useUpdatePaymentAmountMutation();
   const createPayment = useCreatePaymentMutation();
+  const deletePayment = useDeletePaymentMutation();
+  const [confirmDeletePaymentId, setConfirmDeletePaymentId] = useState<string | null>(null);
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
   const [amountDraft, setAmountDraft] = useState("");
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -815,6 +821,7 @@ function ClientInfoModal({
       .join("") || "?";
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[90dvh] sm:max-h-[70dvh] overflow-y-auto">
         <DialogHeader>
@@ -1076,6 +1083,16 @@ function ClientInfoModal({
                         ))}
                       </SelectContent>
                     </Select>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      title="Eliminar pago"
+                      disabled={deletePayment.isPending && confirmDeletePaymentId === p.id}
+                      onClick={() => setConfirmDeletePaymentId(p.id)}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
                   </div>
                 ))}
 
@@ -1198,6 +1215,38 @@ function ClientInfoModal({
         )}
       </DialogContent>
     </Dialog>
+
+    <Dialog open={!!confirmDeletePaymentId} onOpenChange={(o) => { if (!o) setConfirmDeletePaymentId(null); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Eliminar pago</DialogTitle>
+          <DialogDescription>
+            Esta acción no se puede deshacer. El registro de pago será eliminado permanentemente.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setConfirmDeletePaymentId(null)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={deletePayment.isPending}
+            onClick={() => {
+              if (!confirmDeletePaymentId) return;
+              deletePayment.mutate(confirmDeletePaymentId, {
+                onSuccess: () => {
+                  toast.success("Pago eliminado");
+                  setConfirmDeletePaymentId(null);
+                },
+              });
+            }}
+          >
+            {deletePayment.isPending ? "Eliminando…" : "Eliminar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
