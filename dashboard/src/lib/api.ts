@@ -72,7 +72,7 @@ import type {
   ExternalAccountsResponse,
   ExportToReportingResponse,
 } from "../types/api";
-import { supabase } from "./supabase";
+import { supabase, getCachedSession, updateCachedSession } from "./supabase";
 
 /** Error tipado para respuestas fallidas del API. Permite distinguir 4xx de 5xx en los componentes. */
 export class ApiError extends Error {
@@ -129,26 +129,20 @@ export function setActiveOrgId(id: string | null): void {
 
 const REQUEST_TIMEOUT_MS = 20_000;
 
-// getSession() reads from localStorage — no network call.
-// autoRefreshToken:true in the Supabase client handles token refresh internally
-// with its own deduplication. Calling refreshSession() manually in parallel
-// consumes the single-use refresh token and corrupts the session.
-async function getValidAccessToken(): Promise<string | undefined> {
-  if (!supabase) return undefined;
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.access_token ?? undefined;
-  } catch {
-    return undefined;
-  }
+// Reads from the module-level session cache (no async, no lock contention).
+// The cache is kept fresh by onAuthStateChange in AuthGuard. This prevents
+// getSession() from being called concurrently on every navigation, which
+// could deadlock the supabase-js internal lock and hang all requests.
+function getValidAccessToken(): string | undefined {
+  return getCachedSession()?.access_token ?? undefined;
 }
 
+// Kept async so callers using .then() chains don't need changes,
+// but internally synchronous — no lock, no network call.
 async function buildHeaders(
   contentType = true
 ): Promise<Record<string, string>> {
-  const accessToken = await getValidAccessToken();
+  const accessToken = getValidAccessToken();
   const orgId = getActiveOrgId();
   return {
     Authorization: `Bearer ${accessToken ?? ""}`,
@@ -164,14 +158,16 @@ async function request<T>(path: string, isRetry = false): Promise<T> {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (res.status === 401 && !isRetry) {
-    // getSession() goes through the SDK's internal lock — if a token refresh is
-    // in flight, this call waits for it to complete before returning.
-    // Never call refreshSession() manually: it bypasses the lock and races with
-    // autoRefreshToken, consuming the single-use refresh token.
+    // Token was stale. Wait for the SDK to complete any in-flight refresh
+    // (getSession acquires the internal lock), then update the cache and retry.
+    if (!supabase) await throwApiError(res);
+    // supabase is non-null here: throwApiError never returns, so if we reach
+    // this line the guard above did not fire.
     const { data } = await supabase!.auth
       .getSession()
       .catch(() => ({ data: { session: null } }));
     if (!data.session) await throwApiError(res);
+    updateCachedSession(data.session);
     return request<T>(path, true);
   }
   if (!res.ok) await throwApiError(res);

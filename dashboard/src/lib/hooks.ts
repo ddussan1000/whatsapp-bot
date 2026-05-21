@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "./api";
-import { supabase } from "./supabase";
+import { getCachedSession } from "./supabase";
 import type {
   AdReferralQueryParams,
   CreateCampaignBody,
@@ -333,11 +333,9 @@ export function useSessionQuery() {
 export function useSupabaseUser() {
   return useQuery({
     queryKey: ["supabase", "user"],
-    queryFn: async () => {
-      // getSession reads from localStorage (no network). getUser() always hits /auth/v1/user.
-      const { data } = (await supabase?.auth.getSession()) ?? {};
-      return data?.session?.user ?? null;
-    },
+    // Read from module cache — no lock, no network. TOKEN_REFRESHED in AuthGuard
+    // invalidates this query so it refetches with the fresh session.
+    queryFn: () => getCachedSession()?.user ?? null,
     staleTime: 1000 * 60 * 5,
   });
 }

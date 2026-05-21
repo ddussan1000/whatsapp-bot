@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { supabase } from "./supabase";
+import { getCachedSession } from "./supabase";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,13 +31,10 @@ function refetchAuthErrors() {
   });
 }
 
-// On tab focus: getSession() waits for any in-flight SDK refresh (via internal lock)
-// before returning. If the session is alive, recover any queries that errored with 401
-// while the token was expired. Never call refreshSession() manually — it bypasses the
-// lock and races with autoRefreshToken, corrupting the single-use refresh token.
-document.addEventListener("visibilitychange", async () => {
+// On tab focus: recover queries that errored with 401 while the tab was hidden.
+// TOKEN_REFRESHED in AuthGuard handles the refresh itself; we just need to check
+// the cache here — no getSession() call, no lock.
+document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
-  if (!supabase) return;
-  const { data } = await supabase.auth.getSession().catch(() => ({ data: null }));
-  if (data?.session) refetchAuthErrors();
+  if (getCachedSession()) refetchAuthErrors();
 });

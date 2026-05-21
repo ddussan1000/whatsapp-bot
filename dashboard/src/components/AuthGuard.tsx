@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { supabase, updateCachedSession } from "../lib/supabase";
 import { api, setActiveOrgId } from "../lib/api";
 import { queryClient } from "../lib/query-client";
 import { SessionLoader } from "./SessionLoader";
@@ -14,6 +14,7 @@ export function AuthGuard({ children }: { children: ReactElement }) {
     let mounted = true;
     void supabase?.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
+      updateCachedSession(data.session);
       const ok = Boolean(data.session);
       setAuthenticated(ok);
       if (ok) {
@@ -31,15 +32,18 @@ export function AuthGuard({ children }: { children: ReactElement }) {
     });
     const { data: listener } =
       supabase?.auth.onAuthStateChange(async (event, session) => {
-        // Only explicitly mark as unauthenticated on real sign-out events.
-        // For TOKEN_REFRESHED and other events, trust the session value.
+        // Always keep the module-level cache in sync — this is the ONLY place
+        // that updates it, making all API calls lock-free.
+        // updateCachedSession above is the authoritative update point.
+        // api.ts 401 retry also updates the cache as a secondary path.
+
         if (event === "SIGNED_OUT") {
+          setActiveOrgId(null);
           setAuthenticated(false);
           return;
         }
         if (event === "TOKEN_REFRESHED" && session) {
-          // Refetch any query that failed with 401 while the old token was expired.
-          // This is the recovery path for mid-session token rotation.
+          // Recover any queries that failed with 401 during the refresh window.
           void queryClient.invalidateQueries({ queryKey: ["supabase", "user"] });
           void queryClient.refetchQueries({
             predicate: (query) => {
