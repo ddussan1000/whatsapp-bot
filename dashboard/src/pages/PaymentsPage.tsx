@@ -119,7 +119,10 @@ function PhonePaymentsModal({
     updateState.mutate(
       { id, state },
       {
-        onSuccess: () => { toast.success("Estado actualizado"); setPendingStateId(null); },
+        onSuccess: () => {
+          toast.success("Estado actualizado");
+          setPendingStateId(null);
+        },
         onSettled: () => setPendingStateId(null),
       }
     );
@@ -131,7 +134,10 @@ function PhonePaymentsModal({
     updateAmount.mutate(
       { id, amount: v, currency },
       {
-        onSuccess: () => { toast.success("Monto actualizado"); setEditingId(null); },
+        onSuccess: () => {
+          toast.success("Monto actualizado");
+          setEditingId(null);
+        },
       }
     );
   }
@@ -139,99 +145,121 @@ function PhonePaymentsModal({
   return (
     <>
       <Dialog open onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-full sm:max-w-xl md:max-w-xl">
           <DialogHeader>
             <DialogTitle>Pagos de {phone}</DialogTitle>
             <DialogDescription>
-              Todos los pagos registrados para este número. Haz clic en el monto para editarlo.
+              Todos los pagos registrados para este número. Haz clic en el monto
+              para editarlo.
             </DialogDescription>
           </DialogHeader>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">Cargando…</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Cargando…
+            </p>
           ) : payments.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">Sin pagos registrados</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Sin pagos registrados
+            </p>
           ) : (
             <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto pr-1">
               {payments.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-                  {editingId === p.id ? (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <input
-                        type="number"
-                        value={amountDraft}
-                        onChange={(e) => setAmountDraft(e.target.value)}
-                        className="w-24 h-7 border rounded px-2 text-xs font-mono bg-background"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleAmountSave(p.id, p.currency ?? "COP");
-                          if (e.key === "Escape") setEditingId(null);
+                <div
+                  key={p.id}
+                  className="flex flex-col gap-2 rounded-lg border p-3 text-sm sm:flex-row sm:items-center sm:gap-3"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {editingId === p.id ? (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <input
+                          type="number"
+                          value={amountDraft}
+                          onChange={(e) => setAmountDraft(e.target.value)}
+                          className="w-24 h-7 border rounded px-2 text-xs font-mono bg-background"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter")
+                              handleAmountSave(p.id, p.currency ?? "COP");
+                            if (e.key === "Escape") setEditingId(null);
+                          }}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {p.currency}
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        className="font-mono text-sm hover:underline text-left shrink-0"
+                        title="Editar monto"
+                        onClick={() => {
+                          setEditingId(p.id);
+                          setAmountDraft(String(p.amount ?? ""));
                         }}
-                      />
-                      <span className="text-xs text-muted-foreground">{p.currency}</span>
+                      >
+                        {formatCurrency(p.amount, p.currency)}
+                      </button>
+                    )}
+                    <div className="shrink-0">
+                      <PaymentStateBadge state={p.state ?? ""} />
                     </div>
-                  ) : (
-                    <button
-                      className="font-mono text-sm hover:underline text-left shrink-0"
-                      title="Editar monto"
-                      onClick={() => { setEditingId(p.id); setAmountDraft(String(p.amount ?? "")); }}
-                    >
-                      {formatCurrency(p.amount, p.currency)}
-                    </button>
-                  )}
+                  </div>
 
-                  <PaymentStateBadge state={p.state ?? ""} />
-
-                  <span className="text-xs text-muted-foreground ml-auto shrink-0">
-                    {formatDate(p.receipt_date ?? p.received_at)}
-                  </span>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    {p.state !== "validated" && (
+                  <div className="flex items-center gap-1 sm:ml-auto">
+                    <span className="text-xs text-muted-foreground shrink-0 flex-1 sm:flex-none">
+                      {formatDate(p.receipt_date ?? p.received_at)}
+                    </span>
+                    <div className="flex items-center gap-0.5 shrink-0 ml-auto sm:ml-0">
+                      {p.state !== "validated" && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-green-600 hover:text-green-700"
+                          title="Aprobar"
+                          disabled={pendingStateId === p.id}
+                          onClick={() => handleStateChange(p.id, "validated")}
+                        >
+                          <CheckCircle2 size={14} />
+                        </Button>
+                      )}
+                      {p.state !== "pending_manual_review" && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-amber-600 hover:text-amber-700"
+                          title="Marcar pendiente"
+                          disabled={pendingStateId === p.id}
+                          onClick={() =>
+                            handleStateChange(p.id, "pending_manual_review")
+                          }
+                        >
+                          <Clock size={14} />
+                        </Button>
+                      )}
+                      {p.state !== "rejected" && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-red-600 hover:text-red-700"
+                          title="Rechazar"
+                          disabled={pendingStateId === p.id}
+                          onClick={() => handleStateChange(p.id, "rejected")}
+                        >
+                          <XCircle size={14} />
+                        </Button>
+                      )}
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 text-green-600 hover:text-green-700"
-                        title="Aprobar"
-                        disabled={pendingStateId === p.id}
-                        onClick={() => handleStateChange(p.id, "validated")}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        title="Eliminar"
+                        disabled={
+                          deletePayment.isPending && confirmDeleteId === p.id
+                        }
+                        onClick={() => setConfirmDeleteId(p.id)}
                       >
-                        <CheckCircle2 size={14} />
+                        <Trash2 size={14} />
                       </Button>
-                    )}
-                    {p.state !== "pending_manual_review" && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-amber-600 hover:text-amber-700"
-                        title="Marcar pendiente"
-                        disabled={pendingStateId === p.id}
-                        onClick={() => handleStateChange(p.id, "pending_manual_review")}
-                      >
-                        <Clock size={14} />
-                      </Button>
-                    )}
-                    {p.state !== "rejected" && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-red-600 hover:text-red-700"
-                        title="Rechazar"
-                        disabled={pendingStateId === p.id}
-                        onClick={() => handleStateChange(p.id, "rejected")}
-                      >
-                        <XCircle size={14} />
-                      </Button>
-                    )}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      title="Eliminar"
-                      disabled={deletePayment.isPending && confirmDeleteId === p.id}
-                      onClick={() => setConfirmDeleteId(p.id)}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -240,12 +268,18 @@ function PhonePaymentsModal({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!confirmDeleteId} onOpenChange={(o) => { if (!o) setConfirmDeleteId(null); }}>
+      <Dialog
+        open={!!confirmDeleteId}
+        onOpenChange={(o) => {
+          if (!o) setConfirmDeleteId(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Eliminar pago</DialogTitle>
             <DialogDescription>
-              Esta acción no se puede deshacer. El registro de pago será eliminado permanentemente.
+              Esta acción no se puede deshacer. El registro de pago será
+              eliminado permanentemente.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -379,7 +413,8 @@ export function PaymentsPage() {
       ),
       cell: ({ row }) => {
         const p = row.original;
-        const warn = p.state === "pending_manual_review" && p.has_validated_duplicate;
+        const warn =
+          p.state === "pending_manual_review" && p.has_validated_duplicate;
         return (
           <span className="flex items-center gap-1.5">
             <span className="text-sm font-mono">{p.phone}</span>
@@ -729,7 +764,15 @@ export function PaymentsPage() {
       )}
 
       {/* Edit amount dialog */}
-      <Dialog open={!!editPayment} onOpenChange={(o) => { if (!o) { setEditPayment(null); setEditAmount(""); } }}>
+      <Dialog
+        open={!!editPayment}
+        onOpenChange={(o) => {
+          if (!o) {
+            setEditPayment(null);
+            setEditAmount("");
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar monto</DialogTitle>
@@ -738,7 +781,9 @@ export function PaymentsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-1.5 py-2">
-            <Label htmlFor="edit-amount">Monto ({editPayment?.currency ?? "COP"})</Label>
+            <Label htmlFor="edit-amount">
+              Monto ({editPayment?.currency ?? "COP"})
+            </Label>
             <Input
               id="edit-amount"
               type="number"
@@ -767,7 +812,11 @@ export function PaymentsPage() {
               Cancelar
             </Button>
             <Button
-              disabled={updatePaymentAmount.isPending || !editAmount || Number(editAmount) <= 0}
+              disabled={
+                updatePaymentAmount.isPending ||
+                !editAmount ||
+                Number(editAmount) <= 0
+              }
               onClick={() => {
                 if (!editPayment) return;
                 const num = Number(editAmount);
@@ -791,16 +840,25 @@ export function PaymentsPage() {
 
       {/* Phone payments modal */}
       {phoneModal && (
-        <PhonePaymentsModal phone={phoneModal} onClose={() => setPhoneModal(null)} />
+        <PhonePaymentsModal
+          phone={phoneModal}
+          onClose={() => setPhoneModal(null)}
+        />
       )}
 
       {/* Delete confirm dialog */}
-      <Dialog open={!!deletePaymentId} onOpenChange={(o) => { if (!o) setDeletePaymentId(null); }}>
+      <Dialog
+        open={!!deletePaymentId}
+        onOpenChange={(o) => {
+          if (!o) setDeletePaymentId(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Eliminar pago</DialogTitle>
             <DialogDescription>
-              Esta acción no se puede deshacer. El registro de pago será eliminado permanentemente.
+              Esta acción no se puede deshacer. El registro de pago será
+              eliminado permanentemente.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
