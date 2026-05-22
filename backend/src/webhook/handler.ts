@@ -78,9 +78,12 @@ export async function handleWebhook(c: Context) {
     }
 
     const phone = msg.from;
+    const msgType = msg.type ?? "unknown";
     const contactName =
       (change?.contacts as Array<{ profile?: { name?: string } }> | undefined)?.[0]?.profile?.name ?? null;
     const referral = extractReferral(msg);
+
+    log.info({ metaMsgId, phone, msgType, organizationId }, "webhook: mensaje recibido");
 
     const jobData = { organizationId, metaPhoneNumberId, phone, contactName, referral, msg };
 
