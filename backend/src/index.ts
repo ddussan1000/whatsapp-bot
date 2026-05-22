@@ -94,6 +94,14 @@ registerScheduledMessagesCron();
 registerPurgeReceiptsCron();
 registerPurgeMessagesCron();
 
+process.on("unhandledRejection", (reason) => {
+  log.error({ reason }, "unhandledRejection — proceso continúa");
+});
+
+process.on("uncaughtException", (err) => {
+  log.error({ err }, "uncaughtException — proceso continúa");
+});
+
 process.on("SIGTERM", async () => {
   log.info("SIGTERM: cerrando worker y conexiones...");
   try {

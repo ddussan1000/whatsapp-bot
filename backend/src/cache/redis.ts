@@ -36,7 +36,7 @@ const TTL_SECONDS = 3 * 24 * 3600;
 
 export const redis =
   env.REDIS_ENABLED === "true"
-    ? new Redis(env.REDIS_URL, { maxRetriesPerRequest: 1, enableOfflineQueue: false })
+    ? new Redis(env.REDIS_URL, { maxRetriesPerRequest: 1, enableOfflineQueue: false, commandTimeout: 2000 })
     : null;
 
 function key(phone: string, metaPhoneNumberId?: string | null) {

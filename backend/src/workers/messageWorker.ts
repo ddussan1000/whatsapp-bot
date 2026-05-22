@@ -32,6 +32,10 @@ export function startMessageWorker() {
     log.error({ jobId: job?.id, phone: job?.data?.phone, err }, "messageWorker: job falló");
   });
 
+  worker.on("error", (err) => {
+    log.error({ err }, "messageWorker: error de conexión (no fatal)");
+  });
+
   log.info("messageWorker: iniciado (concurrency=10)");
   return worker;
 }

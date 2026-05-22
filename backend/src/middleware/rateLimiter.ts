@@ -6,7 +6,7 @@ import { log } from "../logger";
 // Reutiliza la conexión Redis si está habilitada
 const redis =
   env.REDIS_ENABLED === "true"
-    ? new Redis(env.REDIS_URL, { maxRetriesPerRequest: 1, enableOfflineQueue: false })
+    ? new Redis(env.REDIS_URL, { maxRetriesPerRequest: 1, enableOfflineQueue: false, commandTimeout: 1500 })
     : null;
 
 // Fallback en memoria cuando Redis no está disponible

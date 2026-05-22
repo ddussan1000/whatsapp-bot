@@ -23,7 +23,10 @@ export async function handleWebhook(c: Context) {
     const metaPhoneNumberId = (change?.metadata?.phone_number_id ?? "") as string;
 
     const instance = metaPhoneNumberId
-      ? await getActiveInstanceByPhoneNumberId(metaPhoneNumberId)
+      ? await Promise.race([
+          getActiveInstanceByPhoneNumberId(metaPhoneNumberId),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+        ])
       : null;
 
     if (instance?.app_secret) {
