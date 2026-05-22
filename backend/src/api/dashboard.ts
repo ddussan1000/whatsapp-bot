@@ -31,6 +31,7 @@ import { conversationStageSchema, settableStageSchema, STAGES } from "../stages"
 import { startAssignedFlow } from "../bot/flowEngine";
 import { cancelJobsForPhone } from "../queue/scheduledMessages";
 import { getState, setState } from "../cache/redis";
+import { messageQueue } from "../queue/messageQueue";
 
 // Converts a Meta daily date (YYYY-MM-DD) to the same bucket format the SQL RPC uses.
 // Postgres: day → YYYY-MM-DD | week → IYYY-"W"IW | month → YYYY-MM
@@ -5296,6 +5297,50 @@ dashboardApi.openapi(
       },
       200,
     );
+  },
+);
+
+// ── Queue stats ────────────────────────────────────────────────────────────
+
+dashboardApi.openapi(
+  createRoute({
+    method: "get",
+    path: "/queue/stats",
+    request: { headers: AuthHeaderSchema },
+    responses: {
+      200: {
+        description: "BullMQ queue stats",
+        content: {
+          "application/json": {
+            schema: z.object({
+              enabled: z.boolean(),
+              waiting: z.number(),
+              active: z.number(),
+              delayed: z.number(),
+              failed: z.number(),
+              completed: z.number(),
+            }),
+          },
+        },
+      },
+    },
+  }),
+  async (c) => {
+    const session = getSession(c);
+    if (!["owner", "admin"].includes(session.role ?? "")) {
+      return c.json({ error: "Solo owner o admin puede ver stats de la cola" }, 403);
+    }
+    if (!messageQueue) {
+      return c.json({ enabled: false, waiting: 0, active: 0, delayed: 0, failed: 0, completed: 0 }, 200);
+    }
+    const [waiting, active, delayed, failed, completed] = await Promise.all([
+      messageQueue.getWaitingCount(),
+      messageQueue.getActiveCount(),
+      messageQueue.getDelayedCount(),
+      messageQueue.getFailedCount(),
+      messageQueue.getCompletedCount(),
+    ]);
+    return c.json({ enabled: true, waiting, active, delayed, failed, completed }, 200);
   },
 );
 

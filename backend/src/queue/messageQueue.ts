@@ -22,9 +22,10 @@ export const messageQueue = connection
   ? new Queue<MessageJobData>("msgProcess", {
       connection,
       defaultJobOptions: {
-        attempts: 1,
+        attempts: 3,
+        backoff: { type: "exponential", delay: 2000 },
         removeOnComplete: 500,
-        removeOnFail: 200,
+        removeOnFail: 1000,
       },
     })
   : null;

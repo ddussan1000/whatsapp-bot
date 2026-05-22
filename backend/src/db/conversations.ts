@@ -55,9 +55,9 @@ export async function upsertConversation(input: UpsertConversationInput) {
         ON CONFLICT (organization_id, phone)
         DO UPDATE SET
           stage               = EXCLUDED.stage,
-          product             = EXCLUDED.product,
-          flow_id             = EXCLUDED.flow_id,
-          whatsapp_instance_id = EXCLUDED.whatsapp_instance_id,
+          product             = COALESCE(EXCLUDED.product, conversations.product),
+          flow_id             = COALESCE(EXCLUDED.flow_id, conversations.flow_id),
+          whatsapp_instance_id = COALESCE(EXCLUDED.whatsapp_instance_id, conversations.whatsapp_instance_id),
           updated_at          = EXCLUDED.updated_at,
           contact_name        = COALESCE(EXCLUDED.contact_name, conversations.contact_name)
         RETURNING id, phone, stage, product, flow_id, whatsapp_instance_id, started_at, updated_at
@@ -75,10 +75,11 @@ export async function upsertConversation(input: UpsertConversationInput) {
     phone: input.phone,
     organization_id: input.organizationId,
     stage: input.stage,
-    product: input.flowName ?? null,
-    flow_id: input.flowId ?? null,
-    whatsapp_instance_id: input.whatsappInstanceId ?? null,
     updated_at: new Date().toISOString(),
+    // Only include nullable FK fields when non-null — prevents overwriting valid values on conflict
+    ...(input.flowName != null ? { product: input.flowName } : {}),
+    ...(input.flowId != null ? { flow_id: input.flowId } : {}),
+    ...(input.whatsappInstanceId != null ? { whatsapp_instance_id: input.whatsappInstanceId } : {}),
     ...(input.contactName != null ? { contact_name: input.contactName } : {}),
   };
   const { data, error } = await supabase

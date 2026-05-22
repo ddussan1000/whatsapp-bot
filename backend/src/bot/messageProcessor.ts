@@ -162,8 +162,44 @@ export async function processMessageJob(data: MessageJobData): Promise<void> {
       : null;
     const assignedFlow = instance?.flow_id ? await getFlowById(instance.flow_id) : null;
     const runtimeFlow = referredFlow ?? assignedFlow;
+
+    const inboundText = msg.type === "text" ? (msg.text?.body ?? "") : "";
+    const type = classify(msg);
+
+    // Always persist conversation + message before any processing decision
+    const conv = await upsertConversation({
+      organizationId,
+      phone,
+      stage: state.stage,
+      flowId: runtimeFlow?.id ?? null,
+      flowName: runtimeFlow?.name ?? null,
+      whatsappInstanceId: instance?.id ?? state.whatsappInstanceId ?? null,
+      contactName,
+    });
+    const conversationId = conv?.id ?? state.id ?? null;
+
+    await insertMessageLog({
+      organizationId,
+      conversationId,
+      whatsappInstanceId: instance?.id ?? state.whatsappInstanceId ?? null,
+      flowId: runtimeFlow?.id ?? null,
+      phone,
+      direction: "inbound",
+      messageType: msg.type === "interactive" ? "interactive" : msg.type,
+      textBody:
+        msg.type === "text"
+          ? inboundText
+          : msg.type === "interactive"
+            ? ((msg as unknown as { interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } } }).interactive?.button_reply?.title ??
+              (msg as unknown as { interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } } }).interactive?.list_reply?.title ??
+              null)
+            : null,
+      payload: msg as unknown as Record<string, unknown>,
+      metaMessageId: metaMsgId,
+    });
+
     if (!runtimeFlow) {
-      log.warn({ phone, organizationId }, "processMessageJob: sin flow asignado");
+      log.warn({ phone, organizationId, metaMsgId, msgType: msg.type }, "drop:sin_flow — mensaje registrado, instancia sin flow asignado");
       return;
     }
 
@@ -178,7 +214,6 @@ export async function processMessageJob(data: MessageJobData): Promise<void> {
       ? true
       : lastUpdated > 0 ? Date.now() - lastUpdated > timeoutMs : true;
     const needsTrigger = !previous?.id || expired;
-    const inboundText = msg.type === "text" ? (msg.text?.body ?? "") : "";
     const triggerMatched = msg.type === "text" ? matchesFlowTrigger(inboundText, runtimeFlow) : true;
 
     const flowIsInProgress = await hasPendingJobs(organizationId, phone);
@@ -189,19 +224,18 @@ export async function processMessageJob(data: MessageJobData): Promise<void> {
       (triggerMatched || runtimeFlow.no_match_behavior === "trigger");
 
     if (!flowIsInProgress && needsTrigger && !triggerMatched && runtimeFlow.no_match_behavior !== "trigger") {
+      log.info({
+        phone,
+        organizationId,
+        metaMsgId,
+        inboundText,
+        triggerFirstWord: runtimeFlow.trigger_first_word,
+        keywords: runtimeFlow.keywords,
+        noMatchBehavior: runtimeFlow.no_match_behavior,
+      }, "drop:trigger_no_coincide — mensaje registrado, sin respuesta");
       return;
     }
 
-    const conv = await upsertConversation({
-      organizationId,
-      phone,
-      stage: state.stage,
-      flowId: runtimeFlow.id,
-      flowName: runtimeFlow.name,
-      whatsappInstanceId: instance?.id ?? state.whatsappInstanceId ?? null,
-      contactName,
-    });
-    const conversationId = conv?.id ?? state.id ?? null;
     const nextBaseState: ConversationState = {
       ...state,
       ...(conversationId && conversationId.length > 0 ? { id: conversationId } : {}),
@@ -212,27 +246,7 @@ export async function processMessageJob(data: MessageJobData): Promise<void> {
       metaPhoneNumberId: metaPhoneNumberId || state.metaPhoneNumberId || null,
     };
 
-    const type = classify(msg);
     const text = inboundText;
-    await insertMessageLog({
-      organizationId,
-      conversationId,
-      whatsappInstanceId: instance?.id ?? nextBaseState.whatsappInstanceId ?? null,
-      flowId: runtimeFlow.id,
-      phone,
-      direction: "inbound",
-      messageType: msg.type === "interactive" ? "interactive" : msg.type,
-      textBody:
-        msg.type === "text"
-          ? text
-          : msg.type === "interactive"
-            ? ((msg as unknown as { interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } } }).interactive?.button_reply?.title ??
-              (msg as unknown as { interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } } }).interactive?.list_reply?.title ??
-              null)
-            : null,
-      payload: msg as unknown as Record<string, unknown>,
-      metaMessageId: metaMsgId,
-    });
 
     let nextState: ConversationState = {
       ...nextBaseState,
