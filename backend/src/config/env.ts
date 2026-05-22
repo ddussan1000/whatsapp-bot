@@ -35,8 +35,8 @@ const envSchema = z.object({
   /** URL pública del bucket R2 (ej. https://media.tudominio.com o https://pub-xxx.r2.dev) */
   R2_PUBLIC_URL: z.string().default(""),
   RECEIPT_RETENTION_DAYS: z.coerce.number().default(7),
-  /** OCR provider for receipt images. "auto" uses Gemini if GEMINI_API_KEY is set, else Tesseract. */
-  OCR_PROVIDER: z.enum(["tesseract", "gemini", "auto"]).default("auto"),
+  /** OCR provider for receipt images. "gemini" or "auto" (uses Gemini when GEMINI_API_KEY is set). */
+  OCR_PROVIDER: z.enum(["gemini", "auto"]).default("auto"),
   /** Gemini model used for OCR. */
   GEMINI_OCR_MODEL: z.string().default("gemini-2.5-flash-lite"),
   /** Direct PostgreSQL connection via PgBouncer (transaction mode, port 6543).
