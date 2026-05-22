@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
+  Activity,
   Building2,
   Check,
   Clock,
@@ -16,6 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -35,6 +42,7 @@ import {
   useCreateInviteMutation,
   useCurrentOrgQuery,
   useInvitesQuery,
+  useQueueStatsQuery,
   useResendInviteMutation,
   useUpdateOrgMutation,
 } from "@/lib/hooks";
@@ -152,6 +160,8 @@ export function OrganizationPage() {
   const [nameInput, setNameInput] = useState("");
   const [editingTimezone, setEditingTimezone] = useState(false);
   const [timezoneInput, setTimezoneInput] = useState("");
+  const [queueOpen, setQueueOpen] = useState(false);
+  const { data: queue, isLoading: queueLoading } = useQueueStatsQuery();
 
   const org = useCurrentOrgQuery();
   const invites = useInvitesQuery();
@@ -422,6 +432,20 @@ export function OrganizationPage() {
         )}
       </SectionCard>
 
+      {/* Queue stats */}
+      {canEditOrg && (
+        <SectionCard
+          icon={Activity}
+          title="Sistema de mensajería"
+          description="Estado de la cola de procesamiento de mensajes WhatsApp."
+        >
+          <Button variant="outline" size="sm" onClick={() => setQueueOpen(true)}>
+            <Activity size={14} className="mr-2" />
+            Ver estadísticas de cola
+          </Button>
+        </SectionCard>
+      )}
+
       {/* Invite */}
       <SectionCard
         icon={UserPlus}
@@ -577,6 +601,54 @@ export function OrganizationPage() {
           </div>
         </div>
       </SectionCard>
+      <Dialog open={queueOpen} onOpenChange={setQueueOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity size={16} />
+              Cola de mensajes
+            </DialogTitle>
+          </DialogHeader>
+          {queueLoading ? (
+            <div className="flex flex-col gap-3 py-2">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : !queue?.enabled ? (
+            <p className="text-sm text-muted-foreground py-2">
+              Redis no está habilitado. La cola no está activa.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 py-2">
+              {[
+                { label: "En espera", value: queue.waiting, hint: "Pendientes de procesar" },
+                { label: "Procesando", value: queue.active, hint: "Workers activos ahora" },
+                { label: "Fallidos", value: queue.failed, hint: "Fallaron tras 3 reintentos" },
+                { label: "Completados", value: queue.completed, hint: "Recientes en Redis" },
+              ].map(({ label, value, hint }) => (
+                <div
+                  key={label}
+                  className={`rounded-lg border p-3 ${
+                    label === "Fallidos" && value > 0
+                      ? "border-red-500/30 bg-red-500/5"
+                      : label === "Procesando" && value >= 10
+                        ? "border-amber-500/30 bg-amber-500/5"
+                        : "bg-muted/30"
+                  }`}
+                >
+                  <p className="text-2xl font-bold">{value}</p>
+                  <p className="text-xs font-medium">{label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{hint}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-[10px] text-muted-foreground">
+            Se actualiza automáticamente cada 15 s.
+          </p>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

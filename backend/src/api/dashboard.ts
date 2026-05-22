@@ -2475,8 +2475,13 @@ dashboardApi.openapi(
     try {
       const raw = await fetchDailyAdSpend(token, inst.meta_ads_account_id, from, to);
       rows = raw.map((r) => ({ date: r.date, spend: r.spend, currency: r.currency ?? "USD" }));
+      log.info(
+        { instanceId: id, from, to, rowCount: rows.length, rows },
+        "meta-ads sync-spend: respuesta de Meta",
+      );
     } catch (err) {
       const msg = err instanceof MetaAdsError ? err.message : "Error al obtener datos de Meta Ads";
+      log.error({ err, instanceId: id, from, to }, "meta-ads sync-spend: error de Meta API");
       return c.json({ error: msg }, 400);
     }
 

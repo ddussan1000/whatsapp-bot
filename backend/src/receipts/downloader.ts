@@ -10,10 +10,12 @@ export async function downloadFromMetaWithType(
   if (!token) throw new Error("Token de acceso no proporcionado");
   const meta = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
     headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(10_000),
   }).then((r) => r.json() as Promise<{ url?: string; mime_type?: string }>);
   if (!meta.url) throw new Error("No se obtuvo URL de media");
   const res = await fetch(meta.url, {
     headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(30_000),
   });
   return {
     buffer: Buffer.from(await res.arrayBuffer()),

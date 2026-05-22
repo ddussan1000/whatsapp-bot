@@ -197,6 +197,10 @@ async function fetchSessionResolved(): Promise<SessionInfo> {
 
 export const api = {
   getTodayStats: () => request<TodayStats>("/api/stats/today"),
+  getQueueStats: () =>
+    request<{ enabled: boolean; waiting: number; active: number; delayed: number; failed: number; completed: number }>(
+      "/api/queue/stats",
+    ),
   getRangeStats: (from?: string, to?: string) => {
     const params = new URLSearchParams();
     if (from) params.set("from", from);

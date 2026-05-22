@@ -37,6 +37,14 @@ export function useTodayStatsQuery() {
   return useQuery({ queryKey: ["stats", "today"], queryFn: api.getTodayStats });
 }
 
+export function useQueueStatsQuery() {
+  return useQuery({
+    queryKey: ["stats", "queue"],
+    queryFn: api.getQueueStats,
+    refetchInterval: 15_000,
+  });
+}
+
 export function useRangeStatsQuery(from?: string, to?: string) {
   return useQuery({
     queryKey: ["stats", "range", from, to],
