@@ -59,7 +59,7 @@ export async function insertMessageLog(input: MessageInput) {
            ${input.flowId ?? null}, ${input.phone}, ${input.direction}, ${input.messageType},
            ${input.textBody ?? null}, ${input.mediaUrl ?? null},
            ${payloadValue ? pgSql.json(payloadValue as Parameters<typeof pgSql.json>[0]) : null}, ${input.metaMessageId ?? null})
-        ON CONFLICT (meta_message_id) DO NOTHING
+        ON CONFLICT (meta_message_id) WHERE meta_message_id IS NOT NULL DO NOTHING
       `;
       return;
     } catch (err) {
@@ -69,7 +69,7 @@ export async function insertMessageLog(input: MessageInput) {
 
   // Fallback: PostgREST
   if (!supabase) return;
-  const { error } = await supabase.from("messages").upsert({
+  const row = {
     organization_id: input.organizationId,
     conversation_id: conversationId,
     whatsapp_instance_id: input.whatsappInstanceId ?? null,
@@ -81,8 +81,12 @@ export async function insertMessageLog(input: MessageInput) {
     media_url: input.mediaUrl ?? null,
     payload: payloadValue,
     meta_message_id: input.metaMessageId ?? null,
-  }, { onConflict: "meta_message_id", ignoreDuplicates: true });
+  };
+  // PostgREST can't express partial-index ON CONFLICT, so always INSERT and treat
+  // duplicate key (23505) as success — the row already exists, dedup done.
+  const { error } = await supabase.from("messages").insert(row);
   if (error) {
+    if (error.code === "23505") return;
     log.error({ error, input }, "No se pudo guardar message log en Supabase");
   }
 }
