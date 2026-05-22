@@ -936,6 +936,8 @@ const MetaStatusSchema = z.object({
   expiresAt: z.number(),
   permissions: z.array(z.object({ name: z.string(), granted: z.boolean() })),
   wabaSubscribed: z.boolean().nullable(),
+  subscribedAppIds: z.array(z.string()).optional(),
+  tokenAppId: z.string().nullable().optional(),
   webhookConfigured: z.boolean().nullable(),
   messagesSubscribed: z.boolean().nullable(),
   webhookUrl: z.string().nullable(),
@@ -1998,6 +2000,8 @@ dashboardApi.openapi(
       expiresAt: 0,
       permissions: REQUIRED_PERMS.map((name) => ({ name, granted: false })),
       wabaSubscribed: null,
+      subscribedAppIds: [],
+      tokenAppId: null,
       webhookConfigured: null,
       messagesSubscribed: null,
       webhookUrl: null,
@@ -2042,8 +2046,15 @@ dashboardApi.openapi(
         { headers: { Authorization: `Bearer ${rawToken}` } },
       ).catch(() => null);
       if (wabaRes?.ok) {
-        const wabaData = await wabaRes.json() as { data?: { id: string }[] };
-        result.wabaSubscribed = (wabaData.data ?? []).some((a) => a.id === appId);
+        const wabaData = await wabaRes.json() as {
+          data?: { id?: string; whatsapp_business_api_data?: { id?: string } }[];
+        };
+        const subscribedIds = (wabaData.data ?? []).map(
+          (a) => a.whatsapp_business_api_data?.id ?? a.id ?? null,
+        ).filter(Boolean) as string[];
+        result.subscribedAppIds = subscribedIds;
+        result.tokenAppId = appId ?? null;
+        result.wabaSubscribed = subscribedIds.some((id) => id === appId);
       } else {
         result.wabaSubscribed = false;
       }
@@ -5328,6 +5339,7 @@ dashboardApi.openapi(
           },
         },
       },
+      403: { description: "Forbidden", content: { "application/json": { schema: ErrorSchema } } },
     },
   }),
   async (c) => {
