@@ -21,20 +21,11 @@ export async function insertPayment(input: PaymentInput) {
   const { organizationId, ...rest } = input;
   const payload = { ...rest, organization_id: organizationId };
 
-  // If we have a meta_message_id, use upsert to avoid duplicates on webhook retries
-  if (payload.meta_message_id) {
-    const { error } = await supabase
-      .from("payments")
-      .upsert(payload, { onConflict: "meta_message_id", ignoreDuplicates: true });
-    if (error) {
-      log.error({ error, input }, "No se pudo guardar payment en Supabase");
-      throw error;
-    }
-    return;
-  }
-
+  // PostgREST can't express partial-index ON CONFLICT, so INSERT and treat
+  // duplicate key (23505) as success — dedup via the partial unique index.
   const { error } = await supabase.from("payments").insert(payload);
   if (error) {
+    if (error.code === "23505") return;
     log.error({ error, input }, "No se pudo guardar payment en Supabase");
     throw error;
   }
