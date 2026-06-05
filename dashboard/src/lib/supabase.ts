@@ -27,18 +27,5 @@ export function updateCachedSession(session: Session | null): void {
   _cachedSession = session;
 }
 
-// Seed the cache once at module load from localStorage (synchronous in
-// supabase-js v2 when no token refresh is needed). This avoids a cold-start
-// window between app mount and the first onAuthStateChange event.
-if (supabase) {
-  void supabase.auth.getSession()
-    .then(({ data }) => {
-      if (_cachedSession === null) {
-        updateCachedSession(data.session);
-      }
-    })
-    .catch(() => {
-      // If getSession() fails at load time, onAuthStateChange will seed the
-      // cache when the SDK recovers.
-    });
-}
+// Cache is seeded by the INITIAL_SESSION event in AuthGuard before any API
+// call needs it. No module-level getSession() call — avoids the SDK lock race.

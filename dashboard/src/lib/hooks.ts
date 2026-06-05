@@ -335,7 +335,12 @@ export function useSyncMetaSpendMutation() {
 }
 
 export function useSessionQuery() {
-  return useQuery({ queryKey: ["auth", "session"], queryFn: api.getSession, staleTime: 5 * 60_000 });
+  return useQuery({
+    queryKey: ["auth", "session"],
+    queryFn: api.getSession,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
 }
 
 export function useSupabaseUser() {
