@@ -19,6 +19,9 @@ import {
   Activity,
   BarChart2,
   Megaphone,
+  Plus,
+  Pencil,
+  Zap,
 } from "lucide-react";
 import {
   InfoModal,
@@ -71,8 +74,12 @@ import {
   useValidateInstanceMetaAdsMutation,
   useInstanceExternalReportingQuery,
   useSaveInstanceExternalReportingMutation,
+  useMetaDatasetsQuery,
+  useCreateMetaDatasetMutation,
+  useUpdateMetaDatasetMutation,
+  useDeleteMetaDatasetMutation,
 } from "@/lib/hooks";
-import type { MetaStatusResponse, ReconfigureMetaResult } from "@/types/api";
+import type { MetaDataset, MetaStatusResponse, ReconfigureMetaResult } from "@/types/api";
 
 const NO_FLOW_VALUE = "__none__";
 
@@ -236,9 +243,13 @@ function EditDialog({
   const validateMetaAds = useValidateInstanceMetaAdsMutation();
   const externalReportingQ = useInstanceExternalReportingQuery(instance.id);
   const saveExternalReporting = useSaveInstanceExternalReportingMutation();
+  const { data: datasets = [] } = useMetaDatasetsQuery();
 
   const [metaAdsAccountId, setMetaAdsAccountId] = useState(
     instance.meta_ads_account_id ?? ""
+  );
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>(
+    instance.meta_dataset_id ?? "__none__"
   );
   const [metaAdsValidation, setMetaAdsValidation] = useState<{
     ok: boolean;
@@ -679,6 +690,74 @@ function EditDialog({
 
             <Separator />
 
+            {/* Conversiones API (CAPI) */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Zap size={14} className="text-muted-foreground" />
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Conversiones API (CAPI)
+                </p>
+                {instance.meta_dataset_id && (
+                  <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    Activo
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Reporta compras confirmadas a Meta para optimizar tus campañas CTWA. Creá los
+                datasets en la sección de abajo y asigná uno a este número.
+              </p>
+              <Field label="Dataset de conversiones">
+                <Select
+                  value={selectedDatasetId}
+                  onValueChange={setSelectedDatasetId}
+                >
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="Sin dataset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sin dataset</SelectItem>
+                    {datasets.map((ds) => (
+                      <SelectItem key={ds.id} value={ds.id}>
+                        <span className="flex items-center gap-2">
+                          {ds.label}
+                          <code className="text-[10px] text-muted-foreground font-mono">
+                            {ds.dataset_id}
+                          </code>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                loading={updateInstance.isPending}
+                loadingText="Guardando…"
+                onClick={() =>
+                  updateInstance.mutate(
+                    {
+                      id: instance.id,
+                      payload: {
+                        metaDatasetId:
+                          selectedDatasetId === "__none__" ? null : selectedDatasetId,
+                      },
+                    },
+                    {
+                      onSuccess: () => toast.success("Dataset de conversiones guardado"),
+                      onError: (e) => toast.error((e as Error).message),
+                    },
+                  )
+                }
+              >
+                Guardar dataset
+              </Button>
+            </div>
+
+            <Separator />
+
             {/* Sistema de Reportes Externo */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
@@ -787,6 +866,293 @@ function EditDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ── Dataset dialog (create / edit) ────────────────────────────────────────
+
+function DatasetDialog({
+  dataset,
+  onClose,
+}: {
+  dataset?: MetaDataset;
+  onClose: () => void;
+}) {
+  const isEdit = Boolean(dataset);
+  const create = useCreateMetaDatasetMutation();
+  const update = useUpdateMetaDatasetMutation();
+
+  const [label, setLabel] = useState(dataset?.label ?? "");
+  const [datasetId, setDatasetId] = useState(dataset?.dataset_id ?? "");
+  const [accessToken, setAccessToken] = useState("");
+  const [showToken, setShowToken] = useState(false);
+
+  const isPending = create.isPending || update.isPending;
+
+  const handleSave = () => {
+    if (!label.trim() || !datasetId.trim()) return;
+    if (!isEdit && !accessToken.trim()) return;
+
+    if (isEdit && dataset) {
+      const payload: { label?: string; datasetId?: string; accessToken?: string } = {};
+      if (label !== dataset.label) payload.label = label.trim();
+      if (datasetId !== dataset.dataset_id) payload.datasetId = datasetId.trim();
+      if (accessToken.trim()) payload.accessToken = accessToken.trim();
+      update.mutate(
+        { id: dataset.id, payload },
+        {
+          onSuccess: () => { toast.success("Dataset actualizado y verificado ✓"); onClose(); },
+          onError: (e) => toast.error((e as Error).message),
+        },
+      );
+    } else {
+      create.mutate(
+        { label: label.trim(), datasetId: datasetId.trim(), accessToken: accessToken.trim() },
+        {
+          onSuccess: () => { toast.success("Dataset creado y verificado ✓"); onClose(); },
+          onError: (e) => toast.error((e as Error).message),
+        },
+      );
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "Editar dataset CAPI" : "Nuevo dataset CAPI"}</DialogTitle>
+          <DialogDescription>
+            El token se verifica con Meta antes de guardar.{" "}
+            {isEdit && dataset?.access_token_configured && "Dejá el token vacío para mantener el actual."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-4 py-2">
+          <Field label="Nombre interno" hint="Para identificarlo en el dashboard">
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Ej: Campañas CTWA — Negocio Principal"
+            />
+          </Field>
+
+          <Field
+            label="Dataset ID"
+            hint="Número de 15–16 dígitos de Events Manager"
+          >
+            <Input
+              value={datasetId}
+              onChange={(e) => setDatasetId(e.target.value)}
+              placeholder="123456789012345"
+              className="font-mono text-sm"
+            />
+          </Field>
+
+          <Field
+            label="System User Token"
+            hint={
+              isEdit && dataset?.access_token_configured
+                ? "Configurado — ingresá uno nuevo para reemplazarlo"
+                : "Token del System User con permiso ads_management"
+            }
+          >
+            <div className="flex gap-2">
+              <Input
+                type={showToken ? "text" : "password"}
+                value={accessToken}
+                onChange={(e) => setAccessToken(e.target.value)}
+                placeholder={
+                  isEdit && dataset?.access_token_configured
+                    ? "••••••••  (vacío = sin cambios)"
+                    : "EAA..."
+                }
+                className="font-mono text-sm"
+              />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                type="button"
+                onClick={() => setShowToken((v) => !v)}
+              >
+                {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
+              </Button>
+            </div>
+          </Field>
+
+          <div className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground mb-1">¿Dónde obtener estos datos?</p>
+            <ol className="list-decimal list-inside space-y-0.5">
+              <li>Events Manager → tu dataset → copiar ID</li>
+              <li>Business Manager → Usuarios → System Users → generar token con <code className="bg-muted px-1 rounded">ads_management</code></li>
+            </ol>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isPending}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={
+              isPending ||
+              !label.trim() ||
+              !datasetId.trim() ||
+              (!isEdit && !accessToken.trim())
+            }
+            loading={isPending}
+            loadingText="Verificando con Meta…"
+          >
+            <Check size={14} className="mr-1.5" />
+            Guardar y verificar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Meta Datasets card ────────────────────────────────────────────────────
+
+function MetaDatasetsCard() {
+  const { data: datasets = [], isLoading } = useMetaDatasetsQuery();
+  const deleteDataset = useDeleteMetaDatasetMutation();
+  const [editing, setEditing] = useState<MetaDataset | undefined>(undefined);
+  const [creating, setCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<MetaDataset | null>(null);
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap size={16} className="text-muted-foreground" />
+              <CardTitle>Conversiones API (CAPI)</CardTitle>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setCreating(true)} className="gap-1.5">
+              <Plus size={14} />
+              Nuevo dataset
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Conecta tus anuncios Click-to-WhatsApp con las compras confirmadas en el bot. Cada dataset
+            se vincula a uno o más números de WhatsApp desde el diálogo de edición.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex flex-col gap-2">
+              {[1, 2].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+            </div>
+          ) : datasets.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <Zap size={28} className="text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">
+                Sin datasets configurados. Creá uno para empezar a reportar compras a Meta.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => setCreating(true)} className="gap-1.5">
+                <Plus size={13} />
+                Crear primer dataset
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Dataset ID</TableHead>
+                  <TableHead>Token</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {datasets.map((ds) => (
+                  <TableRow key={ds.id}>
+                    <TableCell className="font-medium">{ds.label}</TableCell>
+                    <TableCell>
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                        {ds.dataset_id}
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      {ds.access_token_configured ? (
+                        <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 size={12} />
+                          Configurado
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs text-destructive">
+                          <XCircle size={12} />
+                          Sin token
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setEditing(ds)}
+                          className="text-muted-foreground hover:text-primary"
+                        >
+                          <Pencil size={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setConfirmDelete(ds)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {creating && <DatasetDialog onClose={() => setCreating(false)} />}
+      {editing && <DatasetDialog dataset={editing} onClose={() => setEditing(undefined)} />}
+
+      {/* Confirm delete */}
+      {confirmDelete && (
+        <Dialog open onOpenChange={(o) => !o && setConfirmDelete(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Eliminar dataset</DialogTitle>
+              <DialogDescription>
+                Se eliminará <strong>{confirmDelete.label}</strong>. Los números vinculados a este dataset
+                dejarán de reportar compras a Meta. Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDelete(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                loading={deleteDataset.isPending}
+                loadingText="Eliminando…"
+                onClick={() =>
+                  deleteDataset.mutate(confirmDelete.id, {
+                    onSuccess: () => { toast.success("Dataset eliminado"); setConfirmDelete(null); },
+                    onError: (e) => toast.error((e as Error).message),
+                  })
+                }
+              >
+                <Trash2 size={14} className="mr-1.5" />
+                Eliminar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 }
 
@@ -1311,6 +1677,9 @@ export function InstancesPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* CAPI Datasets */}
+      <MetaDatasetsCard />
 
       {/* Edit dialog */}
       {editing && (

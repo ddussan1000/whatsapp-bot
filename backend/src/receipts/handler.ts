@@ -10,6 +10,7 @@ import { supabase } from "../db/supabase";
 import { log } from "../logger";
 import { STAGES } from "../stages";
 import { cancelJobsForPhone } from "../queue/scheduledMessages";
+import { tryFireCapiPurchase } from "../capi/purchase";
 
 const DEFAULT_RECEIPT_REJECTED_MESSAGE =
   "No pudimos validar tu comprobante. Un agente lo revisara manualmente y te informara.";
@@ -284,6 +285,7 @@ export async function classifyAndHandleImage(
     },
     "classifyAndHandleImage: payment validated ✓",
   );
+  const finalCurrency = ocrResult.currency ?? currency;
   await insertPayment({
     organizationId: state.organizationId,
     phone,
@@ -291,13 +293,15 @@ export async function classifyAndHandleImage(
     flow_id: state.flowId ?? null,
     whatsapp_instance_id: state.whatsappInstanceId ?? null,
     amount,
-    currency: ocrResult.currency ?? currency,
+    currency: finalCurrency,
     receipt_url: receiptUrl,
     receipt_date: receiptDate ? receiptDate.toISOString() : null,
     conversation_id: state.id ?? null,
     state: "validated",
     meta_message_id: metaMessageId,
   });
+  tryFireCapiPurchase(state.organizationId, state.whatsappInstanceId, phone, amount, finalCurrency, metaMessageId)
+    .catch((err) => log.warn({ err, phone }, "CAPI: failed on auto-validation"));
   await cancelPending();
   await sendMessage(phone, textMessage(confirmedMessage), msgCtx(state));
   return { handled: true, state: { ...state, stage: STAGES.pago_confirmado } };

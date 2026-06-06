@@ -28,6 +28,7 @@ import { invalidateInstanceCache } from "../db/instances";
 import { fetchDailyAdSpend, MetaAdsError } from "../meta/adsInsights";
 import { getExternalAccounts, sendSheetEntry, ExternalReportingError } from "../external/reportingClient";
 import { conversationStageSchema, settableStageSchema, STAGES } from "../stages";
+import { tryFireCapiPurchase } from "../capi/purchase";
 import { startAssignedFlow } from "../bot/flowEngine";
 import { cancelJobsForPhone } from "../queue/scheduledMessages";
 import { getState, setState } from "../cache/redis";
@@ -920,8 +921,19 @@ const InstanceSchema = z.object({
   currency: z.string().default("COP"),
   high_amount_threshold: z.number().positive().nullable().optional(),
   meta_ads_account_id: z.string().nullable().optional(),
+  meta_dataset_id: z.string().uuid().nullable().optional(),
   external_reporting_configured: z.boolean().optional(),
   updated_at: z.string().nullable().optional(),
+});
+
+const MetaDatasetSchema = z.object({
+  id: z.string().uuid(),
+  organization_id: z.string().uuid(),
+  label: z.string(),
+  dataset_id: z.string(),
+  access_token_configured: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 const AutoConfigResultSchema = z.object({
@@ -1683,7 +1695,7 @@ dashboardApi.openapi(
     const { data, error } = await supabase
       .from("whatsapp_instances")
       .select(
-        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, meta_ads_account_id, external_reporting_key, updated_at",
+        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, meta_ads_account_id, meta_dataset_id, external_reporting_key, updated_at",
       )
       .eq("organization_id", orgId(c))
       .order("created_at", { ascending: false });
@@ -1764,7 +1776,7 @@ dashboardApi.openapi(
         high_amount_threshold: body.highAmountThreshold ?? null,
       })
       .select(
-        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, meta_ads_account_id, external_reporting_key, updated_at",
+        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, meta_ads_account_id, meta_dataset_id, external_reporting_key, updated_at",
       )
       .single();
 
@@ -1890,6 +1902,7 @@ dashboardApi.openapi(
               isActive: z.boolean().optional(),
               currency: z.string().nullable().optional(),
               highAmountThreshold: z.number().positive().nullable().optional(),
+              metaDatasetId: z.string().uuid().nullable().optional(),
             }),
           },
         },
@@ -1927,6 +1940,7 @@ dashboardApi.openapi(
       ...(body.isActive !== undefined ? { is_active: body.isActive } : {}),
       ...(body.currency !== undefined ? { currency: body.currency } : {}),
       ...(body.highAmountThreshold !== undefined ? { high_amount_threshold: body.highAmountThreshold } : {}),
+      ...(body.metaDatasetId !== undefined ? { meta_dataset_id: body.metaDatasetId } : {}),
       updated_at: new Date().toISOString(),
     };
     const { data, error } = await supabase
@@ -1935,7 +1949,7 @@ dashboardApi.openapi(
       .eq("id", id)
       .eq("organization_id", orgId(c))
       .select(
-        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, meta_ads_account_id, external_reporting_key, updated_at",
+        "id, organization_id, provider, label, waba_id, meta_app_id, phone_number_id, display_phone_number, meta_token, app_secret, flow_id, is_active, currency, high_amount_threshold, meta_ads_account_id, meta_dataset_id, external_reporting_key, updated_at",
       )
       .single();
     if (error) return c.json({ error: error.message }, 500);
@@ -2326,6 +2340,254 @@ dashboardApi.openapi(
       .eq("organization_id", org);
 
     if (deleteError) return c.json({ error: deleteError.message }, 500);
+    return c.json({ ok: true }, 200);
+  },
+);
+
+// ── CAPI helpers ─────────────────────────────────────────────────────────────
+
+async function validateCapiToken(
+  datasetId: string,
+  accessToken: string,
+): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/${encodeURIComponent(datasetId)}?fields=name`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(8_000),
+      },
+    );
+    const data = await res.json() as {
+      id?: string;
+      name?: string;
+      error?: { message?: string; code?: number };
+    };
+    if (!res.ok || data.error) {
+      return { ok: false, error: data.error?.message ?? "Dataset o token inválido" };
+    }
+    return { ok: true, name: data.name ?? datasetId };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con Meta API" };
+  }
+}
+
+// ── GET /meta-datasets ────────────────────────────────────────────────────────
+
+dashboardApi.openapi(
+  createRoute({
+    method: "get",
+    path: "/meta-datasets",
+    request: { headers: AuthHeaderSchema },
+    responses: {
+      200: {
+        description: "Meta Conversions API datasets for the org",
+        content: { "application/json": { schema: z.array(MetaDatasetSchema) } },
+      },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json([], 200);
+    const { data, error } = await supabase
+      .from("meta_datasets")
+      .select("id, organization_id, label, dataset_id, access_token, created_at, updated_at")
+      .eq("organization_id", orgId(c))
+      .order("created_at", { ascending: false });
+    if (error) return c.json({ error: error.message }, 500);
+    const items = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+      id: row.id as string,
+      organization_id: row.organization_id as string,
+      label: row.label as string,
+      dataset_id: row.dataset_id as string,
+      access_token_configured: Boolean(row.access_token),
+      created_at: row.created_at as string,
+      updated_at: row.updated_at as string,
+    }));
+    return c.json(items, 200);
+  },
+);
+
+// ── POST /meta-datasets ───────────────────────────────────────────────────────
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/meta-datasets",
+    request: {
+      headers: AuthHeaderSchema,
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              label: z.string().min(1).max(100),
+              datasetId: z.string().min(1).max(60),
+              accessToken: z.string().min(1),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Dataset created",
+        content: { "application/json": { schema: MetaDatasetSchema } },
+      },
+      400: { description: "Token o dataset inválido", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { label, datasetId, accessToken } = c.req.valid("json");
+
+    const validation = await validateCapiToken(datasetId, accessToken);
+    if (!validation.ok) return c.json({ error: `Meta API: ${validation.error}` }, 400);
+
+    const { data, error } = await supabase
+      .from("meta_datasets")
+      .insert({
+        organization_id: orgId(c),
+        label,
+        dataset_id: datasetId,
+        access_token: await encrypt(accessToken),
+      })
+      .select("id, organization_id, label, dataset_id, access_token, created_at, updated_at")
+      .single();
+    if (error) return c.json({ error: error.message }, 500);
+    const row = data as Record<string, unknown>;
+    return c.json({
+      id: row.id as string,
+      organization_id: row.organization_id as string,
+      label: row.label as string,
+      dataset_id: row.dataset_id as string,
+      access_token_configured: Boolean(row.access_token),
+      created_at: row.created_at as string,
+      updated_at: row.updated_at as string,
+    }, 200);
+  },
+);
+
+// ── PUT /meta-datasets/{id} ───────────────────────────────────────────────────
+
+dashboardApi.openapi(
+  createRoute({
+    method: "put",
+    path: "/meta-datasets/{id}",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              label: z.string().min(1).max(100).optional(),
+              datasetId: z.string().min(1).max(60).optional(),
+              accessToken: z.string().min(1).optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Dataset updated",
+        content: { "application/json": { schema: MetaDatasetSchema } },
+      },
+      400: { description: "Token o dataset inválido", content: { "application/json": { schema: ErrorSchema } } },
+      404: { description: "No encontrado", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const body = c.req.valid("json");
+
+    const { data: existing } = await supabase
+      .from("meta_datasets")
+      .select("id, dataset_id")
+      .eq("id", id)
+      .eq("organization_id", orgId(c))
+      .maybeSingle();
+    if (!existing) return c.json({ error: "Dataset no encontrado" }, 404);
+
+    // Validate if token or dataset_id changed
+    if (body.accessToken !== undefined || body.datasetId !== undefined) {
+      const checkDatasetId = body.datasetId ?? (existing as Record<string, unknown>).dataset_id as string;
+      const checkToken = body.accessToken;
+      if (checkToken) {
+        const validation = await validateCapiToken(checkDatasetId, checkToken);
+        if (!validation.ok) return c.json({ error: `Meta API: ${validation.error}` }, 400);
+      }
+    }
+
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (body.label !== undefined) patch.label = body.label;
+    if (body.datasetId !== undefined) patch.dataset_id = body.datasetId;
+    if (body.accessToken !== undefined) patch.access_token = await encrypt(body.accessToken);
+
+    const { data, error } = await supabase
+      .from("meta_datasets")
+      .update(patch)
+      .eq("id", id)
+      .eq("organization_id", orgId(c))
+      .select("id, organization_id, label, dataset_id, access_token, created_at, updated_at")
+      .single();
+    if (error) return c.json({ error: error.message }, 500);
+    const row = data as Record<string, unknown>;
+    return c.json({
+      id: row.id as string,
+      organization_id: row.organization_id as string,
+      label: row.label as string,
+      dataset_id: row.dataset_id as string,
+      access_token_configured: Boolean(row.access_token),
+      created_at: row.created_at as string,
+      updated_at: row.updated_at as string,
+    }, 200);
+  },
+);
+
+// ── DELETE /meta-datasets/{id} ────────────────────────────────────────────────
+
+dashboardApi.openapi(
+  createRoute({
+    method: "delete",
+    path: "/meta-datasets/{id}",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description: "Dataset deleted",
+        content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+      },
+      404: { description: "No encontrado", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const org = orgId(c);
+
+    const { data: existing } = await supabase
+      .from("meta_datasets")
+      .select("id")
+      .eq("id", id)
+      .eq("organization_id", org)
+      .maybeSingle();
+    if (!existing) return c.json({ error: "Dataset no encontrado" }, 404);
+
+    const { error } = await supabase
+      .from("meta_datasets")
+      .delete()
+      .eq("id", id)
+      .eq("organization_id", org);
+    if (error) return c.json({ error: error.message }, 500);
     return c.json({ ok: true }, 200);
   },
 );
@@ -4703,6 +4965,17 @@ dashboardApi.openapi(
         .update({ validated_at: new Date().toISOString() })
         .eq("id", data.id)
         .eq("organization_id", organization);
+
+      if (phone && whatsapp_instance_id) {
+        tryFireCapiPurchase(
+          organization,
+          whatsapp_instance_id as string,
+          phone as string,
+          amount as number,
+          (currency as string) ?? "COP",
+          data.id as string,
+        ).catch((err) => log.warn({ err, paymentId: data.id }, "CAPI: failed on payment creation"));
+      }
     }
 
     return c.json({ ok: true, id: data.id as string }, 201);
@@ -4895,7 +5168,7 @@ dashboardApi.openapi(
 
     const { data: existing } = await supabase
       .from("payments")
-      .select("id")
+      .select("id, phone, whatsapp_instance_id, amount, currency")
       .eq("id", id)
       .eq("organization_id", organization)
       .maybeSingle();
@@ -4912,6 +5185,18 @@ dashboardApi.openapi(
       .eq("organization_id", organization);
 
     if (error) return c.json({ error: error.message }, 500);
+
+    if (state === "validated" && existing.phone) {
+      tryFireCapiPurchase(
+        organization,
+        existing.whatsapp_instance_id as string | null,
+        existing.phone as string,
+        (existing.amount as number) ?? 0,
+        (existing.currency as string) ?? "COP",
+        id,
+      ).catch((err) => log.warn({ err, paymentId: id }, "CAPI: failed on manual validation"));
+    }
+
     return c.json({ ok: true }, 200);
   },
 );

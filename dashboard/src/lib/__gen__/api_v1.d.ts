@@ -1757,6 +1757,8 @@ export interface paths {
                             currency: string;
                             high_amount_threshold?: number | null;
                             meta_ads_account_id?: string | null;
+                            /** Format: uuid */
+                            meta_dataset_id?: string | null;
                             external_reporting_configured?: boolean;
                             updated_at?: string | null;
                         }[];
@@ -1830,6 +1832,8 @@ export interface paths {
                                 currency: string;
                                 high_amount_threshold?: number | null;
                                 meta_ads_account_id?: string | null;
+                                /** Format: uuid */
+                                meta_dataset_id?: string | null;
                                 external_reporting_configured?: boolean;
                                 updated_at?: string | null;
                             };
@@ -1893,6 +1897,8 @@ export interface paths {
                         isActive?: boolean;
                         currency?: string | null;
                         highAmountThreshold?: number | null;
+                        /** Format: uuid */
+                        metaDatasetId?: string | null;
                     };
                 };
             };
@@ -1920,6 +1926,8 @@ export interface paths {
                             currency: string;
                             high_amount_threshold?: number | null;
                             meta_ads_account_id?: string | null;
+                            /** Format: uuid */
+                            meta_dataset_id?: string | null;
                             external_reporting_configured?: boolean;
                             updated_at?: string | null;
                         };
@@ -2029,6 +2037,8 @@ export interface paths {
                                 granted: boolean;
                             }[];
                             wabaSubscribed: boolean | null;
+                            subscribedAppIds?: string[];
+                            tokenAppId?: string | null;
                             webhookConfigured: boolean | null;
                             messagesSubscribed: boolean | null;
                             webhookUrl: string | null;
@@ -2110,6 +2120,266 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/meta-datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    authorization: string;
+                    "x-organization-id"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Meta Conversions API datasets for the org */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            organization_id: string;
+                            label: string;
+                            dataset_id: string;
+                            access_token_configured: boolean;
+                            created_at: string;
+                            updated_at: string;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    authorization: string;
+                    "x-organization-id"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        label: string;
+                        datasetId: string;
+                        accessToken: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Dataset created */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            organization_id: string;
+                            label: string;
+                            dataset_id: string;
+                            access_token_configured: boolean;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Token o dataset inválido */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/meta-datasets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    authorization: string;
+                    "x-organization-id"?: string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        label?: string;
+                        datasetId?: string;
+                        accessToken?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Dataset updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            organization_id: string;
+                            label: string;
+                            dataset_id: string;
+                            access_token_configured: boolean;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Token o dataset inválido */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header: {
+                    authorization: string;
+                    "x-organization-id"?: string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Dataset deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                        };
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -5213,6 +5483,62 @@ export interface paths {
                 };
                 /** @description Error */
                 500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/queue/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    authorization: string;
+                    "x-organization-id"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description BullMQ queue stats */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            enabled: boolean;
+                            waiting: number;
+                            active: number;
+                            delayed: number;
+                            failed: number;
+                            completed: number;
+                        };
+                    };
+                };
+                /** @description Forbidden */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };

@@ -31,6 +31,8 @@ import type {
   UpsertFlowBody,
   CreateFlowReferralBody,
   CreateInstanceResponse,
+  CreateMetaDatasetBody,
+  UpdateMetaDatasetBody,
 } from "../types/api";
 
 export function useTodayStatsQuery() {
@@ -851,5 +853,43 @@ export function useDeleteOrgMediaMutation() {
   return useMutation({
     mutationFn: (id: string) => api.deleteOrgMedia(id),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["org-media"] }),
+  });
+}
+
+// ── Meta Datasets (Conversions API) ──────────────────────────────────────────
+
+export function useMetaDatasetsQuery() {
+  return useQuery({
+    queryKey: ["meta-datasets"],
+    queryFn: api.getMetaDatasets,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateMetaDatasetMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateMetaDatasetBody) => api.createMetaDataset(payload),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["meta-datasets"] }),
+  });
+}
+
+export function useUpdateMetaDatasetMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateMetaDatasetBody }) =>
+      api.updateMetaDataset(id, payload),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["meta-datasets"] }),
+  });
+}
+
+export function useDeleteMetaDatasetMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteMetaDataset(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["meta-datasets"] });
+      void qc.invalidateQueries({ queryKey: ["instances"] });
+    },
   });
 }

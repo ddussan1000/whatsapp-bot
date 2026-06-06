@@ -142,9 +142,22 @@ export type WhatsAppInstance = {
   currency: string;
   high_amount_threshold?: number | null;
   meta_ads_account_id?: string | null;
+  meta_dataset_id?: string | null;
   external_reporting_configured?: boolean;
   updated_at?: string | null;
 };
+
+export type MetaDataset = {
+  id: string;
+  organization_id: string;
+  label: string;
+  dataset_id: string;
+  access_token_configured: boolean;
+  created_at: string;
+  updated_at: string;
+};
+export type CreateMetaDatasetBody = { label: string; datasetId: string; accessToken: string };
+export type UpdateMetaDatasetBody = { label?: string; datasetId?: string; accessToken?: string };
 export type InstanceHealth = {
   ok: boolean;
   status: "connected" | "invalid_token" | "error";
@@ -364,6 +377,7 @@ export type UpdateInstanceBody = Partial<CreateInstanceBody> & {
   appSecret?: string | null;
   currency?: string | null;
   highAmountThreshold?: number | null;
+  metaDatasetId?: string | null;
 };
 
 // ── Meta token discovery ──────────────────────────────────────────────────

@@ -71,6 +71,9 @@ import type {
   ExternalReportingConfig,
   ExternalAccountsResponse,
   ExportToReportingResponse,
+  MetaDataset,
+  CreateMetaDatasetBody,
+  UpdateMetaDatasetBody,
 } from "../types/api";
 import { supabase, getCachedSession, updateCachedSession } from "./supabase";
 
@@ -994,6 +997,41 @@ export const api = {
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
         return r.json() as Promise<ExportToReportingResponse>;
+      })
+    ),
+
+  // ── Meta Datasets (Conversions API) ─────────────────────────────────────
+  getMetaDatasets: () => request<MetaDataset[]>("/api/meta-datasets"),
+  createMetaDataset: (payload: CreateMetaDatasetBody) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/meta-datasets`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<MetaDataset>;
+      })
+    ),
+  updateMetaDataset: (id: string, payload: UpdateMetaDatasetBody) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/meta-datasets/${id}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<MetaDataset>;
+      })
+    ),
+  deleteMetaDataset: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/meta-datasets/${id}`, {
+        method: "DELETE",
+        headers,
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<OkResponse>;
       })
     ),
 
