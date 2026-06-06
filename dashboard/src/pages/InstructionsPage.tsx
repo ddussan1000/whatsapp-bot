@@ -105,6 +105,23 @@ const SETUP_STEPS = [
       "Si tenés anuncios Click-to-WhatsApp en Meta, podés asignarle un flow específico a cada anuncio. Cuando alguien hace click y te escribe, la plataforma detecta de qué anuncio proviene y lo registra en Reportes → Anuncios.",
     tip: "Si el token tiene el permiso ads_read, la plataforma muestra automáticamente el nombre del anuncio, la campaña y el conjunto de anuncios junto con cada registro.",
   },
+  {
+    step: 8,
+    title: "Activá Conversions API para tus anuncios (opcional)",
+    nav: "Números de WhatsApp",
+    icon: Zap,
+    required: false,
+    description:
+      "Conversions API (CAPI) permite reportar a Meta cuando un cliente compra, directamente desde el servidor. Esto mejora la optimización de tus campañas CTWA incluso si el píxel web no está disponible.",
+    substeps: [
+      "En Meta Business Manager → Events Manager creá una nueva fuente de datos tipo «Conversions API»",
+      "Copiá el Dataset ID que aparece en la configuración de esa fuente de datos",
+      "Creá un System User Token con el permiso ads_management desde Business Manager → Configuración → Usuarios del sistema",
+      "En Números de WhatsApp → Datasets de Meta agregá un nuevo dataset con ese ID y el token",
+      "En la configuración de cada número, asigná el dataset creado",
+    ],
+    tip: "Una vez configurado, cada pago confirmado reporta automáticamente un evento Purchase a Meta con el monto y divisa correctos. No requiere ninguna acción adicional.",
+  },
 ];
 
 // ── Permisos ──────────────────────────────────────────────────────────────
@@ -134,6 +151,15 @@ const PERMISSIONS = [
     what: "Leer datos de campañas y anuncios de la cuenta publicitaria. La plataforma lo usa para enriquecer ad_click_logs con nombre de anuncio, campaña y adset vía Graph API.",
     without:
       "Los registros de anuncios solo tendrán el headline que llega en el referral del webhook. No se consultará la Graph API para datos adicionales.",
+  },
+  {
+    permission: "ads_management",
+    level: "CAPI (opcional)",
+    levelColor:
+      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    what: "Requerido para el System User Token del dataset de Conversions API. Permite reportar eventos de compra a Meta desde el servidor para optimizar campañas CTWA.",
+    without:
+      "El dataset de Conversions API no se podrá configurar y los eventos de compra no se reportarán a Meta. Las campañas CTWA no recibirán señales de conversión del servidor.",
   },
 ];
 

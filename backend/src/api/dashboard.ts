@@ -2346,6 +2346,32 @@ dashboardApi.openapi(
 
 // ── CAPI helpers ─────────────────────────────────────────────────────────────
 
+function friendlyMetaError(code: number | undefined, rawMessage: string | undefined): string {
+  switch (code) {
+    case 190:
+    case 102:
+      return "Token inválido o expirado. Generá un nuevo System User Token en Business Manager.";
+    case 200:
+    case 210:
+    case 299:
+      return "El token no tiene los permisos necesarios. Asegurate de incluir ads_management al generarlo.";
+    case 100:
+      return "ID de dataset inválido. Verificá el valor en Events Manager → Fuentes de datos.";
+    case 803:
+      return "Dataset no encontrado. Verificá que el ID sea correcto en Events Manager.";
+    case 368:
+      return "Token bloqueado temporalmente por Meta. Esperá unos minutos o generá uno nuevo.";
+    default:
+      if (rawMessage?.toLowerCase().includes("oauth")) {
+        return "Token inválido o expirado. Generá un nuevo System User Token en Business Manager.";
+      }
+      if (rawMessage?.toLowerCase().includes("permission")) {
+        return "El token no tiene los permisos necesarios. Verificá que incluya ads_management.";
+      }
+      return "No se pudo verificar el dataset. Revisá el ID y el token en Events Manager.";
+  }
+}
+
 async function validateCapiToken(
   datasetId: string,
   accessToken: string,
@@ -2364,11 +2390,11 @@ async function validateCapiToken(
       error?: { message?: string; code?: number };
     };
     if (!res.ok || data.error) {
-      return { ok: false, error: data.error?.message ?? "Dataset o token inválido" };
+      return { ok: false, error: friendlyMetaError(data.error?.code, data.error?.message) };
     }
     return { ok: true, name: data.name ?? datasetId };
   } catch {
-    return { ok: false, error: "No se pudo conectar con Meta API" };
+    return { ok: false, error: "No se pudo conectar con Meta. Verificá tu conexión e intentá de nuevo." };
   }
 }
 
