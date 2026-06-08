@@ -16,6 +16,7 @@ interface CapiPurchasePayload {
   accessToken: string;
   phone: string;
   ctwaClid: string;
+  wabaId: string;
   amount: number;
   currency: string;
   eventTime: number;
@@ -23,7 +24,7 @@ interface CapiPurchasePayload {
 }
 
 async function sendCapiPurchaseEvent(payload: CapiPurchasePayload): Promise<void> {
-  const { datasetId, accessToken, phone, ctwaClid, amount, currency, eventTime, eventId } = payload;
+  const { datasetId, accessToken, phone, ctwaClid, wabaId, amount, currency, eventTime, eventId } = payload;
 
   const eventData: Record<string, unknown> = {
     event_name: "Purchase",
@@ -33,6 +34,7 @@ async function sendCapiPurchaseEvent(payload: CapiPurchasePayload): Promise<void
     user_data: {
       ph: [hashPhone(phone)],
       ctwa_clid: ctwaClid,
+      whatsapp_business_account_id: wabaId,
     },
     custom_data: { currency, value: amount },
   };
@@ -86,18 +88,21 @@ export async function tryFireCapiPurchase(
 
   const { data: inst } = await supabase
     .from("whatsapp_instances")
-    .select("meta_dataset_id, meta_datasets(dataset_id, access_token)")
+    .select("waba_id, meta_dataset_id, meta_datasets(dataset_id, access_token)")
     .eq("id", instanceId)
     .eq("organization_id", organizationId)
     .maybeSingle();
 
   const datasetRow = (
     inst as unknown as {
+      waba_id?: string | null;
       meta_datasets?: { dataset_id: string; access_token: string | null };
     } | null
   )?.meta_datasets;
 
-  if (!datasetRow?.dataset_id || !datasetRow.access_token) return;
+  const wabaId = (inst as unknown as { waba_id?: string | null } | null)?.waba_id;
+
+  if (!datasetRow?.dataset_id || !datasetRow.access_token || !wabaId) return;
 
   const accessToken = await safeDecrypt(datasetRow.access_token);
   if (!accessToken) return;
@@ -124,6 +129,7 @@ export async function tryFireCapiPurchase(
     accessToken,
     phone,
     ctwaClid,
+    wabaId,
     amount,
     currency,
     eventTime: Math.floor(Date.now() / 1000),
