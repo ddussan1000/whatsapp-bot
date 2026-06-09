@@ -25,6 +25,7 @@ import { encrypt, safeDecrypt } from "../crypto/encrypt";
 import { validateAiProvider } from "../ai/assistant";
 import { log } from "../logger";
 import { invalidateInstanceCache } from "../db/instances";
+import { getOrCreateCapiDataset } from "../capi/setup-dataset";
 import { fetchDailyAdSpend, MetaAdsError } from "../meta/adsInsights";
 import { getExternalAccounts, sendSheetEntry, ExternalReportingError } from "../external/reportingClient";
 import { conversationStageSchema, settableStageSchema, STAGES } from "../stages";
@@ -941,6 +942,8 @@ const AutoConfigResultSchema = z.object({
   webhookConfigured: z.boolean(),
   messagesSubscribed: z.boolean(),
   errors: z.array(z.string()),
+  capiConfigured: z.boolean().optional(),
+  capiDatasetId: z.string().nullable().optional(),
 });
 
 const MetaStatusSchema = z.object({
@@ -1875,6 +1878,13 @@ dashboardApi.openapi(
         .update({ flow_id: body.flowId })
         .eq("id", data.id)
         .eq("organization_id", org);
+    }
+
+    // Auto-configurar CAPI dataset si hay wabaId + token
+    if (wabaId && metaToken && data) {
+      const capiDatasetId = await getOrCreateCapiDataset(wabaId, metaToken, org, data.id).catch(() => null);
+      autoConfig.capiConfigured = Boolean(capiDatasetId);
+      autoConfig.capiDatasetId = capiDatasetId ?? null;
     }
 
     return c.json({ instance: maskedInstance, autoConfig }, 200);
