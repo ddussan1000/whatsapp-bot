@@ -1842,6 +1842,8 @@ export interface paths {
                                 webhookConfigured: boolean;
                                 messagesSubscribed: boolean;
                                 errors: string[];
+                                capiConfigured?: boolean;
+                                capiDatasetId?: string | null;
                             };
                         };
                     };
@@ -1996,6 +1998,83 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/instances/{id}/setup-capi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    authorization: string;
+                    "x-organization-id"?: string;
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description CAPI dataset configured */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                            datasetId: string | null;
+                            alreadyExisted: boolean;
+                        };
+                    };
+                };
+                /** @description Faltan datos de instancia */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Instancia no encontrada */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;

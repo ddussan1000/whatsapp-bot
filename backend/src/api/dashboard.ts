@@ -1977,6 +1977,71 @@ dashboardApi.openapi(
   },
 );
 
+// ── POST /instances/{id}/setup-capi ──────────────────────────────────────
+
+dashboardApi.openapi(
+  createRoute({
+    method: "post",
+    path: "/instances/{id}/setup-capi",
+    request: {
+      headers: AuthHeaderSchema,
+      params: z.object({ id: z.string() }),
+    },
+    responses: {
+      200: {
+        description: "CAPI dataset configured",
+        content: {
+          "application/json": {
+            schema: z.object({
+              ok: z.boolean(),
+              datasetId: z.string().nullable(),
+              alreadyExisted: z.boolean(),
+            }),
+          },
+        },
+      },
+      400: { description: "Faltan datos de instancia", content: { "application/json": { schema: ErrorSchema } } },
+      404: { description: "Instancia no encontrada", content: { "application/json": { schema: ErrorSchema } } },
+      500: { description: "Error", content: { "application/json": { schema: ErrorSchema } } },
+    },
+  }),
+  async (c) => {
+    if (!supabase) return c.json({ error: "Supabase no configurado" }, 500);
+    const { id } = c.req.valid("param");
+    const org = orgId(c);
+
+    const { data: inst } = await supabase
+      .from("whatsapp_instances")
+      .select("id, waba_id, meta_token, meta_dataset_id")
+      .eq("id", id)
+      .eq("organization_id", org)
+      .maybeSingle();
+
+    if (!inst) return c.json({ error: "Instancia no encontrada" }, 404);
+
+    const alreadyExisted = Boolean(inst.meta_dataset_id);
+
+    if (!inst.waba_id || !inst.meta_token) {
+      return c.json(
+        { error: "La instancia requiere waba_id y meta_token para configurar CAPI" },
+        400,
+      );
+    }
+
+    const token = await safeDecrypt(inst.meta_token as string);
+    if (!token) return c.json({ error: "No se pudo descifrar el token de la instancia" }, 400);
+
+    const datasetId = await getOrCreateCapiDataset(
+      inst.waba_id as string,
+      token,
+      org,
+      id,
+    ).catch(() => null);
+
+    return c.json({ ok: Boolean(datasetId), datasetId: datasetId ?? null, alreadyExisted }, 200);
+  },
+);
+
 // ── GET /instances/{id}/meta-status ──────────────────────────────────────
 
 dashboardApi.openapi(
