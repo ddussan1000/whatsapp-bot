@@ -1094,10 +1094,13 @@ function AutoConfigChecklist({
     return <XCircle className="h-4 w-4 text-destructive" />;
   }
 
-  const items = [
+  const items: { label: string; value: boolean | null }[] = [
     { label: "WABA suscripta al app", value: autoConfig.wabaSubscribed },
     { label: "Webhook URL registrada", value: autoConfig.webhookConfigured },
     { label: "Campo messages activo", value: autoConfig.messagesSubscribed },
+    ...(autoConfig.capiConfigured !== undefined
+      ? [{ label: "CAPI dataset configurado", value: autoConfig.capiConfigured ?? null }]
+      : []),
   ];
 
   return (

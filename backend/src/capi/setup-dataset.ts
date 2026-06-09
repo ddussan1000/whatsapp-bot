@@ -45,34 +45,39 @@ export async function getOrCreateCapiDataset(
   }
 
   try {
-    // Check if this dataset already exists in our DB for this org
-    const { data: existing } = await supabase
-      .from("meta_datasets")
-      .select("id")
-      .eq("organization_id", orgId)
-      .eq("dataset_id", metaDatasetId)
-      .maybeSingle();
-
+    // Insert dataset record; fall back to select on duplicate key (23505)
+    const encryptedToken = await encrypt(accessToken);
     let dbRecordId: string;
 
-    if (existing) {
-      dbRecordId = existing.id as string;
-    } else {
-      const { data: inserted, error: insertError } = await supabase
-        .from("meta_datasets")
-        .insert({
-          organization_id: orgId,
-          dataset_id: metaDatasetId,
-          label: `CAPI - ${wabaId}`,
-          access_token: await encrypt(accessToken),
-        })
-        .select("id")
-        .single();
+    const { data: inserted, error: insertError } = await supabase
+      .from("meta_datasets")
+      .insert({
+        organization_id: orgId,
+        dataset_id: metaDatasetId,
+        label: `CAPI - ${wabaId}`,
+        access_token: encryptedToken,
+      })
+      .select("id")
+      .single();
 
-      if (insertError || !inserted) {
+    if (insertError) {
+      // 23505 = unique_violation — another concurrent call already inserted it
+      if ((insertError as { code?: string }).code !== "23505") {
         log.warn({ error: insertError, wabaId }, "CAPI setup: failed to insert meta_dataset");
         return null;
       }
+      const { data: existing } = await supabase
+        .from("meta_datasets")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("dataset_id", metaDatasetId)
+        .maybeSingle();
+      if (!existing) {
+        log.warn({ wabaId }, "CAPI setup: could not find existing dataset after insert conflict");
+        return null;
+      }
+      dbRecordId = existing.id as string;
+    } else {
       dbRecordId = (inserted as { id: string }).id;
     }
 

@@ -719,7 +719,7 @@ function EditDialog({
                   onClick={() =>
                     setupCapi.mutate(instance.id, {
                       onSuccess: (data) => {
-                        if (data.ok) toast.success("CAPI configurado correctamente");
+                        if (data.ok) toast.success(data.alreadyExisted ? "CAPI ya estaba configurado" : "CAPI configurado correctamente");
                         else toast.error("No se pudo configurar CAPI. Verificá el token de la instancia.");
                       },
                       onError: (e) => toast.error((e as Error).message),
