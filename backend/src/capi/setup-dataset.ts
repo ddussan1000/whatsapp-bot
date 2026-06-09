@@ -21,8 +21,13 @@ export async function getOrCreateCapiDataset(
   let metaDatasetId: string;
   try {
     const res = await fetch(
-      `https://graph.facebook.com/${GRAPH_API_VERSION}/${wabaId}/dataset?access_token=${encodeURIComponent(accessToken)}`,
-      { method: "POST", signal: AbortSignal.timeout(10_000) },
+      `https://graph.facebook.com/${GRAPH_API_VERSION}/${wabaId}/dataset`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: accessToken }),
+        signal: AbortSignal.timeout(10_000),
+      },
     );
     const data = (await res.json()) as {
       id?: string;
@@ -39,49 +44,54 @@ export async function getOrCreateCapiDataset(
     return null;
   }
 
-  // Check if this dataset already exists in our DB for this org
-  const { data: existing } = await supabase
-    .from("meta_datasets")
-    .select("id")
-    .eq("organization_id", orgId)
-    .eq("dataset_id", metaDatasetId)
-    .maybeSingle();
-
-  let dbRecordId: string;
-
-  if (existing) {
-    dbRecordId = existing.id as string;
-  } else {
-    const { data: inserted, error: insertError } = await supabase
+  try {
+    // Check if this dataset already exists in our DB for this org
+    const { data: existing } = await supabase
       .from("meta_datasets")
-      .insert({
-        organization_id: orgId,
-        dataset_id: metaDatasetId,
-        label: `CAPI - ${wabaId}`,
-        access_token: await encrypt(accessToken),
-      })
       .select("id")
-      .single();
+      .eq("organization_id", orgId)
+      .eq("dataset_id", metaDatasetId)
+      .maybeSingle();
 
-    if (insertError || !inserted) {
-      log.warn({ error: insertError, wabaId }, "CAPI setup: failed to insert meta_dataset");
+    let dbRecordId: string;
+
+    if (existing) {
+      dbRecordId = existing.id as string;
+    } else {
+      const { data: inserted, error: insertError } = await supabase
+        .from("meta_datasets")
+        .insert({
+          organization_id: orgId,
+          dataset_id: metaDatasetId,
+          label: `CAPI - ${wabaId}`,
+          access_token: await encrypt(accessToken),
+        })
+        .select("id")
+        .single();
+
+      if (insertError || !inserted) {
+        log.warn({ error: insertError, wabaId }, "CAPI setup: failed to insert meta_dataset");
+        return null;
+      }
+      dbRecordId = (inserted as { id: string }).id;
+    }
+
+    // Link dataset to instance
+    const { error: updateError } = await supabase
+      .from("whatsapp_instances")
+      .update({ meta_dataset_id: dbRecordId })
+      .eq("id", instanceId)
+      .eq("organization_id", orgId);
+
+    if (updateError) {
+      log.warn({ error: updateError, instanceId }, "CAPI setup: failed to link dataset to instance");
       return null;
     }
-    dbRecordId = (inserted as { id: string }).id;
-  }
 
-  // Link dataset to instance
-  const { error: updateError } = await supabase
-    .from("whatsapp_instances")
-    .update({ meta_dataset_id: dbRecordId })
-    .eq("id", instanceId)
-    .eq("organization_id", orgId);
-
-  if (updateError) {
-    log.warn({ error: updateError, instanceId }, "CAPI setup: failed to link dataset to instance");
+    log.info({ metaDatasetId, wabaId, instanceId }, "CAPI: dataset configured ✓");
+    return metaDatasetId;
+  } catch (err) {
+    log.warn({ err, wabaId }, "CAPI setup: unexpected DB error");
     return null;
   }
-
-  log.info({ metaDatasetId, wabaId, instanceId }, "CAPI: dataset configured ✓");
-  return metaDatasetId;
 }
