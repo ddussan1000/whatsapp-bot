@@ -78,6 +78,7 @@ import {
   useCreateMetaDatasetMutation,
   useUpdateMetaDatasetMutation,
   useDeleteMetaDatasetMutation,
+  useSetupCapiMutation,
 } from "@/lib/hooks";
 import type { MetaDataset, MetaStatusResponse, ReconfigureMetaResult } from "@/types/api";
 
@@ -238,6 +239,7 @@ function EditDialog({
   onClose: () => void;
 }) {
   const updateInstance = useUpdateInstanceMutation();
+  const setupCapi = useSetupCapiMutation();
   const assignFlow = useAssignFlowMutation();
   const saveMetaAds = useSaveInstanceMetaAdsMutation();
   const validateMetaAds = useValidateInstanceMetaAdsMutation();
@@ -707,6 +709,26 @@ function EditDialog({
                 Reporta compras confirmadas a Meta para optimizar tus campañas CTWA. Creá los
                 datasets en la sección de abajo y asigná uno a este número.
               </p>
+              {instance.waba_id && !instance.meta_dataset_id && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="self-start"
+                  loading={setupCapi.isPending}
+                  loadingText="Configurando…"
+                  onClick={() =>
+                    setupCapi.mutate(instance.id, {
+                      onSuccess: (data) => {
+                        if (data.ok) toast.success("CAPI configurado correctamente");
+                        else toast.error("No se pudo configurar CAPI. Verificá el token de la instancia.");
+                      },
+                      onError: (e) => toast.error((e as Error).message),
+                    })
+                  }
+                >
+                  Configurar automáticamente
+                </Button>
+              )}
               <Field label="Dataset de conversiones">
                 <Select
                   value={selectedDatasetId}
