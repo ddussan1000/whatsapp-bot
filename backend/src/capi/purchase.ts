@@ -6,9 +6,7 @@ import { log } from "../logger";
 const GRAPH_API_VERSION = "v19.0";
 
 function hashPhone(phone: string): string {
-  return createHash("sha256")
-    .update(phone.replace(/^\+/, ""))
-    .digest("hex");
+  return createHash("sha256").update(phone.replace(/^\+/, "")).digest("hex");
 }
 
 interface CapiPurchasePayload {
@@ -24,7 +22,8 @@ interface CapiPurchasePayload {
 }
 
 async function sendCapiPurchaseEvent(payload: CapiPurchasePayload): Promise<void> {
-  const { datasetId, accessToken, phone, ctwaClid, wabaId, amount, currency, eventTime, eventId } = payload;
+  const { datasetId, accessToken, phone, ctwaClid, wabaId, amount, currency, eventTime, eventId } =
+    payload;
 
   const eventData: Record<string, unknown> = {
     event_name: "Purchase",
@@ -47,27 +46,33 @@ async function sendCapiPurchaseEvent(payload: CapiPurchasePayload): Promise<void
 
   let res: Response;
   try {
-    res = await fetch(
-      `https://graph.facebook.com/${GRAPH_API_VERSION}/${datasetId}/events`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(10_000),
-      },
-    );
+    res = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${datasetId}/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    });
   } catch (err) {
     log.warn({ err, datasetId }, "CAPI: network error sending Purchase event");
     return;
   }
 
-  const data = await res.json() as { events_received?: number; error?: { message?: string; code?: number } };
+  const data = (await res.json()) as {
+    events_received?: number;
+    error?: { message?: string; code?: number };
+  };
   if (!res.ok || data.error) {
-    log.warn({ capiError: data.error, statusCode: res.status, datasetId }, "CAPI: Purchase event rejected by Meta");
+    log.warn(
+      { capiError: data.error, statusCode: res.status, datasetId },
+      "CAPI: Purchase event rejected by Meta",
+    );
     return;
   }
 
-  log.info({ eventsReceived: data.events_received, phone, amount, currency }, "CAPI: Purchase event sent ✓");
+  log.info(
+    { eventsReceived: data.events_received, phone, amount, currency },
+    "CAPI: Purchase event sent ✓",
+  );
 }
 
 /**
