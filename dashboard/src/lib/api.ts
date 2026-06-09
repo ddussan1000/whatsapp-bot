@@ -716,6 +716,16 @@ export const api = {
         return r.json() as Promise<ReconfigureMetaResult>;
       })
     ),
+  setupCapi: (id: string) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/instances/${id}/setup-capi`, {
+        method: "POST",
+        headers,
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ ok: boolean; datasetId: string | null; alreadyExisted: boolean }>;
+      })
+    ),
   /** Descubre números de WhatsApp disponibles a partir de un token de Meta.
    *  El token se usa solo para consultar la API de Meta y NO se almacena aquí. */
   discoverInstances: (payload: DiscoverInstancesBody) =>

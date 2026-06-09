@@ -596,6 +596,14 @@ export function useReconfigureMetaMutation() {
   });
 }
 
+export function useSetupCapiMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (instanceId: string) => api.setupCapi(instanceId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["instances"] }),
+  });
+}
+
 export function useSaveInstanceMetaAdsMutation() {
   const qc = useQueryClient();
   return useMutation({
