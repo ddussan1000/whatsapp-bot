@@ -63,6 +63,7 @@ import type {
   CreateInstanceResponse,
   MetaStatusResponse,
   ReconfigureMetaResult,
+  SetupCapiResult,
   OkResponse,
   SyncMetaSpendBody,
   SyncMetaSpendResponse,
@@ -723,7 +724,7 @@ export const api = {
         headers,
       }).then((r) => {
         if (!r.ok) return throwApiError(r);
-        return r.json() as Promise<{ ok: boolean; datasetId: string | null; alreadyExisted: boolean }>;
+        return r.json() as Promise<SetupCapiResult>;
       })
     ),
   /** Descubre números de WhatsApp disponibles a partir de un token de Meta.

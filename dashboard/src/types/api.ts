@@ -442,6 +442,12 @@ export type ReconfigureMetaResult = {
   errors: string[];
 };
 
+export type SetupCapiResult = {
+  ok: boolean;
+  datasetId: string | null;
+  alreadyExisted: boolean;
+};
+
 export type CreateProductReferralBody = {
   productId: string;
   ctwaClid: string;
