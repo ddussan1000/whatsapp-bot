@@ -2010,13 +2010,14 @@ dashboardApi.openapi(
     const { id } = c.req.valid("param");
     const org = orgId(c);
 
-    const { data: inst } = await supabase
+    const { data: inst, error: instError } = await supabase
       .from("whatsapp_instances")
       .select("id, waba_id, meta_token, meta_dataset_id")
       .eq("id", id)
       .eq("organization_id", org)
       .maybeSingle();
 
+    if (instError) return c.json({ error: instError.message }, 500);
     if (!inst) return c.json({ error: "Instancia no encontrada" }, 404);
 
     const alreadyExisted = Boolean(inst.meta_dataset_id);
