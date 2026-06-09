@@ -411,6 +411,8 @@ export type AutoConfigResult = {
   webhookConfigured: boolean;
   messagesSubscribed: boolean;
   errors: string[];
+  capiConfigured?: boolean;
+  capiDatasetId?: string | null;
 };
 
 export type CreateInstanceResponse = {
