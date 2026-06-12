@@ -43,6 +43,10 @@ type Props = {
   onDraftChange?: (draft: FlowEditorDraft) => void;
   renderActions?: (ctx: FlowEditorActionsContext) => React.ReactNode;
   readOnly?: boolean;
+  /** When set, auto-select this step (by index) after (re)mount — used to reveal AI variants. */
+  focusStepIndex?: number;
+  /** When `focusStepIndex` is set, also expand this message's variants panel (index within the step). */
+  focusMessageIndex?: number;
 };
 
 function FlowCanvasInner({
@@ -56,6 +60,8 @@ function FlowCanvasInner({
   onDraftChange,
   renderActions,
   readOnly = false,
+  focusStepIndex,
+  focusMessageIndex,
 }: Props) {
   const [draft, setDraftRaw] = useState<FlowEditorDraft>(initialDraft);
   const [dirty, setDirtyRaw] = useState(false);
@@ -65,13 +71,26 @@ function FlowCanvasInner({
   const [uploadMsgIndex, setUploadMsgIndex] = useState<number | null>(null);
   const [expandedVariants, setExpandedVariants] = useState<Set<number>>(new Set());
 
-  // Reset when initialDraft changes (e.g. parent loads different flow)
+  // Reset when initialDraft changes (e.g. parent loads different flow).
+  // If the parent passed a focus target (e.g. after generating AI variants), auto-select
+  // that step and expand the given message so the new versions are immediately visible.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraftRaw(initialDraft);
     setDirtyRaw(false);
-    setSelectedNodeId(null);
-    setExpandedVariants(new Set());
+    if (
+      focusStepIndex != null &&
+      focusStepIndex >= 0 &&
+      focusStepIndex < initialDraft.steps.length
+    ) {
+      setSelectedNodeId(
+        stepNodeId(initialDraft.steps[focusStepIndex], focusStepIndex),
+      );
+      setExpandedVariants(new Set(focusMessageIndex != null ? [focusMessageIndex] : []));
+    } else {
+      setSelectedNodeId(null);
+      setExpandedVariants(new Set());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialDraft]);
 
   // ── Draft mutations ────────────────────────────────────────────────────

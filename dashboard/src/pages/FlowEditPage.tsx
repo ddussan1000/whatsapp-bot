@@ -106,6 +106,7 @@ export function FlowEditPage() {
   const [currentDraft, setCurrentDraft] = useState<FlowEditorDraft>(emptyDraft);
   const [, setDirty] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+  const [focusAfterGen, setFocusAfterGen] = useState<{ step: number; msg: number } | null>(null);
 
   // Autosave timer
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,6 +139,7 @@ export function FlowEditPage() {
     if (!isNew && existingFlow && !draftInitializedRef.current) {
       draftInitializedRef.current = true;
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFocusAfterGen(null);
       setCurrentDraft(toDraft(existingFlow));
       setEditorKey((k) => k + 1);
       return;
@@ -149,6 +151,7 @@ export function FlowEditPage() {
       if (templateRaw) {
         try {
           const parsed = JSON.parse(templateRaw) as FlowEditorDraft;
+          setFocusAfterGen(null);
           setCurrentDraft({ ...parsed, id: undefined });
           setEditorKey((k) => k + 1);
           localStorage.removeItem("flow_new_draft");
@@ -163,12 +166,14 @@ export function FlowEditPage() {
       if (savedRaw) {
         try {
           const saved = JSON.parse(savedRaw) as FlowEditorDraft;
+          setFocusAfterGen(null);
           toast("Borrador restaurado", {
             description: "Se encontró un borrador guardado automáticamente.",
             action: {
               label: "Descartar",
               onClick: () => {
                 localStorage.removeItem("flow_draft");
+                setFocusAfterGen(null);
                 setCurrentDraft(emptyDraft());
                 setEditorKey((k) => k + 1);
               },
@@ -190,6 +195,7 @@ export function FlowEditPage() {
       if (templateRaw) {
         try {
           const parsed = JSON.parse(templateRaw) as FlowEditorDraft;
+          setFocusAfterGen(null);
           setCurrentDraft({ ...parsed, id: undefined });
           setEditorKey((k) => k + 1);
           localStorage.removeItem("flow_new_draft");
@@ -268,6 +274,7 @@ export function FlowEditPage() {
       onSuccess: (saved) => {
         localStorage.removeItem("flow_draft");
         const savedDraft = toDraft(saved);
+        setFocusAfterGen(null);
         setCurrentDraft(savedDraft);
         setEditorKey((k) => k + 1);
         toast.success("Flow guardado");
@@ -311,9 +318,26 @@ export function FlowEditPage() {
           }),
         })),
       };
+      // First message (in step/message order) that received a new variant — to auto-reveal it.
+      let focus: { step: number; msg: number } | null = null;
+      let affectedMessages = 0;
+      next.steps.forEach((s, stepIdx) =>
+        s.messages.forEach((m, msgIdx) => {
+          const before = draft.steps[stepIdx]?.messages[msgIdx]?.textVariants?.length ?? 0;
+          const after = m.textVariants?.length ?? 0;
+          if (after > before) {
+            affectedMessages += 1;
+            if (!focus) focus = { step: stepIdx, msg: msgIdx };
+          }
+        })
+      );
+      setFocusAfterGen(focus);
       setCurrentDraft(next);
       setEditorKey((k) => k + 1);
-      toast.success(`Se generaron ${res.variants.length} variantes con IA`);
+      toast.success(
+        `IA generó ${res.variants.length} versión(es) alternativa(s) en ${affectedMessages} mensaje(s). ` +
+          `Abrí los pasos marcados ⤨ para verlas. Guardá el flujo para conservarlas.`,
+      );
     } catch {
       toast.error("No se pudieron generar variantes. Verificá que tengas un proveedor de IA configurado.");
     }
@@ -399,6 +423,8 @@ export function FlowEditPage() {
         <FlowCanvas
           key={editorKey}
           initialDraft={currentDraft}
+          focusStepIndex={focusAfterGen?.step}
+          focusMessageIndex={focusAfterGen?.msg}
           onSave={handleSave}
           savePending={upsert.isPending}
           saveLabel="Guardar flujo"
