@@ -291,10 +291,17 @@ export function useUpdateBotConfigMutation() {
 export function useValidateAiMutation() {
   return useMutation({
     mutationFn: (payload: {
-      provider: "openai" | "gemini" | "anthropic" | "groq";
+      provider: "openai" | "gemini" | "anthropic" | "groq" | "deepseek" | "openrouter";
       apiKey: string;
       model: string;
     }) => api.validateAiProvider(payload),
+  });
+}
+
+export function useGenerateFlowVariantsMutation() {
+  return useMutation({
+    mutationFn: (payload: { messages: { index: number; text: string }[] }) =>
+      api.generateFlowVariants(payload),
   });
 }
 

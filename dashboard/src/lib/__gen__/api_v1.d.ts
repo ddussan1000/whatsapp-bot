@@ -5403,7 +5403,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        provider: "openai" | "gemini" | "anthropic" | "groq";
+                        provider: "openai" | "gemini" | "anthropic" | "groq" | "deepseek" | "openrouter";
                         apiKey: string;
                         model: string;
                     };
@@ -5491,7 +5491,7 @@ export interface paths {
                         receiptConfirmedMessage?: string;
                         ai_enabled?: boolean;
                         /** @enum {string|null} */
-                        ai_provider?: "openai" | "gemini" | "anthropic" | "groq" | null;
+                        ai_provider?: "openai" | "gemini" | "anthropic" | "groq" | "deepseek" | "openrouter" | null;
                         ai_api_key?: string | null;
                         ai_model?: string | null;
                         ai_system_prompt?: string | null;

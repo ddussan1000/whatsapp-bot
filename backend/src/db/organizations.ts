@@ -3,7 +3,7 @@ import { getCached, setCached, deleteCached } from "../cache/redis";
 
 export type OrgAiConfig = {
   ai_enabled: boolean;
-  ai_provider: "openai" | "gemini" | "anthropic" | "groq" | null;
+  ai_provider: "openai" | "gemini" | "anthropic" | "groq" | "deepseek" | "openrouter" | null;
   ai_api_key: string | null; // decrypted value
   ai_model: string | null;
   ai_system_prompt: string | null;

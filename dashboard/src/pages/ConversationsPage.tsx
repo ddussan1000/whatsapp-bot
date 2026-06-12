@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import { ConversationDetailPage } from "./ConversationDetailPage";
+import { cn } from "@/lib/utils";
 import {
   Search,
   X,
@@ -96,10 +98,12 @@ function ConversationRow({
   conv,
   onClick,
   onMarkRead,
+  selected,
 }: {
   conv: Conversation;
   onClick: () => void;
   onMarkRead: (e: React.MouseEvent) => void;
+  selected?: boolean;
 }) {
   const unread = conv.unread_count ?? 0;
   const lastText = conv.last_message_text ?? null;
@@ -113,7 +117,10 @@ function ConversationRow({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
-      className="flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-all hover:bg-muted/40 hover:shadow-sm cursor-pointer"
+      className={cn(
+        "flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-all hover:bg-muted/40 hover:shadow-sm cursor-pointer",
+        selected && "bg-muted ring-1 ring-primary/30",
+      )}
     >
       {/* Avatar with unread badge */}
       <div className="relative shrink-0">
@@ -225,7 +232,6 @@ function ConversationRow({
 // ── ConversationsPage ─────────────────────────────────────────────────────
 
 export function ConversationsPage() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Read all filter state from URL params
@@ -267,6 +273,7 @@ export function ConversationsPage() {
   const hasUnread = searchParams.get("unread") === "1";
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const sortDir = (searchParams.get("sort") ?? "desc") as "asc" | "desc";
+  const selectedId = searchParams.get("c") ?? "";
 
   const pageSize = 15;
 
@@ -284,6 +291,11 @@ export function ConversationsPage() {
       },
       { replace: true }
     );
+  }
+
+  function selectConversation(convId: string) {
+    setParam("c", convId, false); // false = keep current page
+    markRead.mutate(convId);
   }
 
   function toggleUnread() {
@@ -344,7 +356,15 @@ export function ConversationsPage() {
   const hasAdOptions = (filters?.ads?.length ?? 0) > 0;
 
   return (
-    <section className="flex flex-col gap-4 p-3 sm:gap-5 sm:p-6">
+    <div className="flex h-full overflow-hidden">
+      {/* ── Left: conversation list ── */}
+      <aside
+        className={cn(
+          "h-full w-full shrink-0 overflow-y-auto border-r lg:w-[380px] xl:w-[420px]",
+          selectedId ? "hidden lg:block" : "block",
+        )}
+      >
+      <section className="flex flex-col gap-4 p-3 sm:gap-5 sm:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -595,7 +615,8 @@ export function ConversationsPage() {
             <ConversationRow
               key={conv.id}
               conv={conv}
-              onClick={() => navigate(`/conversations/${conv.id}`)}
+              selected={conv.id === selectedId}
+              onClick={() => selectConversation(conv.id)}
               onMarkRead={(e) => {
                 e.stopPropagation();
                 markRead.mutate(conv.id);
@@ -636,6 +657,32 @@ export function ConversationsPage() {
           </div>
         </div>
       )}
-    </section>
+      </section>
+      </aside>
+
+      {/* ── Right: selected conversation ── */}
+      <main
+        className={cn(
+          "h-full flex-1 overflow-hidden",
+          selectedId ? "block" : "hidden lg:block",
+        )}
+      >
+        {selectedId ? (
+          <ConversationDetailPage
+            key={selectedId}
+            conversationId={selectedId}
+            embedded
+            onBack={() => setParam("c", "", false)}
+          />
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+            <MessagesSquare size={40} className="text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">
+              Seleccioná una conversación para ver el chat
+            </p>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
