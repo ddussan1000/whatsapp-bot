@@ -291,7 +291,7 @@ export function useUpdateBotConfigMutation() {
 export function useValidateAiMutation() {
   return useMutation({
     mutationFn: (payload: {
-      provider: "openai" | "gemini" | "anthropic" | "groq";
+      provider: "openai" | "gemini" | "anthropic" | "groq" | "deepseek" | "openrouter";
       apiKey: string;
       model: string;
     }) => api.validateAiProvider(payload),

@@ -55,13 +55,25 @@ async function askAnthropic(text: string, systemPrompt: string, apiKey: string, 
   return extractJson(raw);
 }
 
-async function askGroq(text: string, systemPrompt: string, apiKey: string, model: string): Promise<AssistantResult> {
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+const OPENAI_COMPATIBLE_URLS = {
+  openai: "https://api.openai.com/v1/chat/completions",
+  groq: "https://api.groq.com/openai/v1/chat/completions",
+  deepseek: "https://api.deepseek.com/v1/chat/completions",
+  openrouter: "https://openrouter.ai/api/v1/chat/completions",
+} as const;
+
+type OpenAICompatibleProvider = keyof typeof OPENAI_COMPATIBLE_URLS;
+
+async function askOpenAICompatible(
+  provider: OpenAICompatibleProvider,
+  text: string,
+  systemPrompt: string,
+  apiKey: string,
+  model: string,
+): Promise<AssistantResult> {
+  const res = await fetch(OPENAI_COMPATIBLE_URLS[provider], {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model,
       max_tokens: 280,
@@ -72,7 +84,7 @@ async function askGroq(text: string, systemPrompt: string, apiKey: string, model
       ],
     }),
   });
-  if (!res.ok) throw new Error(`Groq API error ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`${provider} API error ${res.status}: ${await res.text()}`);
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   const raw = data.choices?.[0]?.message?.content ?? '{"reply":"No pude responder","next_state":null,"send_catalog":false}';
   return extractJson(raw);
@@ -94,35 +106,14 @@ async function askGemini(text: string, systemPrompt: string, apiKey: string, mod
   return extractJson(raw);
 }
 
-async function askOpenAI(text: string, systemPrompt: string, apiKey: string, model: string): Promise<AssistantResult> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 280,
-      temperature: 0.3,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: text },
-      ],
-    }),
-  });
-  if (!res.ok) throw new Error(`OpenAI API error ${res.status}: ${await res.text()}`);
-  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  const raw = data.choices?.[0]?.message?.content ?? '{"reply":"No pude responder","next_state":null,"send_catalog":false}';
-  return extractJson(raw);
-}
-
-function getDefaultModel(provider: "openai" | "gemini" | "anthropic" | "groq"): string {
+function getDefaultModel(provider: "openai" | "gemini" | "anthropic" | "groq" | "deepseek" | "openrouter"): string {
   switch (provider) {
     case "openai": return "gpt-4o-mini";
     case "gemini": return "gemini-2.0-flash-lite";
     case "anthropic": return "claude-3-5-haiku-latest";
     case "groq": return "llama-3.3-70b-versatile";
+    case "deepseek": return "deepseek-chat";
+    case "openrouter": return "openai/gpt-4o-mini";
   }
 }
 
@@ -146,10 +137,12 @@ export async function askAssistantForOrg(
     const apiKey = orgConfig.ai_api_key;
     const model = orgConfig.ai_model ?? getDefaultModel(orgConfig.ai_provider);
     try {
-      if (orgConfig.ai_provider === "openai") return await askOpenAI(text, systemPrompt, apiKey, model);
+      if (orgConfig.ai_provider === "openai" || orgConfig.ai_provider === "groq" ||
+          orgConfig.ai_provider === "deepseek" || orgConfig.ai_provider === "openrouter") {
+        return await askOpenAICompatible(orgConfig.ai_provider, text, systemPrompt, apiKey, model);
+      }
       if (orgConfig.ai_provider === "gemini") return await askGemini(text, systemPrompt, apiKey, model);
       if (orgConfig.ai_provider === "anthropic") return await askAnthropic(text, systemPrompt, apiKey, model);
-      if (orgConfig.ai_provider === "groq") return await askGroq(text, systemPrompt, apiKey, model);
     } catch (err) {
       log.error({ err, provider: orgConfig.ai_provider }, "askAssistantForOrg: fallo proveedor org");
     }
@@ -162,17 +155,17 @@ export async function askAssistantForOrg(
 
 // Validation: test that an API key + model combo works
 export async function validateAiProvider(
-  provider: "openai" | "gemini" | "anthropic" | "groq",
+  provider: "openai" | "gemini" | "anthropic" | "groq" | "deepseek" | "openrouter",
   apiKey: string,
   model: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const testPrompt = 'Respond with exactly: {"ok":true}';
   const systemPrompt = "You are a test assistant. Follow instructions exactly.";
   try {
-    if (provider === "openai") await askOpenAI(testPrompt, systemPrompt, apiKey, model);
-    else if (provider === "gemini") await askGemini(testPrompt, systemPrompt, apiKey, model);
+    if (provider === "openai" || provider === "groq" || provider === "deepseek" || provider === "openrouter") {
+      await askOpenAICompatible(provider, testPrompt, systemPrompt, apiKey, model);
+    } else if (provider === "gemini") await askGemini(testPrompt, systemPrompt, apiKey, model);
     else if (provider === "anthropic") await askAnthropic(testPrompt, systemPrompt, apiKey, model);
-    else if (provider === "groq") await askGroq(testPrompt, systemPrompt, apiKey, model);
     return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
