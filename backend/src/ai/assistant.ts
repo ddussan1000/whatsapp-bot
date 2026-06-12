@@ -160,6 +160,68 @@ export async function askAssistantForOrg(
   return null;
 }
 
+// Raw text completion using the org's BYOK provider. Unlike askAssistantForOrg this is NOT gated on
+// ai_enabled (that flag governs the auto-responder, not editor tools) and does not coerce to the
+// sales JSON schema — it returns whatever the model produced. Returns null if no provider/key configured.
+const RAW_OPENAI_COMPATIBLE_URLS: Record<string, string> = {
+  openai: "https://api.openai.com/v1/chat/completions",
+  groq: "https://api.groq.com/openai/v1/chat/completions",
+  deepseek: "https://api.deepseek.com/v1/chat/completions",
+  openrouter: "https://openrouter.ai/api/v1/chat/completions",
+};
+
+async function rawOpenAICompatible(url: string, system: string, user: string, apiKey: string, model: string, maxTokens: number): Promise<string> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model, max_tokens: maxTokens, temperature: 0.7,
+      messages: [ { role: "system", content: system }, { role: "user", content: user } ],
+    }),
+  });
+  if (!res.ok) throw new Error(`AI API error ${res.status}: ${await res.text()}`);
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+async function rawAnthropic(system: string, user: string, apiKey: string, model: string, maxTokens: number): Promise<string> {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: "user", content: user }] }),
+  });
+  if (!res.ok) throw new Error(`Anthropic API error ${res.status}: ${await res.text()}`);
+  const data = (await res.json()) as { content?: Array<{ text?: string }> };
+  return data.content?.[0]?.text ?? "";
+}
+
+async function rawGemini(system: string, user: string, apiKey: string, model: string, maxTokens: number): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey });
+  const response = await ai.models.generateContent({
+    model,
+    config: { temperature: 0.7, maxOutputTokens: maxTokens, systemInstruction: system },
+    contents: [{ role: "user", parts: [{ text: user }] }],
+  });
+  return response.text ?? "";
+}
+
+export async function generateRawForOrg(
+  system: string,
+  user: string,
+  orgConfig: OrgAiConfig,
+  maxTokens = 3000,
+): Promise<string | null> {
+  if (!orgConfig.ai_provider || !orgConfig.ai_api_key) return null;
+  const apiKey = orgConfig.ai_api_key;
+  const model = orgConfig.ai_model ?? getDefaultModel(orgConfig.ai_provider);
+  const p = orgConfig.ai_provider;
+  if (p === "gemini") return await rawGemini(system, user, apiKey, model, maxTokens);
+  if (p === "anthropic") return await rawAnthropic(system, user, apiKey, model, maxTokens);
+  const url = RAW_OPENAI_COMPATIBLE_URLS[p];
+  if (!url) return null;
+  return await rawOpenAICompatible(url, system, user, apiKey, model, maxTokens);
+}
+
 // Validation: test that an API key + model combo works
 export async function validateAiProvider(
   provider: "openai" | "gemini" | "anthropic" | "groq",

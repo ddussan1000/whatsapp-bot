@@ -468,6 +468,17 @@ export const api = {
         return r.json() as Promise<ValidateAiResponse>;
       })
     ),
+  generateFlowVariants: (payload: { messages: { index: number; text: string }[] }) =>
+    buildHeaders(true).then((headers) =>
+      fetch(`${API_URL}/api/flows/generate-variants`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      }).then((r) => {
+        if (!r.ok) return throwApiError(r);
+        return r.json() as Promise<{ variants: { index: number; text: string }[] }>;
+      })
+    ),
   getFlowTemplates: () => request<FlowTemplate[]>("/api/flow-templates"),
   createFlowTemplate: (payload: CreateFlowTemplateBody) =>
     buildHeaders(true).then((headers) =>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { BookMarked, Trash2 } from "lucide-react";
+import { BookMarked, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ import {
   useUpsertFlowV2Mutation,
   useDeleteFlowV2Mutation,
   useCreateFlowTemplateMutation,
+  useGenerateFlowVariantsMutation,
 } from "@/lib/hooks";
 import type { FlowEditorDraft } from "@/lib/flowUtils";
 import type { FlowV2, UpsertFlowBody } from "@/types/api";
@@ -99,6 +100,7 @@ export function FlowEditPage() {
   const upsert = useUpsertFlowV2Mutation();
   const remove = useDeleteFlowV2Mutation();
   const createTemplate = useCreateFlowTemplateMutation();
+  const generateVariants = useGenerateFlowVariantsMutation();
 
   // ── Editor state ─────────────────────────────────────────────────────────
   const [currentDraft, setCurrentDraft] = useState<FlowEditorDraft>(emptyDraft);
@@ -274,6 +276,49 @@ export function FlowEditPage() {
     });
   }
 
+  // ── Generate AI variants handler ──────────────────────────────────────────
+  async function handleGenerateVariants(draft: FlowEditorDraft) {
+    // Flatten text messages with non-empty content, keeping a stable index map.
+    const refs: { index: number; stepIdx: number; msgIdx: number; text: string }[] = [];
+    draft.steps.forEach((s, stepIdx) =>
+      s.messages.forEach((m, msgIdx) => {
+        if (m.messageType === "text" && (m.textContent ?? "").trim()) {
+          refs.push({ index: refs.length, stepIdx, msgIdx, text: (m.textContent ?? "").trim() });
+        }
+      })
+    );
+    if (refs.length === 0) {
+      toast.error("No hay mensajes de texto para parafrasear");
+      return;
+    }
+    try {
+      const res = await generateVariants.mutateAsync({
+        messages: refs.map((r) => ({ index: r.index, text: r.text })),
+      });
+      // Build a new draft with each generated paraphrase appended to its message's textVariants.
+      const byIndex = new Map(res.variants.map((v) => [v.index, v.text]));
+      const next: FlowEditorDraft = {
+        ...draft,
+        steps: draft.steps.map((s, stepIdx) => ({
+          ...s,
+          messages: s.messages.map((m, msgIdx) => {
+            const ref = refs.find((r) => r.stepIdx === stepIdx && r.msgIdx === msgIdx);
+            const variant = ref ? byIndex.get(ref.index) : undefined;
+            if (!variant) return m;
+            const existing = m.textVariants ?? [];
+            if (existing.includes(variant)) return m;
+            return { ...m, textVariants: [...existing, variant] };
+          }),
+        })),
+      };
+      setCurrentDraft(next);
+      setEditorKey((k) => k + 1);
+      toast.success(`Se generaron ${res.variants.length} variantes con IA`);
+    } catch {
+      toast.error("No se pudieron generar variantes. Verificá que tengas un proveedor de IA configurado.");
+    }
+  }
+
   // ── Delete handler ────────────────────────────────────────────────────────
   function confirmDelete(id: string) {
     setDeleteTargetId(id);
@@ -370,6 +415,15 @@ export function FlowEditPage() {
                 disabled={!isDirty}
               >
                 Descartar cambios
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                disabled={generateVariants.isPending}
+                onClick={() => void handleGenerateVariants(draft)}
+              >
+                <Sparkles size={14} />
+                {generateVariants.isPending ? "Generando…" : "Generar variante con IA"}
               </Button>
               <Button
                 variant="outline"

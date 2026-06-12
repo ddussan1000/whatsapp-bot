@@ -298,6 +298,13 @@ export function useValidateAiMutation() {
   });
 }
 
+export function useGenerateFlowVariantsMutation() {
+  return useMutation({
+    mutationFn: (payload: { messages: { index: number; text: string }[] }) =>
+      api.generateFlowVariants(payload),
+  });
+}
+
 export function useFlowTemplatesQuery() {
   return useQuery({
     queryKey: ["flow-templates"],
