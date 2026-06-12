@@ -5,6 +5,7 @@ import { extractFirstWord, invalidateFlowCache } from "../db/flows";
 import { invalidateInstanceCache } from "../db/instances";
 import { getOrgAiConfig } from "../db/organizations";
 import { generateRawForOrg } from "../ai/assistant";
+import { log } from "../logger";
 
 function db(c: Context) {
   return getSupabaseWithUserJwt(c);
@@ -443,37 +444,78 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       }
 
       const system =
-        "Eres un redactor experto en mensajes de WhatsApp para ventas. Te paso un arreglo JSON de " +
-        "mensajes de un bot. Devuelve EXACTAMENTE un arreglo JSON de strings, mismo largo y mismo " +
-        "orden, donde cada elemento es una PARÁFRASIS del mensaje original: mismo significado, mismo " +
-        "tono, misma intención y estructura, pero con otras palabras. Conservá emojis, saltos de " +
-        "línea y cualquier placeholder como {{nombre}} o {nombre} sin modificarlos. No agregues texto " +
-        "fuera del arreglo JSON.";
-      const user = JSON.stringify(messages.map((m) => m.text));
+        "Eres un redactor experto en mensajes de WhatsApp para ventas. Recibís un objeto JSON " +
+        '{"messages": string[]} con los mensajes de un bot. Respondé SOLO con un objeto JSON ' +
+        '{"variants": string[]} donde variants tiene EXACTAMENTE el mismo largo y el mismo orden que ' +
+        "messages, y cada elemento es una PARÁFRASIS del mensaje original: mismo significado, tono, " +
+        "intención y estructura, con otras palabras. Conservá emojis, saltos de línea y cualquier " +
+        "placeholder como {{nombre}} o {nombre} sin modificarlos. No agregues texto fuera del objeto JSON.";
+      const user = JSON.stringify({ messages: messages.map((m) => m.text) });
+
+      // Scale token budget to the input so long flows are not truncated mid-array.
+      const inputChars = messages.reduce((n, m) => n + m.text.length, 0);
+      const maxTokens = Math.min(8000, Math.max(3000, Math.ceil(inputChars / 2) + 500));
 
       let raw: string | null;
       try {
-        raw = await generateRawForOrg(system, user, orgConfig);
+        raw = await generateRawForOrg(system, user, orgConfig, maxTokens, {
+          jsonMode: true,
+          temperature: 0,
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        if (msg === "AI_RESPONSE_TRUNCATED") {
+          return c.json(
+            { error: "El flujo es demasiado largo para generar variantes de una vez. Probá con menos mensajes." },
+            502,
+          );
+        }
         return c.json({ error: `Fallo del proveedor de IA: ${msg}` }, 502);
       }
       if (!raw) return c.json({ error: "El proveedor de IA no devolvió respuesta." }, 502);
 
-      // Extract a JSON array of strings from the model output.
-      let parsed: unknown;
-      try {
-        const start = raw.indexOf("[");
-        const end = raw.lastIndexOf("]");
-        parsed = JSON.parse(start >= 0 && end > start ? raw.slice(start, end + 1) : raw);
-      } catch {
+      // Robustly extract the variants array. Accept either {"variants":[...]} (JSON mode) or a bare
+      // array, tolerating ```json fences and surrounding prose.
+      function extractVariants(text: string): string[] | null {
+        let s = text.trim();
+        const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+        if (fence && fence[1]) s = fence[1].trim();
+        const tryParse = (candidate: string): unknown => {
+          try {
+            return JSON.parse(candidate);
+          } catch {
+            return undefined;
+          }
+        };
+        let obj = tryParse(s);
+        if (obj === undefined) {
+          // Fall back to slicing the outermost object, then the outermost array.
+          const ob = s.indexOf("{"), oe = s.lastIndexOf("}");
+          if (ob >= 0 && oe > ob) obj = tryParse(s.slice(ob, oe + 1));
+          if (obj === undefined) {
+            const ab = s.indexOf("["), ae = s.lastIndexOf("]");
+            if (ab >= 0 && ae > ab) obj = tryParse(s.slice(ab, ae + 1));
+          }
+        }
+        if (Array.isArray(obj)) return obj.map((x) => String(x ?? ""));
+        if (obj && typeof obj === "object" && Array.isArray((obj as { variants?: unknown }).variants)) {
+          return (obj as { variants: unknown[] }).variants.map((x) => String(x ?? ""));
+        }
+        return null;
+      }
+
+      const arr = extractVariants(raw);
+      if (!arr) {
+        log.error({ orgId: orgId(c), rawSample: raw.slice(0, 500) }, "generate-variants: unparseable AI response");
         return c.json({ error: "No se pudo interpretar la respuesta de la IA." }, 502);
       }
-      if (!Array.isArray(parsed) || parsed.length !== messages.length) {
+      if (arr.length !== messages.length) {
+        log.warn({ orgId: orgId(c), got: arr.length, expected: messages.length }, "generate-variants: length mismatch");
         return c.json({ error: "La IA devolvió una cantidad inesperada de variantes." }, 502);
       }
 
-      const variants = messages.map((m, i) => ({ index: m.index, text: String(parsed[i] ?? "").trim() }))
+      const variants = messages
+        .map((m, i) => ({ index: m.index, text: String(arr[i] ?? "").trim() }))
         .filter((v) => v.text.length > 0);
       return c.json({ variants }, 200);
     },

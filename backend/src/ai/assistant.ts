@@ -163,17 +163,38 @@ const RAW_OPENAI_COMPATIBLE_URLS: Record<string, string> = {
   openrouter: "https://openrouter.ai/api/v1/chat/completions",
 };
 
-async function rawOpenAICompatible(url: string, system: string, user: string, apiKey: string, model: string, maxTokens: number): Promise<string> {
+async function rawOpenAICompatible(
+  url: string,
+  system: string,
+  user: string,
+  apiKey: string,
+  model: string,
+  maxTokens: number,
+  opts: { jsonMode?: boolean; temperature?: number } = {},
+): Promise<string> {
+  const body: Record<string, unknown> = {
+    model,
+    max_tokens: maxTokens,
+    temperature: opts.temperature ?? 0.7,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  };
+  if (opts.jsonMode) body.response_format = { type: "json_object" };
+
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model, max_tokens: maxTokens, temperature: 0.7,
-      messages: [ { role: "system", content: system }, { role: "user", content: user } ],
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`AI API error ${res.status}: ${await res.text()}`);
-  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
+  };
+  if (data.choices?.[0]?.finish_reason === "length") {
+    throw new Error("AI_RESPONSE_TRUNCATED");
+  }
   return data.choices?.[0]?.message?.content ?? "";
 }
 
@@ -203,6 +224,7 @@ export async function generateRawForOrg(
   user: string,
   orgConfig: OrgAiConfig,
   maxTokens = 3000,
+  opts: { jsonMode?: boolean; temperature?: number } = {},
 ): Promise<string | null> {
   if (!orgConfig.ai_provider || !orgConfig.ai_api_key) return null;
   const apiKey = orgConfig.ai_api_key;
@@ -212,7 +234,7 @@ export async function generateRawForOrg(
   if (p === "anthropic") return await rawAnthropic(system, user, apiKey, model, maxTokens);
   const url = RAW_OPENAI_COMPATIBLE_URLS[p];
   if (!url) return null;
-  return await rawOpenAICompatible(url, system, user, apiKey, model, maxTokens);
+  return await rawOpenAICompatible(url, system, user, apiKey, model, maxTokens, opts);
 }
 
 // Validation: test that an API key + model combo works
