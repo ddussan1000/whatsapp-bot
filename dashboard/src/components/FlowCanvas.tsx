@@ -139,7 +139,6 @@ function FlowCanvasInner({
     step.messages.forEach((m, i) => {
       if ((m.textVariants?.length ?? 0) > 0) toExpand.add(i);
     });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExpandedVariants(toExpand);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNodeId]);

@@ -9,6 +9,8 @@ import {
   Megaphone,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  SlidersHorizontal,
   Workflow,
   CornerUpLeft,
   RefreshCw,
@@ -240,6 +242,7 @@ export function ConversationsPage() {
 
   // Local input state — decoupled from URL so debounce works
   const [searchInput, setSearchInput] = useState(search);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   // Track the last value pushed to the URL so the debounce doesn't fire on mount
   const pushedSearchRef = useRef(search);
 
@@ -415,9 +418,25 @@ export function ConversationsPage() {
       {/* Filters */}
       <div className="rounded-xl border bg-muted/20 p-3 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((o) => !o)}
+            aria-expanded={filtersOpen}
+            className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <SlidersHorizontal size={13} />
             Filtros
-          </p>
+            {hasFilters && !filtersOpen && (
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-primary"
+                aria-label="Hay filtros activos"
+              />
+            )}
+            <ChevronDown
+              size={14}
+              className={`transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+            />
+          </button>
           {hasFilters && (
             <button
               type="button"
@@ -429,6 +448,7 @@ export function ConversationsPage() {
           )}
         </div>
 
+        {filtersOpen && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
           {/* Search */}
           <div className="flex flex-col gap-1">
@@ -569,6 +589,7 @@ export function ConversationsPage() {
             </Select>
           </div>
         </div>
+        )}
       </div>
 
       {/* List */}
