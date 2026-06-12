@@ -482,7 +482,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         "placeholder como {{nombre}} o {nombre} sin modificarlos. No agregues texto fuera del objeto JSON.";
 
       // Generate in batches so long flows never hit the provider's single-response output ceiling.
-      const BATCH_SIZE = 8;
+      const BATCH_SIZE = 5;
       const texts = messages.map((m) => m.text);
       const allVariants: string[] = [];
 
@@ -490,7 +490,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         const batch = texts.slice(start, start + BATCH_SIZE);
         const user = JSON.stringify({ messages: batch });
         const inputChars = batch.reduce((n, t) => n + t.length, 0);
-        const maxTokens = Math.min(8000, Math.max(1500, Math.ceil(inputChars / 2) + 500));
+        const maxTokens = Math.min(8000, Math.max(1500, inputChars + 800));
 
         let raw: string | null;
         try {

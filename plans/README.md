@@ -21,6 +21,8 @@ Repo state when written: commit `df009e2`, branch `main`.
 | 008  | Conversations: responsive filter grid + stop auto-mark-read on select | P1 | S | 003 (DONE) | DONE (executor commit `d9f9de2`, cherry-picked to main → `6134457`; reviewed, build+lint exit 0, approved 2026-06-12; **smoke test pending**) |
 | 009  | Collapsible conversation filters (collapsed by default) + lint cleanup | P2 | S | 008, 007 (DONE) | DONE (executor commit `3c27f86`, FF-merged to main → `3c27f86`; reviewed, build+lint **0 warnings**, approved 2026-06-12; recovered a dangling commit after a stray local FlowCanvas edit blocked the first FF — final tree clean) |
 
+| 010  | Sanitize AI provider errors before they reach the client | P0 | S | — | DONE (commit `9e44cc8`, FF to main; reviewed, typecheck clean on changed files, grep criteria pass, approved 2026-06-12; landed directly on main — executor worktree predated the feature) |
+
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (reason)
 
 ## Dependency notes
