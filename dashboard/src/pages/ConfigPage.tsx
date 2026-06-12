@@ -262,25 +262,24 @@ export function ConfigPage() {
 
       {/* Sección proveedor IA propio */}
       <Section
-        title="API Key de IA"
-        subtitle="Para que el bot pueda responder con IA después de un flujo, necesitás configurar tu propia API key. Sin esto, las respuestas con IA no funcionan aunque estén activadas."
+        title="Proveedor de IA"
+        subtitle="Configurá tu propia API key. Se usa para las respuestas con IA post-flujo y también para funciones como generar variantes de mensajes con IA en el editor de flujos. Podés configurarlo aunque las respuestas automáticas estén desactivadas."
       >
         <Field
           icon={Zap}
           label="Proveedor"
-          description="Proveedor de IA con el que querés responder. Cada proveedor requiere su propia API key."
+          description="Proveedor de IA a usar. Cada proveedor requiere su propia API key. Independiente del interruptor de respuestas automáticas."
         >
           <Select
             value={aiProvider}
             onValueChange={setAiProvider}
-            disabled={!aiEnabled}
           >
             <SelectTrigger>
               <SelectValue placeholder="Seleccioná un proveedor" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">
-                Sin proveedor (IA desactivada)
+                Sin proveedor
               </SelectItem>
               <SelectItem value="openai">OpenAI (GPT)</SelectItem>
               <SelectItem value="gemini">Gemini (Google)</SelectItem>
@@ -306,7 +305,6 @@ export function ConfigPage() {
                     ? "••••••• (configurada — dejar vacío para mantener)"
                     : "sk-..."
                 }
-                disabled={!aiEnabled}
                 autoComplete="new-password"
               />
             </Field>
@@ -322,7 +320,6 @@ export function ConfigPage() {
                 placeholder={
                   MODEL_PLACEHOLDERS[aiProvider] ?? "nombre-del-modelo"
                 }
-                disabled={!aiEnabled}
               />
             </Field>
 
@@ -331,7 +328,7 @@ export function ConfigPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => void onValidateAi()}
-                disabled={validateAiMutation.isPending || !aiEnabled}
+                disabled={validateAiMutation.isPending}
                 className="gap-2"
               >
                 {validateAiMutation.isPending ? (
