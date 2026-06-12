@@ -28,6 +28,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/ui/button";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
 import { StatusBadge } from "../components/StatusBadge";
@@ -1252,8 +1253,17 @@ function ClientInfoModal({
 
 // ── ConversationDetailPage ─────────────────────────────────────────────────
 
-export function ConversationDetailPage() {
-  const { id = "" } = useParams();
+export function ConversationDetailPage({
+  conversationId,
+  embedded = false,
+  onBack,
+}: {
+  conversationId?: string;
+  embedded?: boolean;
+  onBack?: () => void;
+} = {}) {
+  const params = useParams();
+  const id = conversationId ?? params.id ?? "";
   const navigate = useNavigate();
   const [text, setText] = useState("");
   const [infoOpen, setInfoOpen] = useState(false);
@@ -1433,8 +1443,8 @@ export function ConversationDetailPage() {
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => navigate(-1)}
-            className="shrink-0"
+            onClick={embedded ? onBack : () => navigate(-1)}
+            className={cn("shrink-0", embedded && "lg:hidden")}
             aria-label="Volver"
           >
             <ArrowLeft size={18} />
