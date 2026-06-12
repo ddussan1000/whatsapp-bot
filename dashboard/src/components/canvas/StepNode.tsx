@@ -27,11 +27,6 @@ const TYPE_COLOR: Record<FlowMessageType, string> = {
 export function StepNode({ data }: { data: StepNodeData }) {
   const { step, stepIndex, isFirst, isLast, isSelected, isDimmed, onDelayBadgeClick, onMoveUp, onMoveDown } = data;
 
-  const stepVariantCount = step.messages.reduce(
-    (sum, m) => sum + (m.textVariants?.length ?? 0),
-    0,
-  );
-
   return (
     <div
       className={[
@@ -56,15 +51,6 @@ export function StepNode({ data }: { data: StepNodeData }) {
         <span className="flex-1 truncate text-xs font-semibold text-foreground">
           {step.label || `Paso ${stepIndex + 1}`}
         </span>
-        {stepVariantCount > 0 && (
-          <span
-            title={`${stepVariantCount} versión(es) alternativa(s) en este paso`}
-            className="flex shrink-0 items-center gap-0.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[9px] font-medium text-primary"
-          >
-            <Shuffle size={9} />
-            {stepVariantCount}
-          </span>
-        )}
         <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             type="button"

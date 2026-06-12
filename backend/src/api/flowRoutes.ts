@@ -11,6 +11,36 @@ function db(c: Context) {
   return getSupabaseWithUserJwt(c);
 }
 
+// Robustly extract the variants array. Accept either {"variants":[...]} (JSON mode) or a bare
+// array, tolerating ```json fences and surrounding prose.
+function extractVariants(text: string): string[] | null {
+  let s = text.trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence && fence[1]) s = fence[1].trim();
+  const tryParse = (candidate: string): unknown => {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      return undefined;
+    }
+  };
+  let obj = tryParse(s);
+  if (obj === undefined) {
+    // Fall back to slicing the outermost object, then the outermost array.
+    const ob = s.indexOf("{"), oe = s.lastIndexOf("}");
+    if (ob >= 0 && oe > ob) obj = tryParse(s.slice(ob, oe + 1));
+    if (obj === undefined) {
+      const ab = s.indexOf("["), ae = s.lastIndexOf("]");
+      if (ab >= 0 && ae > ab) obj = tryParse(s.slice(ab, ae + 1));
+    }
+  }
+  if (Array.isArray(obj)) return obj.map((x) => String(x ?? ""));
+  if (obj && typeof obj === "object" && Array.isArray((obj as { variants?: unknown }).variants)) {
+    return (obj as { variants: unknown[] }).variants.map((x) => String(x ?? ""));
+  }
+  return null;
+}
+
 const ErrorSchema = z.object({ error: z.string() });
 
 const AuthHeaderSchema = z.object({
@@ -417,7 +447,7 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
                 messages: z
                   .array(z.object({ index: z.number().int(), text: z.string().min(1) }))
                   .min(1)
-                  .max(40),
+                  .max(100),
               }),
             },
           },
@@ -450,72 +480,50 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         "messages, y cada elemento es una PARÁFRASIS del mensaje original: mismo significado, tono, " +
         "intención y estructura, con otras palabras. Conservá emojis, saltos de línea y cualquier " +
         "placeholder como {{nombre}} o {nombre} sin modificarlos. No agregues texto fuera del objeto JSON.";
-      const user = JSON.stringify({ messages: messages.map((m) => m.text) });
 
-      // Scale token budget to the input so long flows are not truncated mid-array.
-      const inputChars = messages.reduce((n, m) => n + m.text.length, 0);
-      const maxTokens = Math.min(8000, Math.max(3000, Math.ceil(inputChars / 2) + 500));
+      // Generate in batches so long flows never hit the provider's single-response output ceiling.
+      const BATCH_SIZE = 8;
+      const texts = messages.map((m) => m.text);
+      const allVariants: string[] = [];
 
-      let raw: string | null;
-      try {
-        raw = await generateRawForOrg(system, user, orgConfig, maxTokens, {
-          jsonMode: true,
-          temperature: 0,
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg === "AI_RESPONSE_TRUNCATED") {
-          return c.json(
-            { error: "El flujo es demasiado largo para generar variantes de una vez. Probá con menos mensajes." },
-            502,
-          );
-        }
-        return c.json({ error: `Fallo del proveedor de IA: ${msg}` }, 502);
-      }
-      if (!raw) return c.json({ error: "El proveedor de IA no devolvió respuesta." }, 502);
+      for (let start = 0; start < texts.length; start += BATCH_SIZE) {
+        const batch = texts.slice(start, start + BATCH_SIZE);
+        const user = JSON.stringify({ messages: batch });
+        const inputChars = batch.reduce((n, t) => n + t.length, 0);
+        const maxTokens = Math.min(8000, Math.max(1500, Math.ceil(inputChars / 2) + 500));
 
-      // Robustly extract the variants array. Accept either {"variants":[...]} (JSON mode) or a bare
-      // array, tolerating ```json fences and surrounding prose.
-      function extractVariants(text: string): string[] | null {
-        let s = text.trim();
-        const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
-        if (fence && fence[1]) s = fence[1].trim();
-        const tryParse = (candidate: string): unknown => {
-          try {
-            return JSON.parse(candidate);
-          } catch {
-            return undefined;
+        let raw: string | null;
+        try {
+          raw = await generateRawForOrg(system, user, orgConfig, maxTokens, {
+            jsonMode: true,
+            temperature: 0,
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg === "AI_RESPONSE_TRUNCATED") {
+            return c.json(
+              { error: "Un mensaje es demasiado largo para generar su variante. Acortá ese mensaje e intentá de nuevo." },
+              502,
+            );
           }
-        };
-        let obj = tryParse(s);
-        if (obj === undefined) {
-          // Fall back to slicing the outermost object, then the outermost array.
-          const ob = s.indexOf("{"), oe = s.lastIndexOf("}");
-          if (ob >= 0 && oe > ob) obj = tryParse(s.slice(ob, oe + 1));
-          if (obj === undefined) {
-            const ab = s.indexOf("["), ae = s.lastIndexOf("]");
-            if (ab >= 0 && ae > ab) obj = tryParse(s.slice(ab, ae + 1));
-          }
+          return c.json({ error: `Fallo del proveedor de IA: ${msg}` }, 502);
         }
-        if (Array.isArray(obj)) return obj.map((x) => String(x ?? ""));
-        if (obj && typeof obj === "object" && Array.isArray((obj as { variants?: unknown }).variants)) {
-          return (obj as { variants: unknown[] }).variants.map((x) => String(x ?? ""));
-        }
-        return null;
-      }
+        if (!raw) return c.json({ error: "El proveedor de IA no devolvió respuesta." }, 502);
 
-      const arr = extractVariants(raw);
-      if (!arr) {
-        log.error({ orgId: orgId(c), rawSample: raw.slice(0, 500) }, "generate-variants: unparseable AI response");
-        return c.json({ error: "No se pudo interpretar la respuesta de la IA." }, 502);
-      }
-      if (arr.length !== messages.length) {
-        log.warn({ orgId: orgId(c), got: arr.length, expected: messages.length }, "generate-variants: length mismatch");
-        return c.json({ error: "La IA devolvió una cantidad inesperada de variantes." }, 502);
+        const part = extractVariants(raw);
+        if (!part) {
+          log.error({ orgId: orgId(c), rawSample: raw.slice(0, 500) }, "generate-variants: unparseable AI response");
+          return c.json({ error: "No se pudo interpretar la respuesta de la IA." }, 502);
+        }
+        if (part.length !== batch.length) {
+          log.warn({ orgId: orgId(c), got: part.length, expected: batch.length }, "generate-variants: batch length mismatch");
+          return c.json({ error: "La IA devolvió una cantidad inesperada de variantes." }, 502);
+        }
+        allVariants.push(...part);
       }
 
       const variants = messages
-        .map((m, i) => ({ index: m.index, text: String(arr[i] ?? "").trim() }))
+        .map((m, i) => ({ index: m.index, text: String(allVariants[i] ?? "").trim() }))
         .filter((v) => v.text.length > 0);
       return c.json({ variants }, 200);
     },

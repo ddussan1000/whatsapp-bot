@@ -128,6 +128,22 @@ function FlowCanvasInner({
     setExpandedVariants(new Set());
   }
 
+  // When a step is selected, expand by default every message that already has variants, so the
+  // alternate versions are readable without opening each one. Re-applies only when the selected
+  // step changes (not on every edit), so manual collapses within a step are preserved.
+  useEffect(() => {
+    if (selectedStepIndex == null || selectedStepIndex < 0) return;
+    const step = draft.steps[selectedStepIndex];
+    if (!step) return;
+    const toExpand = new Set<number>();
+    step.messages.forEach((m, i) => {
+      if ((m.textVariants?.length ?? 0) > 0) toExpand.add(i);
+    });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExpandedVariants(toExpand);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNodeId]);
+
   // ── Canvas data (derived) ──────────────────────────────────────────────
 
   const nodes = useMemo(
