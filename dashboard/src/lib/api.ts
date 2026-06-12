@@ -454,7 +454,7 @@ export const api = {
       })
     ),
   validateAiProvider: (payload: {
-    provider: "openai" | "gemini" | "anthropic" | "groq";
+    provider: "openai" | "gemini" | "anthropic" | "groq" | "deepseek" | "openrouter";
     apiKey: string;
     model: string;
   }) =>
