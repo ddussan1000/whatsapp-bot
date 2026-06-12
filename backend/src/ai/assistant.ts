@@ -188,7 +188,10 @@ async function rawOpenAICompatible(
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`AI API error ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`AI_PROVIDER_ERROR:${res.status}:${body}`);
+  }
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
   };
@@ -204,7 +207,10 @@ async function rawAnthropic(system: string, user: string, apiKey: string, model:
     headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: "user", content: user }] }),
   });
-  if (!res.ok) throw new Error(`Anthropic API error ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`AI_PROVIDER_ERROR:${res.status}:${body}`);
+  }
   const data = (await res.json()) as { content?: Array<{ text?: string }> };
   return data.content?.[0]?.text ?? "";
 }

@@ -506,13 +506,22 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
               502,
             );
           }
-          return c.json({ error: `Fallo del proveedor de IA: ${msg}` }, 502);
+          if (msg.startsWith("AI_PROVIDER_ERROR:")) {
+            const [, statusStr, ...bodyParts] = msg.split(":");
+            log.error(
+              { orgId: orgId(c), providerStatus: statusStr, providerBody: bodyParts.join(":").slice(0, 500) },
+              "generate-variants: AI provider HTTP error",
+            );
+            return c.json({ error: "El proveedor de IA rechazó la solicitud. Verificá tu API key y cuota." }, 502);
+          }
+          log.error({ orgId: orgId(c), err: msg }, "generate-variants: unexpected error");
+          return c.json({ error: "Fallo inesperado al generar variante." }, 502);
         }
         if (!raw) return c.json({ error: "El proveedor de IA no devolvió respuesta." }, 502);
 
         const part = extractVariants(raw);
         if (!part) {
-          log.error({ orgId: orgId(c), rawSample: raw.slice(0, 500) }, "generate-variants: unparseable AI response");
+          log.error({ orgId: orgId(c), rawLen: raw.length }, "generate-variants: unparseable AI response");
           return c.json({ error: "No se pudo interpretar la respuesta de la IA." }, 502);
         }
         if (part.length !== batch.length) {
