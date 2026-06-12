@@ -88,6 +88,8 @@ const MODEL_PLACEHOLDERS: Record<string, string> = {
   gemini: "gemini-2.0-flash-lite",
   anthropic: "claude-3-5-haiku-latest",
   groq: "llama-3.3-70b-versatile",
+  deepseek: "deepseek-chat",
+  openrouter: "openai/gpt-4o-mini",
 };
 
 export function ConfigPage() {
@@ -148,7 +150,7 @@ export function ConfigPage() {
     }
     try {
       const result = await validateAiMutation.mutateAsync({
-        provider: aiProvider as "openai" | "gemini" | "anthropic" | "groq",
+        provider: aiProvider as "openai" | "gemini" | "anthropic" | "groq" | "deepseek" | "openrouter",
         apiKey: aiApiKey,
         model,
       });
@@ -177,6 +179,8 @@ export function ConfigPage() {
         | "gemini"
         | "anthropic"
         | "groq"
+        | "deepseek"
+        | "openrouter"
         | null
         | undefined,
       ai_model: aiModel || null,
@@ -286,6 +290,8 @@ export function ConfigPage() {
               <SelectItem value="gemini">Gemini (Google)</SelectItem>
               <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
               <SelectItem value="groq">Groq (Llama)</SelectItem>
+              <SelectItem value="deepseek">DeepSeek</SelectItem>
+              <SelectItem value="openrouter">OpenRouter</SelectItem>
             </SelectContent>
           </Select>
         </Field>

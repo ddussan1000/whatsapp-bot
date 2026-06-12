@@ -5437,7 +5437,7 @@ dashboardApi.openapi(
         content: {
           "application/json": {
             schema: z.object({
-              provider: z.enum(["openai", "gemini", "anthropic", "groq"]),
+              provider: z.enum(["openai", "gemini", "anthropic", "groq", "deepseek", "openrouter"]),
               apiKey: z.string().min(1),
               model: z.string().min(1),
             }),
@@ -5530,7 +5530,7 @@ dashboardApi.openapi(
               receiptRejectedMessage: z.string().optional(),
               receiptConfirmedMessage: z.string().optional(),
               ai_enabled: z.boolean().optional(),
-              ai_provider: z.enum(["openai", "gemini", "anthropic", "groq"]).nullable().optional(),
+              ai_provider: z.enum(["openai", "gemini", "anthropic", "groq", "deepseek", "openrouter"]).nullable().optional(),
               ai_api_key: z.string().nullable().optional(),
               ai_model: z.string().nullable().optional(),
               ai_system_prompt: z.string().nullable().optional(),

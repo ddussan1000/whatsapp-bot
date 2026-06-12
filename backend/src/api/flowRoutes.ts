@@ -3,6 +3,8 @@ import type { Context } from "hono";
 import { getSupabaseWithUserJwt } from "./authContext";
 import { extractFirstWord, invalidateFlowCache } from "../db/flows";
 import { invalidateInstanceCache } from "../db/instances";
+import { getOrgAiConfig } from "../db/organizations";
+import { generateRawForOrg } from "../ai/assistant";
 
 function db(c: Context) {
   return getSupabaseWithUserJwt(c);
@@ -397,6 +399,83 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
         .single();
       if (error) return c.json({ error: error.message }, 500);
       return c.json(data, 200);
+    },
+  );
+
+  dashboardApi.openapi(
+    createRoute({
+      method: "post",
+      path: "/flows/generate-variants",
+      request: {
+        headers: AuthHeaderSchema,
+        body: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: z.object({
+                messages: z
+                  .array(z.object({ index: z.number().int(), text: z.string().min(1) }))
+                  .min(1)
+                  .max(40),
+              }),
+            },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: "Generated variants",
+          content: {
+            "application/json": {
+              schema: z.object({ variants: z.array(z.object({ index: z.number().int(), text: z.string() })) }),
+            },
+          },
+        },
+        400: { description: "No AI provider configured / bad input", content: { "application/json": { schema: ErrorSchema } } },
+        502: { description: "AI generation failed", content: { "application/json": { schema: ErrorSchema } } },
+      },
+    }),
+    async (c) => {
+      const { messages } = c.req.valid("json");
+      const orgConfig = await getOrgAiConfig(orgId(c));
+      if (!orgConfig.ai_provider || !orgConfig.ai_api_key) {
+        return c.json({ error: "No hay proveedor de IA configurado. Configurá uno en Ajustes." }, 400);
+      }
+
+      const system =
+        "Eres un redactor experto en mensajes de WhatsApp para ventas. Te paso un arreglo JSON de " +
+        "mensajes de un bot. Devuelve EXACTAMENTE un arreglo JSON de strings, mismo largo y mismo " +
+        "orden, donde cada elemento es una PARÁFRASIS del mensaje original: mismo significado, mismo " +
+        "tono, misma intención y estructura, pero con otras palabras. Conservá emojis, saltos de " +
+        "línea y cualquier placeholder como {{nombre}} o {nombre} sin modificarlos. No agregues texto " +
+        "fuera del arreglo JSON.";
+      const user = JSON.stringify(messages.map((m) => m.text));
+
+      let raw: string | null;
+      try {
+        raw = await generateRawForOrg(system, user, orgConfig);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return c.json({ error: `Fallo del proveedor de IA: ${msg}` }, 502);
+      }
+      if (!raw) return c.json({ error: "El proveedor de IA no devolvió respuesta." }, 502);
+
+      // Extract a JSON array of strings from the model output.
+      let parsed: unknown;
+      try {
+        const start = raw.indexOf("[");
+        const end = raw.lastIndexOf("]");
+        parsed = JSON.parse(start >= 0 && end > start ? raw.slice(start, end + 1) : raw);
+      } catch {
+        return c.json({ error: "No se pudo interpretar la respuesta de la IA." }, 502);
+      }
+      if (!Array.isArray(parsed) || parsed.length !== messages.length) {
+        return c.json({ error: "La IA devolvió una cantidad inesperada de variantes." }, 502);
+      }
+
+      const variants = messages.map((m, i) => ({ index: m.index, text: String(parsed[i] ?? "").trim() }))
+        .filter((v) => v.text.length > 0);
+      return c.json({ variants }, 200);
     },
   );
 }
