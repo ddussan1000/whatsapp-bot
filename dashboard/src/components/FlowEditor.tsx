@@ -264,7 +264,7 @@ function MessageRow({
                   <Textarea
                     placeholder="Escribe el mensaje de texto…"
                     value={msg.textContent ?? ""}
-                    rows={2}
+                    rows={4}
                     className="resize-none text-base"
                     onChange={(e) => onTextChange(e.target.value)}
                   />
@@ -290,7 +290,7 @@ function MessageRow({
                     <Textarea
                       placeholder={`Escribe una variante del mensaje…`}
                       value={v}
-                      rows={2}
+                      rows={4}
                       className="resize-none text-base"
                       onChange={(e) => {
                         const next = [...variants];
@@ -319,7 +319,7 @@ function MessageRow({
                 <Textarea
                   placeholder="Escribe el mensaje de texto…"
                   value={msg.textContent ?? ""}
-                  rows={2}
+                  rows={4}
                   className="resize-none text-base"
                   onChange={(e) => onTextChange(e.target.value)}
                 />

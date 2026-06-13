@@ -31,7 +31,7 @@ export function VariantsPanel({
           <Textarea
             placeholder="Escribe el mensaje…"
             value={textContent}
-            rows={2}
+            rows={4}
             className="resize-none text-sm"
             onChange={(e) => onTextChange(e.target.value)}
           />
@@ -58,7 +58,7 @@ export function VariantsPanel({
             <Textarea
               placeholder="Versión alternativa…"
               value={v}
-              rows={2}
+              rows={4}
               className="resize-none text-sm"
               onChange={(e) => {
                 const next = [...variants];
@@ -92,7 +92,7 @@ export function VariantsPanel({
       <Textarea
         placeholder="Escribe el mensaje…"
         value={textContent}
-        rows={2}
+        rows={4}
         className="resize-none text-sm"
         onChange={(e) => onTextChange(e.target.value)}
       />
