@@ -300,7 +300,7 @@ export function useValidateAiMutation() {
 
 export function useGenerateFlowVariantsMutation() {
   return useMutation({
-    mutationFn: (payload: { messages: { index: number; text: string }[] }) =>
+    mutationFn: (payload: { messages: { index: number; text: string; existingVariants?: string[] }[] }) =>
       api.generateFlowVariants(payload),
   });
 }

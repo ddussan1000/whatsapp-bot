@@ -445,7 +445,11 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
             "application/json": {
               schema: z.object({
                 messages: z
-                  .array(z.object({ index: z.number().int(), text: z.string().min(1) }))
+                  .array(z.object({
+                    index: z.number().int(),
+                    text: z.string().min(1),
+                    existingVariants: z.array(z.string()).optional().default([]),
+                  }))
                   .min(1)
                   .max(100),
               }),
@@ -474,22 +478,27 @@ export function registerFlowRoutes(dashboardApi: OpenAPIHono) {
       }
 
       const system =
-        "Eres un redactor experto en mensajes de WhatsApp para ventas. Recibís un objeto JSON " +
-        '{"messages": string[]} con los mensajes de un bot. Respondé SOLO con un objeto JSON ' +
-        '{"variants": string[]} donde variants tiene EXACTAMENTE el mismo largo y el mismo orden que ' +
-        "messages, y cada elemento es una PARÁFRASIS del mensaje original: mismo significado, tono, " +
-        "intención y estructura, con otras palabras. Conservá emojis, saltos de línea y cualquier " +
-        "placeholder como {{nombre}} o {nombre} sin modificarlos. No agregues texto fuera del objeto JSON.";
+        "Eres un redactor experto en mensajes de WhatsApp para ventas. " +
+        'Recibís un objeto JSON {"messages": Array<{text: string, existingVariants: string[]}>} con los mensajes de un bot. ' +
+        'Respondé SOLO con un objeto JSON {"variants": string[]} donde variants tiene EXACTAMENTE el mismo largo y el mismo orden que messages, ' +
+        "y cada elemento es una PARÁFRASIS del mensaje original: mismo significado, tono, intención y estructura, con otras palabras. " +
+        "IMPORTANTE: para cada mensaje, el campo existingVariants lista las versiones alternativas ya existentes — tu nueva paráfrasis " +
+        "NO debe ser igual ni muy similar a ninguna de ellas; usá palabras y estructura claramente distintas. " +
+        "Conservá emojis, saltos de línea y cualquier placeholder como {{nombre}} o {nombre} sin modificarlos. " +
+        "No agregues texto fuera del objeto JSON.";
 
       // Generate in batches so long flows never hit the provider's single-response output ceiling.
       const BATCH_SIZE = 5;
-      const texts = messages.map((m) => m.text);
+      const messageObjects = messages.map((m) => ({
+        text: m.text,
+        existingVariants: m.existingVariants ?? [],
+      }));
       const allVariants: string[] = [];
 
-      for (let start = 0; start < texts.length; start += BATCH_SIZE) {
-        const batch = texts.slice(start, start + BATCH_SIZE);
+      for (let start = 0; start < messageObjects.length; start += BATCH_SIZE) {
+        const batch = messageObjects.slice(start, start + BATCH_SIZE);
         const user = JSON.stringify({ messages: batch });
-        const inputChars = batch.reduce((n, t) => n + t.length, 0);
+        const inputChars = batch.reduce((n, m) => n + m.text.length, 0);
         const maxTokens = Math.min(8000, Math.max(1500, inputChars + 800));
 
         let raw: string | null;

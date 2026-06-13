@@ -286,7 +286,7 @@ export function FlowEditPage() {
   // ── Generate AI variants handler ──────────────────────────────────────────
   async function handleGenerateVariants(draft: FlowEditorDraft) {
     // Flatten text messages with non-empty content, keeping a stable index map.
-    const refs: { index: number; stepIdx: number; msgIdx: number; text: string }[] = [];
+    const refs: { index: number; stepIdx: number; msgIdx: number; text: string; existingVariants: string[] }[] = [];
     draft.steps.forEach((s, stepIdx) =>
       s.messages.forEach((m, msgIdx) => {
         if (
@@ -294,7 +294,13 @@ export function FlowEditPage() {
           (m.textContent ?? "").trim() &&
           (m.textVariants?.length ?? 0) < 4   // skip messages already at cap
         ) {
-          refs.push({ index: refs.length, stepIdx, msgIdx, text: (m.textContent ?? "").trim() });
+          refs.push({
+            index: refs.length,
+            stepIdx,
+            msgIdx,
+            text: (m.textContent ?? "").trim(),
+            existingVariants: m.textVariants ?? [],
+          });
         }
       })
     );
@@ -316,7 +322,7 @@ export function FlowEditPage() {
     }
     try {
       const res = await generateVariants.mutateAsync({
-        messages: refs.map((r) => ({ index: r.index, text: r.text })),
+        messages: refs.map((r) => ({ index: r.index, text: r.text, existingVariants: r.existingVariants })),
       });
       // Build a new draft with each generated paraphrase appended to its message's textVariants.
       const byIndex = new Map(res.variants.map((v) => [v.index, v.text]));

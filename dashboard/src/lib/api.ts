@@ -468,7 +468,7 @@ export const api = {
         return r.json() as Promise<ValidateAiResponse>;
       })
     ),
-  generateFlowVariants: (payload: { messages: { index: number; text: string }[] }) =>
+  generateFlowVariants: (payload: { messages: { index: number; text: string; existingVariants?: string[] }[] }) =>
     buildHeaders(true).then((headers) =>
       fetch(`${API_URL}/api/flows/generate-variants`, {
         method: "POST",
