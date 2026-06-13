@@ -289,11 +289,27 @@ export function FlowEditPage() {
     const refs: { index: number; stepIdx: number; msgIdx: number; text: string }[] = [];
     draft.steps.forEach((s, stepIdx) =>
       s.messages.forEach((m, msgIdx) => {
-        if (m.messageType === "text" && (m.textContent ?? "").trim()) {
+        if (
+          m.messageType === "text" &&
+          (m.textContent ?? "").trim() &&
+          (m.textVariants?.length ?? 0) < 4   // skip messages already at cap
+        ) {
           refs.push({ index: refs.length, stepIdx, msgIdx, text: (m.textContent ?? "").trim() });
         }
       })
     );
+    if (import.meta.env.DEV) {
+      draft.steps.forEach((s, stepIdx) =>
+        s.messages.forEach((m, msgIdx) => {
+          if (m.messageType === "text") {
+            console.log(
+              `[variant-gen] step=${stepIdx} msg=${msgIdx} existing variants:`,
+              m.textVariants ?? [],
+            );
+          }
+        }),
+      );
+    }
     if (refs.length === 0) {
       toast.error("No hay mensajes de texto para parafrasear");
       return;
@@ -314,6 +330,7 @@ export function FlowEditPage() {
             if (!variant) return m;
             const existing = m.textVariants ?? [];
             if (existing.includes(variant)) return m;
+            if (existing.length >= 4) return m;  // defensive: never exceed cap
             return { ...m, textVariants: [...existing, variant] };
           }),
         })),
@@ -331,6 +348,18 @@ export function FlowEditPage() {
           }
         })
       );
+      if (import.meta.env.DEV) {
+        next.steps.forEach((s, stepIdx) =>
+          s.messages.forEach((m, msgIdx) => {
+            if (m.messageType === "text") {
+              console.log(
+                `[variant-gen] step=${stepIdx} msg=${msgIdx} → variants after gen:`,
+                m.textVariants ?? [],
+              );
+            }
+          }),
+        );
+      }
       setFocusAfterGen(focus);
       setCurrentDraft(next);
       setEditorKey((k) => k + 1);

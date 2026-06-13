@@ -303,10 +303,11 @@ function MessageRow({
                 <button
                   type="button"
                   onClick={() => onVariantsChange?.([...variants, ""])}
-                  className="flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                  disabled={variants.length >= 4}
+                  className="flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Plus size={12} />
-                  Agregar versión
+                  {variants.length >= 4 ? "Máximo 5 versiones" : "Agregar versión"}
                 </button>
                 <p className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
                   <Shuffle size={10} />
@@ -325,6 +326,7 @@ function MessageRow({
                 <button
                   type="button"
                   onClick={() => {
+                    if (variants.length >= 4) return;
                     onVariantsChange?.([...variants, ""]);
                     onToggleVariants?.();
                   }}
